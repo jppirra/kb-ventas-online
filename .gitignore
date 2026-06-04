@@ -1,0 +1,21 @@
+# Secrets
+.env
+.env.local
+.env.production
+
+# Build artifacts
+backend/target/
+frontend/dist/
+frontend/node_modules/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

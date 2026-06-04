@@ -1,0 +1,55 @@
+import React from 'react'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Toaster } from 'sonner'
+import { GoogleOAuthProvider } from '@react-oauth/google'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
+import ProtectedRoute from './components/ProtectedRoute'
+import Login from './pages/Login'
+import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
+import VerifyEmail from './pages/VerifyEmail'
+import Dashboard from './pages/Dashboard'
+import CatalogsPage from './pages/CatalogsPage'
+import CatalogDetailPage from './pages/CatalogDetailPage'
+
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+
+function RootRedirect() {
+  const { isAuthenticated, loading } = useAuth()
+  if (loading) return null
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
+}
+
+export default function App() {
+  return (
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <ThemeProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <Toaster richColors position="top-right" />
+            <Routes>
+              <Route path="/" element={<RootRedirect />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/dashboard" element={
+                <ProtectedRoute><Dashboard /></ProtectedRoute>
+              } />
+              <Route path="/catalogs" element={
+                <ProtectedRoute><CatalogsPage /></ProtectedRoute>
+              } />
+              <Route path="/catalogs/:id" element={
+                <ProtectedRoute><CatalogDetailPage /></ProtectedRoute>
+              } />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </BrowserRouter>
+        </AuthProvider>
+      </ThemeProvider>
+    </GoogleOAuthProvider>
+  )
+}

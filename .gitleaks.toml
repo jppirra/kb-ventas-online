@@ -1,0 +1,58 @@
+# =============================================================================
+# Gitleaks configuration — secret scanning for KB Gastos
+# Run locally: gitleaks detect --source . --config .gitleaks.toml
+# =============================================================================
+
+title = "kb-gastos gitleaks config"
+
+[extend]
+# Extend the default Gitleaks ruleset
+useDefault = true
+
+# ── Custom rules ──────────────────────────────────────────────────────────────
+
+[[rules]]
+id = "telegram-bot-token"
+description = "Telegram Bot Token"
+regex = '''\d{8,10}:AA[a-zA-Z0-9_-]{33}'''
+tags = ["telegram", "secret"]
+
+[[rules]]
+id = "spring-hardcoded-password"
+description = "Hardcoded Spring Boot datasource password"
+regex = '''spring\.datasource\.password\s*=\s*(?!\$\{)[^\s]{4,}'''
+tags = ["spring", "password"]
+
+[[rules]]
+id = "spring-hardcoded-jwt"
+description = "Hardcoded JWT secret in Spring config"
+regex = '''jwt\.secret\s*=\s*(?!\$\{)[^\s]{8,}'''
+tags = ["jwt", "secret"]
+
+[[rules]]
+id = "spring-hardcoded-mail-password"
+description = "Hardcoded SMTP password in Spring config"
+regex = '''spring\.mail\.password\s*=\s*(?!\$\{)[^\s]{4,}'''
+tags = ["smtp", "password"]
+
+# ── Allow-list (false-positive suppressions) ──────────────────────────────────
+
+[allowlist]
+description = "Global allowlist"
+# Allow placeholder/example files
+paths = [
+  ".env.example",
+  "frontend/.env.example",
+  "backend/src/main/resources/application.properties.example",
+  ".gitleaks.toml",
+]
+# Allow common placeholder patterns
+regexes = [
+  '''your[-_]?(super[-_]?)?secret''',
+  '''changeme''',
+  '''YourPassword''',
+  '''EAAxxxxxxxx''',
+  '''placeholder''',
+  '''example''',
+  '''<your[-_]''',
+]
