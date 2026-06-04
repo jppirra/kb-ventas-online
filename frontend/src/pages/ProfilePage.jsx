@@ -76,8 +76,7 @@ export default function ProfilePage() {
     }
   }
 
-  async function handleGenerateBio(e) {
-    e.preventDefault()
+  async function handleGenerateBio() {
     setBioGen(b => ({ ...b, loading: true }))
     try {
       const { data } = await profileApi.generateBio({
@@ -204,7 +203,7 @@ export default function ProfilePage() {
 
             {/* Panel generador IA */}
             {bioGen.open && (
-              <form onSubmit={handleGenerateBio} className="mb-3 p-4 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 rounded-xl space-y-3">
+              <div className="mb-3 p-4 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 rounded-xl space-y-3">
                 <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">Generador de bio con IA</p>
 
                 <div>
@@ -254,8 +253,9 @@ export default function ProfilePage() {
 
                 <div className="flex gap-2">
                   <button
-                    type="submit"
-                    disabled={bioGen.loading}
+                    type="button"
+                    onClick={handleGenerateBio}
+                    disabled={bioGen.loading || !bioGen.rubro.trim() || !bioGen.productTypes.trim()}
                     className="flex-1 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
                   >
                     {bioGen.loading ? (
@@ -276,7 +276,7 @@ export default function ProfilePage() {
                     Cancelar
                   </button>
                 </div>
-              </form>
+              </div>
             )}
 
             <textarea
