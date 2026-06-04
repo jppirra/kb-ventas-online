@@ -1,8 +1,10 @@
 package com.jafpsoft.ventas.controller;
 
+import com.jafpsoft.ventas.dto.profile.BioGenerationRequest;
 import com.jafpsoft.ventas.dto.profile.ProfileResponse;
-import com.jafpsoft.ventas.security.CustomUserDetails;
 import com.jafpsoft.ventas.dto.profile.ProfileUpdateRequest;
+import com.jafpsoft.ventas.security.CustomUserDetails;
+import com.jafpsoft.ventas.service.AiService;
 import com.jafpsoft.ventas.service.ProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -20,6 +22,7 @@ import java.util.Map;
 public class ProfileController {
 
     private final ProfileService profileService;
+    private final AiService aiService;
 
     @GetMapping
     public ProfileResponse get(@AuthenticationPrincipal CustomUserDetails user) {
@@ -57,6 +60,18 @@ public class ProfileController {
                 ? profile.getSlug()
                 : profileService.generateSlugFromName(profile.getName());
         return ResponseEntity.ok(Map.of("slug", suggested));
+    }
+
+    @PostMapping("/generate-bio")
+    public ResponseEntity<Map<String, String>> generateBio(
+            @Valid @RequestBody BioGenerationRequest req,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        ProfileResponse profile = profileService.getProfile(id(user));
+        String bio = aiService.generateBio(profile.getName(), req.getRubro(), req.getProductTypes(), req.getTone());
+        if (bio == null) {
+            return ResponseEntity.status(503).body(Map.of("error", "ANTHROPIC_API_KEY no configurada"));
+        }
+        return ResponseEntity.ok(Map.of("bio", bio));
     }
 
     private Long id(CustomUserDetails user) { return user.getUserId(); }

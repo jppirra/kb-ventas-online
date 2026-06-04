@@ -13,10 +13,17 @@ const PLATFORMS = [
   { value: 'WEBSITE', label: 'Sitio web', placeholder: 'https://tusitioweb.com' },
 ]
 
+const TONES = [
+  { value: 'PROFESIONAL', label: 'Profesional', desc: 'Formal y orientado a resultados' },
+  { value: 'CERCANO', label: 'Cercano', desc: 'Cálido y conversacional' },
+  { value: 'CREATIVO', label: 'Creativo', desc: 'Original e impactante' },
+]
+
 export default function ProfilePage() {
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [bioGen, setBioGen] = useState({ open: false, rubro: '', productTypes: '', tone: 'PROFESIONAL', loading: false })
   const [form, setForm] = useState({
     slug: '', bio: '', brandColorPrimary: '#2563eb', brandColorSecondary: '#7c3aed',
     whatsappNumber: '', socialLinks: [],
@@ -66,6 +73,24 @@ export default function ProfilePage() {
       toast.error(err.response?.data?.message || 'Error al guardar perfil')
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleGenerateBio(e) {
+    e.preventDefault()
+    setBioGen(b => ({ ...b, loading: true }))
+    try {
+      const { data } = await profileApi.generateBio({
+        rubro: bioGen.rubro,
+        productTypes: bioGen.productTypes,
+        tone: bioGen.tone,
+      })
+      setForm(f => ({ ...f, bio: data.bio }))
+      setBioGen(b => ({ ...b, open: false, loading: false }))
+      toast.success('Bio generada con IA')
+    } catch (err) {
+      toast.error(err.response?.data?.error || 'Error al generar la bio')
+      setBioGen(b => ({ ...b, loading: false }))
     }
   }
 
@@ -163,7 +188,97 @@ export default function ProfilePage() {
 
           {/* Bio */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Bio</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-slate-300">Bio</label>
+              <button
+                type="button"
+                onClick={() => setBioGen(b => ({ ...b, open: !b.open }))}
+                className="flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-400 hover:bg-violet-200 dark:hover:bg-violet-900/60 font-medium transition-colors"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+                Generar con IA
+              </button>
+            </div>
+
+            {/* Panel generador IA */}
+            {bioGen.open && (
+              <form onSubmit={handleGenerateBio} className="mb-3 p-4 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 rounded-xl space-y-3">
+                <p className="text-xs font-semibold text-violet-600 dark:text-violet-400 uppercase tracking-wide">Generador de bio con IA</p>
+
+                <div>
+                  <label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Tu rubro</label>
+                  <input
+                    type="text"
+                    value={bioGen.rubro}
+                    onChange={e => setBioGen(b => ({ ...b, rubro: e.target.value }))}
+                    placeholder="Ej: indumentaria femenina, electrónica, gastronomía"
+                    required
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 dark:text-slate-400 mb-1">Tipos de productos</label>
+                  <input
+                    type="text"
+                    value={bioGen.productTypes}
+                    onChange={e => setBioGen(b => ({ ...b, productTypes: e.target.value }))}
+                    placeholder="Ej: remeras, vestidos, accesorios"
+                    required
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs text-gray-600 dark:text-slate-400 mb-2">Tono</label>
+                  <div className="flex gap-2">
+                    {TONES.map(t => (
+                      <button
+                        key={t.value}
+                        type="button"
+                        onClick={() => setBioGen(b => ({ ...b, tone: t.value }))}
+                        className={`flex-1 py-2 px-2 rounded-xl border text-xs font-medium transition-colors text-center ${
+                          bioGen.tone === t.value
+                            ? 'bg-violet-600 border-violet-600 text-white'
+                            : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:border-violet-400 dark:hover:border-violet-500'
+                        }`}
+                      >
+                        <span className="block font-semibold">{t.label}</span>
+                        <span className="block opacity-75 mt-0.5 hidden sm:block">{t.desc}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={bioGen.loading}
+                    className="flex-1 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    {bioGen.loading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                        </svg>
+                        Generando...
+                      </>
+                    ) : 'Generar bio'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBioGen(b => ({ ...b, open: false }))}
+                    className="px-4 py-2 text-sm text-gray-500 dark:text-slate-400 border border-gray-300 dark:border-slate-600 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            )}
+
             <textarea
               value={form.bio}
               onChange={e => setForm(f => ({ ...f, bio: e.target.value }))}

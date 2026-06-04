@@ -17,6 +17,7 @@ export const profileApi = {
     return api.post('/profile/upload/banner', form, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
   getSlugSuggestion: () => api.get('/profile/slug-suggestion'),
+  generateBio: (data) => api.post('/profile/generate-bio', data),
 }
 
 export const publicApi = {

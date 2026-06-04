@@ -27,6 +27,11 @@ public class AiService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
+    public String generateBio(String name, String rubro, String productTypes, String tone) {
+        String prompt = buildBioPrompt(name, rubro, productTypes, tone);
+        return callClaude(prompt);
+    }
+
     public String generateProductDescription(Product product) {
         String prompt = buildProductPrompt(product);
         return callClaude(prompt);
@@ -35,6 +40,36 @@ public class AiService {
     public String generateCatalogIntro(String catalogName, List<Product> products) {
         String prompt = buildCatalogIntroPrompt(catalogName, products);
         return callClaude(prompt);
+    }
+
+    private String buildBioPrompt(String name, String rubro, String productTypes, String tone) {
+        String toneInstruction = switch (tone.toUpperCase()) {
+            case "CERCANO" -> """
+                Tono CERCANO y conversacional: usa primera persona ("Hola, soy..."), \
+                sé cálido y accesible, como si hablaras con un amigo. Evita el lenguaje corporativo.""";
+            case "CREATIVO" -> """
+                Tono CREATIVO e impactante: usa metáforas, frases originales y un lenguaje \
+                diferente al común. Sorprendé al lector. Podés usar alguna pregunta retórica.""";
+            default -> """
+                Tono PROFESIONAL: formal, orientado a la credibilidad y los resultados. \
+                Destacá experiencia y propuesta de valor. Tercera persona o primera formal.""";
+        };
+
+        return """
+                Eres un experto en personal branding y marketing digital.
+                Escribí una bio para el perfil público de un vendedor en una plataforma de catálogos.
+
+                Datos del vendedor:
+                - Nombre: %s
+                - Rubro: %s
+                - Tipos de productos que vende: %s
+
+                Instrucciones de tono:
+                %s
+
+                La bio debe tener entre 2 y 4 oraciones. Debe invitar al cliente a explorar los catálogos.
+                Respondé SOLO con el texto de la bio, sin títulos, comillas ni aclaraciones.
+                """.formatted(name, rubro, productTypes, toneInstruction);
     }
 
     private String buildProductPrompt(Product product) {
