@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import ThemeToggle from './ThemeToggle'
 
 export default function Navbar() {
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const location = useLocation()
 
   const navLink = (to, label) => (
@@ -31,6 +31,14 @@ export default function Navbar() {
           {navLink('/profile', 'Mi perfil')}
         </div>
         <div className="flex items-center gap-2">
+          {user?.appAdmin && (
+            <Link
+              to="/admin"
+              className="text-xs px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 font-medium transition-colors"
+            >
+              Admin
+            </Link>
+          )}
           <ThemeToggle />
           <button
             onClick={logout}

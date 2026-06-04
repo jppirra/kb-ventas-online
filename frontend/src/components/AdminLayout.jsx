@@ -1,0 +1,154 @@
+import React, { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import ThemeToggle from './ThemeToggle'
+import Footer from './Footer'
+
+const NAV = [
+  {
+    to: '/admin',
+    exact: true,
+    label: 'Dashboard',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    ),
+  },
+  {
+    to: '/admin/users',
+    label: 'Usuarios',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+      </svg>
+    ),
+  },
+  {
+    to: '/admin/catalogs',
+    label: 'Catálogos',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      </svg>
+    ),
+  },
+  {
+    to: '/admin/email',
+    label: 'Emails',
+    icon: (
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+]
+
+export default function AdminLayout({ children }) {
+  const location = useLocation()
+  const { logout } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  function isActive(item) {
+    return item.exact
+      ? location.pathname === item.to
+      : location.pathname.startsWith(item.to)
+  }
+
+  const Sidebar = () => (
+    <aside className="flex flex-col w-56 bg-gray-900 dark:bg-slate-950 min-h-screen border-r border-gray-800 dark:border-slate-800">
+      <div className="flex items-center justify-between px-4 h-14 border-b border-gray-800 dark:border-slate-800">
+        <div>
+          <span className="text-white font-bold text-sm">Admin Panel</span>
+          <p className="text-gray-500 text-xs">CatalogIA</p>
+        </div>
+      </div>
+
+      <nav className="flex-1 px-2 py-4 space-y-0.5">
+        {NAV.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={() => setSidebarOpen(false)}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              isActive(item)
+                ? 'bg-blue-600 text-white'
+                : 'text-gray-400 hover:text-white hover:bg-gray-800 dark:hover:bg-slate-800'
+            }`}
+          >
+            {item.icon}
+            {item.label}
+          </Link>
+        ))}
+      </nav>
+
+      <div className="px-2 pb-4 space-y-1 border-t border-gray-800 dark:border-slate-800 pt-3">
+        <Link
+          to="/dashboard"
+          className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+          Volver a la app
+        </Link>
+        <button
+          onClick={logout}
+          className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-red-400 hover:bg-gray-800 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </aside>
+  )
+
+  return (
+    <div className="min-h-screen flex bg-gray-50 dark:bg-slate-950">
+      {/* Desktop sidebar */}
+      <div className="hidden md:flex">
+        <Sidebar />
+      </div>
+
+      {/* Mobile sidebar overlay */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 flex md:hidden">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
+          <div className="relative z-50">
+            <Sidebar />
+          </div>
+        </div>
+      )}
+
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top bar */}
+        <header className="h-14 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between px-4 sticky top-0 z-10">
+          <button
+            className="md:hidden p-2 text-gray-500 hover:text-gray-700 dark:text-slate-400"
+            onClick={() => setSidebarOpen(true)}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="hidden md:block" />
+          <div className="flex items-center gap-2">
+            <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 rounded-full font-medium">
+              Admin
+            </span>
+            <ThemeToggle />
+          </div>
+        </header>
+
+        <main className="flex-1 p-6">
+          {children}
+        </main>
+
+        <Footer />
+      </div>
+    </div>
+  )
+}

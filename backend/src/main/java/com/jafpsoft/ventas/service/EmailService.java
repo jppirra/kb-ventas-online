@@ -79,6 +79,12 @@ public class EmailService {
         send(toEmail, "Restablecer contraseña — " + FROM_NAME, html);
     }
 
+    @Async
+    public void sendAdminEmail(String toEmail, String subject, String body) {
+        String html = buildActionEmail(subject, body, null, null, FROM_NAME + " — Admin");
+        send(toEmail, subject, html);
+    }
+
     // ── HTML builder ──────────────────────────────────────────────────────────
 
     private String buildActionEmail(String heading, String body, String ctaUrl, String ctaText, String footer) {
