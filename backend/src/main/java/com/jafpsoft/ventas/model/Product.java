@@ -40,6 +40,12 @@ public class Product {
 
     private Integer sortOrder;
 
+    private Integer stockCount;
+
+    @Column(name = "whatsapp_clicks", nullable = false)
+    @Builder.Default
+    private Long whatsappClicks = 0L;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

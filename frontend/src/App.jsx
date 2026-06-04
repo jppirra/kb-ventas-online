@@ -13,6 +13,8 @@ import VerifyEmail from './pages/VerifyEmail'
 import Dashboard from './pages/Dashboard'
 import CatalogsPage from './pages/CatalogsPage'
 import CatalogDetailPage from './pages/CatalogDetailPage'
+import ProfilePage from './pages/ProfilePage'
+import PublicProfilePage from './pages/PublicProfilePage'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
@@ -45,6 +47,10 @@ export default function App() {
               <Route path="/catalogs/:id" element={
                 <ProtectedRoute><CatalogDetailPage /></ProtectedRoute>
               } />
+              <Route path="/profile" element={
+                <ProtectedRoute><ProfilePage /></ProtectedRoute>
+              } />
+              <Route path="/p/:slug" element={<PublicProfilePage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

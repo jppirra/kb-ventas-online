@@ -35,6 +35,21 @@ public class Catalog {
     @Builder.Default
     private CatalogStatus status = CatalogStatus.DRAFT;
 
+    @Column(name = "cover_image_url")
+    private String coverImageUrl;
+
+    @Column(name = "view_mode", length = 20)
+    @Builder.Default
+    private String viewMode = "GRID";
+
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private boolean active = true;
+
+    @Column(name = "view_count", nullable = false)
+    @Builder.Default
+    private Long viewCount = 0L;
+
     @OneToMany(mappedBy = "catalog", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<Product> products = new ArrayList<>();
