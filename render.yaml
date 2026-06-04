@@ -1,0 +1,45 @@
+services:
+  - type: web
+    name: catalogia-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: DB_URL
+        sync: false          # postgresql://xxx.supabase.co:5432/postgres?sslmode=require
+      - key: DB_USERNAME
+        sync: false          # postgres
+      - key: DB_PASSWORD
+        sync: false          # tu password de Supabase
+      - key: DB_SSLMODE
+        value: require
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 3600000
+      - key: JWT_REFRESH_EXPIRATION
+        value: 604800000
+      - key: APP_BASE_URL
+        sync: false          # https://tu-app.vercel.app
+      - key: APP_BACKEND_URL
+        sync: false          # https://catalogia-backend.onrender.com
+      - key: CORS_ORIGINS
+        sync: false          # https://tu-app.vercel.app
+      - key: RESEND_API_KEY
+        sync: false
+      - key: MAIL_FROM_ADDRESS
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        value: 873128842697-b7rvr3eml5ji763srr745qkp3lkj5o3e.apps.googleusercontent.com
+      - key: APP_ADMIN_EMAILS
+        value: pirrajuanpablo@gmail.com,juanppirra@gmail.com
+      - key: SUPABASE_URL
+        sync: false          # https://xxx.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: catalog-images
+      - key: ANTHROPIC_API_KEY
+        sync: false
