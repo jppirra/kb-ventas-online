@@ -39,5 +39,7 @@ services:
         sync: false
       - key: SUPABASE_BUCKET
         value: catalog-images
+      - key: GEMINI_API_KEY
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false

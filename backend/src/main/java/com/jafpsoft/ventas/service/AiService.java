@@ -18,29 +18,117 @@ import java.util.Map;
 @Slf4j
 public class AiService {
 
+    // ── Gemini ─────────────────────────────────────────────────────────────────
+    @Value("${gemini.api-key:}")
+    private String geminiApiKey;
+
+    @Value("${gemini.model:gemini-2.0-flash}")
+    private String geminiModel;
+
+    // ── Claude (fallback) ──────────────────────────────────────────────────────
     @Value("${anthropic.api-key:}")
-    private String apiKey;
+    private String claudeApiKey;
 
     @Value("${anthropic.model:claude-haiku-4-5-20251001}")
-    private String model;
+    private String claudeModel;
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
+    // ── Métodos públicos (sin cambios de firma) ────────────────────────────────
+
     public String generateBio(String name, String rubro, String productTypes, String tone) {
-        String prompt = buildBioPrompt(name, rubro, productTypes, tone);
-        return callClaude(prompt);
+        return callAi(buildBioPrompt(name, rubro, productTypes, tone));
     }
 
     public String generateProductDescription(Product product) {
-        String prompt = buildProductPrompt(product);
-        return callClaude(prompt);
+        return callAi(buildProductPrompt(product));
     }
 
     public String generateCatalogIntro(String catalogName, List<Product> products) {
-        String prompt = buildCatalogIntroPrompt(catalogName, products);
-        return callClaude(prompt);
+        return callAi(buildCatalogIntroPrompt(catalogName, products));
     }
+
+    // ── Dispatcher: Gemini → Claude ────────────────────────────────────────────
+
+    private String callAi(String prompt) {
+        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
+            return callGemini(prompt);
+        }
+        if (claudeApiKey != null && !claudeApiKey.isBlank()) {
+            return callClaude(prompt);
+        }
+        log.warn("Sin API key de IA configurada (GEMINI_API_KEY o ANTHROPIC_API_KEY)");
+        return null;
+    }
+
+    // ── Gemini REST API ────────────────────────────────────────────────────────
+
+    private String callGemini(String prompt) {
+        try {
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/"
+                    + geminiModel + ":generateContent?key=" + geminiApiKey;
+
+            Map<String, Object> body = Map.of(
+                    "contents", List.of(
+                            Map.of("parts", List.of(Map.of("text", prompt)))
+                    ),
+                    "generationConfig", Map.of(
+                            "maxOutputTokens", 512,
+                            "temperature", 0.7
+                    )
+            );
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    url, new HttpEntity<>(body, headers), String.class);
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            return root.path("candidates").get(0)
+                    .path("content").path("parts").get(0)
+                    .path("text").asText();
+
+        } catch (Exception e) {
+            log.error("Error llamando a Gemini API: {}", e.getMessage());
+            if (claudeApiKey != null && !claudeApiKey.isBlank()) {
+                log.info("Reintentando con Claude como fallback...");
+                return callClaude(prompt);
+            }
+            return null;
+        }
+    }
+
+    // ── Claude REST API (fallback) ─────────────────────────────────────────────
+
+    private String callClaude(String prompt) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("x-api-key", claudeApiKey);
+            headers.set("anthropic-version", "2023-06-01");
+
+            Map<String, Object> body = Map.of(
+                    "model", claudeModel,
+                    "max_tokens", 512,
+                    "messages", List.of(Map.of("role", "user", "content", prompt))
+            );
+
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    "https://api.anthropic.com/v1/messages",
+                    new HttpEntity<>(body, headers), String.class);
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            return root.path("content").get(0).path("text").asText();
+
+        } catch (Exception e) {
+            log.error("Error llamando a Claude API: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    // ── Prompts ────────────────────────────────────────────────────────────────
 
     private String buildBioPrompt(String name, String rubro, String productTypes, String tone) {
         String toneInstruction = switch (tone.toUpperCase()) {
@@ -106,35 +194,5 @@ public class AiService {
 
         sb.append("\nEscribe una introducción de 3-4 oraciones que invite al lector a explorar el catálogo. Solo la introducción, sin títulos ni aclaraciones.");
         return sb.toString();
-    }
-
-    private String callClaude(String prompt) {
-        if (apiKey == null || apiKey.isBlank()) {
-            log.warn("ANTHROPIC_API_KEY no configurada, usando descripción placeholder");
-            return null;
-        }
-
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("x-api-key", apiKey);
-            headers.set("anthropic-version", "2023-06-01");
-
-            Map<String, Object> body = Map.of(
-                    "model", model,
-                    "max_tokens", 512,
-                    "messages", List.of(Map.of("role", "user", "content", prompt))
-            );
-
-            HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    "https://api.anthropic.com/v1/messages", request, String.class);
-
-            JsonNode root = objectMapper.readTree(response.getBody());
-            return root.path("content").get(0).path("text").asText();
-        } catch (Exception e) {
-            log.error("Error llamando a Claude API: {}", e.getMessage());
-            return null;
-        }
     }
 }
