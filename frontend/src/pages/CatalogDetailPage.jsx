@@ -3,11 +3,41 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { catalogsApi } from '../api/catalogs'
+import { publicApi } from '../api/profile'
+
+const VIEW_MODES = [
+  { value: 'GRID', label: 'Grilla', icon: (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+    </svg>
+  )},
+  { value: 'MOSAIC', label: 'Mosaico', icon: (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
+    </svg>
+  )},
+  { value: 'LIST', label: 'Lista', icon: (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  )},
+]
+
+const BG_TYPES = [
+  { value: 'NONE', label: 'Sin fondo' },
+  { value: 'COLOR', label: 'Color solido' },
+  { value: 'PREDEFINED', label: 'Prediseñado' },
+  { value: 'CUSTOM', label: 'Imagen propia' },
+]
+
+const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false }
 
 export default function CatalogDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const fileRef = useRef()
+  const bgFileRef = useRef()
+  const productImgRef = useRef()
 
   const [catalog, setCatalog] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -15,12 +45,25 @@ export default function CatalogDetailPage() {
   const [uploadingExcel, setUploadingExcel] = useState(false)
   const [showProductForm, setShowProductForm] = useState(false)
   const [savingProduct, setSavingProduct] = useState(false)
-  const [productForm, setProductForm] = useState({ name: '', description: '', price: '', sku: '', category: '' })
+  const [productForm, setProductForm] = useState(emptyProduct)
   const [editingProductId, setEditingProductId] = useState(null)
+  const [uploadingProductImg, setUploadingProductImg] = useState(false)
+  const [pendingProductImgId, setPendingProductImgId] = useState(null)
   const [pollTimer, setPollTimer] = useState(null)
+
+  // Appearance state (synced on load, saved separately)
+  const [viewMode, setViewMode] = useState('GRID')
+  const [bgType, setBgType] = useState('NONE')
+  const [bgColor, setBgColor] = useState('#f8fafc')
+  const [bgTemplateId, setBgTemplateId] = useState(null)
+  const [bgTemplates, setBgTemplates] = useState([])
+  const [uploadingBg, setUploadingBg] = useState(false)
+  const [savingAppearance, setSavingAppearance] = useState(false)
+  const [copiedLink, setCopiedLink] = useState(false)
 
   useEffect(() => {
     load()
+    publicApi.getBackgrounds().then(({ data }) => setBgTemplates(data)).catch(() => {})
     return () => clearInterval(pollTimer)
   }, [id])
 
@@ -28,6 +71,10 @@ export default function CatalogDetailPage() {
     try {
       const { data } = await catalogsApi.get(id)
       setCatalog(data)
+      setViewMode(data.viewMode || 'GRID')
+      setBgType(data.backgroundType || 'NONE')
+      setBgColor(data.backgroundColor || '#f8fafc')
+      setBgTemplateId(data.backgroundTemplateId || null)
       if (data.status === 'GENERATING') startPolling()
     } catch {
       toast.error('Catálogo no encontrado')
@@ -91,10 +138,15 @@ export default function CatalogDetailPage() {
         price: product.price ?? '',
         sku: product.sku || '',
         category: product.category || '',
+        imageUrl: product.imageUrl || '',
+        showStock: product.showStock || false,
+        stockStatus: product.stockStatus || 'IN_STOCK',
+        stockCount: product.stockCount ?? '',
+        showStockQuantity: product.showStockQuantity || false,
       })
     } else {
       setEditingProductId(null)
-      setProductForm({ name: '', description: '', price: '', sku: '', category: '' })
+      setProductForm(emptyProduct)
     }
     setShowProductForm(true)
   }
@@ -106,6 +158,7 @@ export default function CatalogDetailPage() {
     const payload = {
       ...productForm,
       price: productForm.price !== '' ? parseFloat(productForm.price) : null,
+      stockCount: productForm.stockCount !== '' ? parseInt(productForm.stockCount) : null,
     }
     try {
       if (editingProductId) {
@@ -135,6 +188,76 @@ export default function CatalogDetailPage() {
     }
   }
 
+  async function handleProductImageUpload(e) {
+    const file = e.target.files[0]
+    if (!file || !pendingProductImgId) return
+    setUploadingProductImg(true)
+    try {
+      const { data } = await catalogsApi.uploadProductImage(id, pendingProductImgId, file)
+      setProductForm(f => ({ ...f, imageUrl: data.imageUrl }))
+      toast.success('Imagen subida')
+      load()
+    } catch {
+      toast.error('Error al subir imagen')
+    } finally {
+      setUploadingProductImg(false)
+      setPendingProductImgId(null)
+      e.target.value = ''
+    }
+  }
+
+  function triggerProductImageUpload(productId) {
+    setPendingProductImgId(productId)
+    productImgRef.current.click()
+  }
+
+  async function handleBgImageUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingBg(true)
+    try {
+      const { data } = await catalogsApi.uploadBackground(id, file)
+      setCatalog(c => ({ ...c, backgroundImageUrl: data.backgroundImageUrl, backgroundType: 'CUSTOM' }))
+      setBgType('CUSTOM')
+      toast.success('Fondo subido')
+    } catch {
+      toast.error('Error al subir fondo')
+    } finally {
+      setUploadingBg(false)
+      e.target.value = ''
+    }
+  }
+
+  async function handleSaveAppearance() {
+    setSavingAppearance(true)
+    try {
+      const payload = {
+        name: catalog.name,
+        description: catalog.description,
+        viewMode,
+        backgroundType: bgType,
+        backgroundColor: bgType === 'COLOR' ? bgColor : null,
+        backgroundTemplateId: bgType === 'PREDEFINED' ? bgTemplateId : null,
+        backgroundImageUrl: bgType === 'CUSTOM' ? catalog.backgroundImageUrl : null,
+      }
+      const { data } = await catalogsApi.update(id, payload)
+      setCatalog(c => ({ ...c, ...data }))
+      toast.success('Apariencia guardada')
+    } catch {
+      toast.error('Error al guardar apariencia')
+    } finally {
+      setSavingAppearance(false)
+    }
+  }
+
+  function handleCopyLink() {
+    const link = `${window.location.origin}/c/${id}`
+    navigator.clipboard.writeText(link).then(() => {
+      setCopiedLink(true)
+      setTimeout(() => setCopiedLink(false), 2000)
+    })
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -143,16 +266,17 @@ export default function CatalogDetailPage() {
     )
   }
 
+  const publicLink = `${window.location.origin}/c/${id}`
+
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-8">
+
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <button
-              onClick={() => navigate('/catalogs')}
-              className="text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 mb-2 flex items-center gap-1"
-            >
+            <button onClick={() => navigate('/catalogs')}
+              className="text-sm text-gray-400 dark:text-slate-500 hover:text-gray-600 dark:hover:text-slate-300 mb-2 flex items-center gap-1">
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
@@ -163,11 +287,8 @@ export default function CatalogDetailPage() {
               <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{catalog.description}</p>
             )}
           </div>
-          <button
-            onClick={handleGenerate}
-            disabled={generating || catalog.products?.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors"
-          >
+          <button onClick={handleGenerate} disabled={generating || catalog.products?.length === 0}
+            className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
             {generating ? (
               <>
                 <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -187,6 +308,24 @@ export default function CatalogDetailPage() {
           </button>
         </div>
 
+        {/* Share link */}
+        <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-2xl p-4">
+          <p className="text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wide mb-2">Enlace publico del catalogo</p>
+          <div className="flex items-center gap-2 flex-wrap">
+            <a href={publicLink} target="_blank" rel="noopener noreferrer"
+              className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate flex-1 min-w-0">{publicLink}</a>
+            <button onClick={handleCopyLink}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-xl transition-colors shrink-0">
+              {copiedLink ? (
+                <><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg> Copiado</>
+              ) : (
+                <><svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copiar</>
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-blue-400 dark:text-blue-500 mt-1.5">Este link es publico. Quien lo tenga puede ver el catalogo y exportarlo a PDF.</p>
+        </div>
+
         {/* AI Content */}
         {catalog.aiContent && (
           <div className="mb-6 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 rounded-2xl p-5">
@@ -195,22 +334,123 @@ export default function CatalogDetailPage() {
           </div>
         )}
 
-        {/* Actions bar */}
+        {/* ── Appearance section ─────────────────────────────────────────────── */}
+        <div className="mb-6 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+          <h2 className="font-semibold text-gray-900 dark:text-white text-sm mb-4">Apariencia del catalogo</h2>
+
+          {/* View mode */}
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Layout de productos</p>
+            <div className="flex gap-2 flex-wrap">
+              {VIEW_MODES.map(m => (
+                <button key={m.value} onClick={() => setViewMode(m.value)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                    viewMode === m.value
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}>
+                  {m.icon}{m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Background type */}
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Fondo</p>
+            <div className="flex gap-2 flex-wrap">
+              {BG_TYPES.map(t => (
+                <button key={t.value} onClick={() => setBgType(t.value)}
+                  className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${
+                    bgType === t.value
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Color picker */}
+          {bgType === 'COLOR' && (
+            <div className="mb-4 flex items-center gap-3">
+              <input type="color" value={bgColor} onChange={e => setBgColor(e.target.value)}
+                className="w-10 h-10 rounded-xl border border-gray-300 dark:border-slate-600 cursor-pointer" />
+              <input type="text" value={bgColor} onChange={e => setBgColor(e.target.value)}
+                className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white w-32 focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          )}
+
+          {/* Predefined templates */}
+          {bgType === 'PREDEFINED' && (
+            <div className="mb-4">
+              {bgTemplates.length === 0 ? (
+                <p className="text-xs text-gray-400 dark:text-slate-500 italic">No hay fondos prediseñados disponibles todavía.</p>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                  {bgTemplates.map(t => (
+                    <button key={t.id} onClick={() => setBgTemplateId(t.id)}
+                      className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${
+                        bgTemplateId === t.id ? 'border-blue-600 ring-2 ring-blue-500' : 'border-transparent hover:border-gray-300'
+                      }`}>
+                      {t.imageUrl ? (
+                        <img src={t.imageUrl} alt={t.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-gray-100 dark:bg-slate-700" />
+                      )}
+                      {bgTemplateId === t.id && (
+                        <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                      <div className="absolute bottom-0 inset-x-0 bg-black/40 px-1 py-0.5">
+                        <p className="text-white text-[9px] truncate">{t.name}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Custom image upload */}
+          {bgType === 'CUSTOM' && (
+            <div className="mb-4 flex items-center gap-3">
+              {catalog.backgroundImageUrl && (
+                <img src={catalog.backgroundImageUrl} alt="Fondo" className="w-20 h-12 rounded-xl object-cover border border-gray-200 dark:border-slate-600" />
+              )}
+              <button onClick={() => bgFileRef.current.click()} disabled={uploadingBg}
+                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                {uploadingBg ? 'Subiendo...' : 'Subir imagen de fondo'}
+              </button>
+              <input ref={bgFileRef} type="file" accept="image/*" className="hidden" onChange={handleBgImageUpload} />
+            </div>
+          )}
+
+          <button onClick={handleSaveAppearance} disabled={savingAppearance}
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+            {savingAppearance ? 'Guardando...' : 'Guardar apariencia'}
+          </button>
+        </div>
+
+        {/* ── Products section ───────────────────────────────────────────────── */}
         <div className="flex items-center gap-3 mb-5">
-          <button
-            onClick={() => openProductForm()}
-            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors"
-          >
+          <button onClick={() => openProductForm()}
+            className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors">
             + Agregar producto
           </button>
-          <button
-            onClick={() => fileRef.current.click()}
-            disabled={uploadingExcel}
-            className="px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
-          >
+          <button onClick={() => fileRef.current.click()} disabled={uploadingExcel}
+            className="px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50">
             {uploadingExcel ? 'Importando...' : 'Importar Excel'}
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcel} />
+          <input ref={productImgRef} type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
           <span className="text-sm text-gray-400 dark:text-slate-500 ml-auto">
             {catalog.products?.length ?? 0} productos
           </span>
@@ -218,10 +458,42 @@ export default function CatalogDetailPage() {
 
         {/* Product form */}
         {showProductForm && (
-          <form onSubmit={handleSaveProduct} className="mb-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 space-y-3">
+          <form onSubmit={handleSaveProduct} className="mb-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 space-y-4">
             <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
               {editingProductId ? 'Editar producto' : 'Nuevo producto'}
             </h3>
+
+            {/* Image upload (only for existing products) */}
+            {editingProductId && (
+              <div className="flex items-center gap-3">
+                {productForm.imageUrl ? (
+                  <img src={productForm.imageUrl} alt="img" className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600 shrink-0" />
+                ) : (
+                  <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                )}
+                <div className="flex flex-col gap-1">
+                  <button type="button" disabled={uploadingProductImg}
+                    onClick={() => triggerProductImageUpload(editingProductId)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    {uploadingProductImg ? 'Subiendo...' : 'Subir imagen'}
+                  </button>
+                  {productForm.imageUrl && (
+                    <button type="button" onClick={() => setProductForm(f => ({ ...f, imageUrl: '' }))}
+                      className="text-xs text-red-400 hover:text-red-600 text-left">
+                      Quitar imagen
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">
                 <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Nombre *</label>
@@ -230,7 +502,7 @@ export default function CatalogDetailPage() {
               </div>
               <div className="sm:col-span-2">
                 <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Descripcion</label>
-                <textarea value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} rows={2} resize="none"
+                <textarea value={productForm.description} onChange={e => setProductForm(f => ({ ...f, description: e.target.value }))} rows={2}
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none" />
               </div>
               <div>
@@ -249,6 +521,53 @@ export default function CatalogDetailPage() {
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
+
+            {/* Stock section */}
+            <div className="border-t border-gray-100 dark:border-slate-700 pt-3">
+              <div className="flex items-center gap-2 mb-3">
+                <input type="checkbox" id="showStock" checked={productForm.showStock}
+                  onChange={e => setProductForm(f => ({ ...f, showStock: e.target.checked }))} className="rounded" />
+                <label htmlFor="showStock" className="text-sm text-gray-700 dark:text-slate-300 font-medium">
+                  Mostrar disponibilidad de stock
+                </label>
+              </div>
+              {productForm.showStock && (
+                <div className="ml-6 space-y-3">
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setProductForm(f => ({ ...f, stockStatus: 'IN_STOCK' }))}
+                      className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${
+                        productForm.stockStatus === 'IN_STOCK'
+                          ? 'bg-green-600 border-green-600 text-white'
+                          : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                      }`}>
+                      En stock
+                    </button>
+                    <button type="button" onClick={() => setProductForm(f => ({ ...f, stockStatus: 'ON_DEMAND' }))}
+                      className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${
+                        productForm.stockStatus === 'ON_DEMAND'
+                          ? 'bg-yellow-500 border-yellow-500 text-white'
+                          : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                      }`}>
+                      A pedido
+                    </button>
+                  </div>
+                  {productForm.stockStatus === 'IN_STOCK' && (
+                    <div className="flex items-center gap-2">
+                      <input type="checkbox" id="showQty" checked={productForm.showStockQuantity}
+                        onChange={e => setProductForm(f => ({ ...f, showStockQuantity: e.target.checked }))} className="rounded" />
+                      <label htmlFor="showQty" className="text-sm text-gray-600 dark:text-slate-400">Mostrar cantidad</label>
+                      {productForm.showStockQuantity && (
+                        <input type="number" min="0" value={productForm.stockCount}
+                          onChange={e => setProductForm(f => ({ ...f, stockCount: e.target.value }))}
+                          placeholder="0"
+                          className="ml-2 w-20 px-2 py-1 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="flex gap-2">
               <button type="submit" disabled={savingProduct}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
@@ -265,14 +584,24 @@ export default function CatalogDetailPage() {
         {/* Products list */}
         {catalog.products?.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700">
-            <p className="text-gray-400 dark:text-slate-500 text-sm">Sin productos. Agregá uno manualmente o importá un Excel.</p>
+            <p className="text-gray-400 dark:text-slate-500 text-sm">Sin productos. Agrega uno manualmente o importa un Excel.</p>
             <p className="text-gray-300 dark:text-slate-600 text-xs mt-1">Columnas Excel: nombre, descripcion, precio, sku, categoria</p>
           </div>
         ) : (
           <div className="space-y-3">
             {catalog.products.map(product => (
               <div key={product.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4">
-                <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  {product.imageUrl ? (
+                    <img src={product.imageUrl} alt={product.name}
+                      className="w-14 h-14 rounded-xl object-cover shrink-0 border border-gray-100 dark:border-slate-700" />
+                  ) : (
+                    <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-medium text-gray-900 dark:text-white">{product.name}</h4>
@@ -286,6 +615,16 @@ export default function CatalogDetailPage() {
                           ${Number(product.price).toLocaleString('es-AR')}
                         </span>
                       )}
+                      {product.showStock && product.stockStatus && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                          product.stockStatus === 'IN_STOCK'
+                            ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+                            : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        }`}>
+                          {product.stockStatus === 'IN_STOCK' ? 'En stock' : 'A pedido'}
+                          {product.showStockQuantity && product.stockCount != null && ` (${product.stockCount})`}
+                        </span>
+                      )}
                     </div>
                     {product.description && (
                       <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{product.description}</p>
@@ -297,7 +636,7 @@ export default function CatalogDetailPage() {
                       </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-1 ml-3 shrink-0">
+                  <div className="flex items-center gap-1 ml-auto shrink-0">
                     <button onClick={() => openProductForm(product)}
                       className="p-1.5 text-gray-400 hover:text-blue-500 dark:text-slate-500 dark:hover:text-blue-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

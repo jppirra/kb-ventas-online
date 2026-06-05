@@ -42,6 +42,17 @@ public class Product {
 
     private Integer stockCount;
 
+    @Column(name = "stock_status", length = 20)
+    private String stockStatus;
+
+    @Column(name = "show_stock", nullable = false)
+    @Builder.Default
+    private boolean showStock = false;
+
+    @Column(name = "show_stock_quantity", nullable = false)
+    @Builder.Default
+    private boolean showStockQuantity = false;
+
     @Column(name = "whatsapp_clicks", nullable = false)
     @Builder.Default
     private Long whatsappClicks = 0L;

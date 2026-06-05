@@ -20,6 +20,8 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import AdminUsersPage from './pages/admin/AdminUsersPage'
 import AdminCatalogsPage from './pages/admin/AdminCatalogsPage'
 import AdminEmailPage from './pages/admin/AdminEmailPage'
+import AdminBackgroundsPage from './pages/admin/AdminBackgroundsPage'
+import PublicCatalogPage from './pages/PublicCatalogPage'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
@@ -56,10 +58,12 @@ export default function App() {
                 <ProtectedRoute><ProfilePage /></ProtectedRoute>
               } />
               <Route path="/p/:slug" element={<PublicProfilePage />} />
+              <Route path="/c/:catalogId" element={<PublicCatalogPage />} />
               <Route path="/admin" element={<AdminProtectedRoute><AdminDashboardPage /></AdminProtectedRoute>} />
               <Route path="/admin/users" element={<AdminProtectedRoute><AdminUsersPage /></AdminProtectedRoute>} />
               <Route path="/admin/catalogs" element={<AdminProtectedRoute><AdminCatalogsPage /></AdminProtectedRoute>} />
               <Route path="/admin/email" element={<AdminProtectedRoute><AdminEmailPage /></AdminProtectedRoute>} />
+              <Route path="/admin/backgrounds" element={<AdminProtectedRoute><AdminBackgroundsPage /></AdminProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

@@ -42,6 +42,19 @@ public class Catalog {
     @Builder.Default
     private String viewMode = "GRID";
 
+    @Column(name = "background_type", length = 20)
+    @Builder.Default
+    private String backgroundType = "NONE";
+
+    @Column(name = "background_color", length = 20)
+    private String backgroundColor;
+
+    @Column(name = "background_image_url")
+    private String backgroundImageUrl;
+
+    @Column(name = "background_template_id")
+    private Long backgroundTemplateId;
+
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private boolean active = true;

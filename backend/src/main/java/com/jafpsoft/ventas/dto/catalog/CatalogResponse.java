@@ -14,6 +14,11 @@ public class CatalogResponse {
     private String description;
     private String aiContent;
     private CatalogStatus status;
+    private String viewMode;
+    private String backgroundType;
+    private String backgroundColor;
+    private String backgroundImageUrl;
+    private Long backgroundTemplateId;
     private int productCount;
     private List<ProductResponse> products;
     private LocalDateTime createdAt;
@@ -26,6 +31,11 @@ public class CatalogResponse {
         r.description = c.getDescription();
         r.aiContent = c.getAiContent();
         r.status = c.getStatus();
+        r.viewMode = c.getViewMode();
+        r.backgroundType = c.getBackgroundType();
+        r.backgroundColor = c.getBackgroundColor();
+        r.backgroundImageUrl = c.getBackgroundImageUrl();
+        r.backgroundTemplateId = c.getBackgroundTemplateId();
         r.productCount = c.getProducts().size();
         r.createdAt = c.getCreatedAt();
         r.updatedAt = c.getUpdatedAt();

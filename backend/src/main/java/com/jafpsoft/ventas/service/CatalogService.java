@@ -18,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -27,6 +28,7 @@ public class CatalogService {
     private final ProductRepository productRepository;
     private final ExcelService excelService;
     private final AiService aiService;
+    private final StorageService storageService;
 
     @Transactional(readOnly = true)
     public List<CatalogResponse> listByUser(Long userId) {
@@ -49,6 +51,7 @@ public class CatalogService {
                 .name(req.getName())
                 .description(req.getDescription())
                 .build();
+        applyAppearance(catalog, req);
         return CatalogResponse.from(catalogRepository.save(catalog), false);
     }
 
@@ -57,7 +60,16 @@ public class CatalogService {
         Catalog catalog = findOwned(id, userId);
         catalog.setName(req.getName());
         catalog.setDescription(req.getDescription());
+        applyAppearance(catalog, req);
         return CatalogResponse.from(catalogRepository.save(catalog), false);
+    }
+
+    private void applyAppearance(Catalog catalog, CatalogRequest req) {
+        if (req.getViewMode() != null) catalog.setViewMode(req.getViewMode());
+        if (req.getBackgroundType() != null) catalog.setBackgroundType(req.getBackgroundType());
+        if (req.getBackgroundColor() != null) catalog.setBackgroundColor(req.getBackgroundColor());
+        if (req.getBackgroundImageUrl() != null) catalog.setBackgroundImageUrl(req.getBackgroundImageUrl());
+        if (req.getBackgroundTemplateId() != null) catalog.setBackgroundTemplateId(req.getBackgroundTemplateId());
     }
 
     @Transactional
@@ -79,6 +91,7 @@ public class CatalogService {
                 .imageUrl(req.getImageUrl())
                 .sortOrder(req.getSortOrder())
                 .build();
+        applyStockFields(product, req);
         return ProductResponse.from(productRepository.save(product));
     }
 
@@ -94,7 +107,15 @@ public class CatalogService {
         product.setCategory(req.getCategory());
         product.setImageUrl(req.getImageUrl());
         product.setSortOrder(req.getSortOrder());
+        applyStockFields(product, req);
         return ProductResponse.from(productRepository.save(product));
+    }
+
+    private void applyStockFields(Product product, ProductRequest req) {
+        if (req.getShowStock() != null) product.setShowStock(req.getShowStock());
+        if (req.getStockStatus() != null) product.setStockStatus(req.getStockStatus());
+        if (req.getStockCount() != null) product.setStockCount(req.getStockCount());
+        if (req.getShowStockQuantity() != null) product.setShowStockQuantity(req.getShowStockQuantity());
     }
 
     @Transactional
@@ -152,6 +173,27 @@ public class CatalogService {
             catalogRepository.save(catalog);
             throw e;
         }
+    }
+
+    @Transactional
+    public Map<String, String> uploadProductImage(Long catalogId, Long productId, MultipartFile file, Long userId) throws IOException {
+        findOwned(catalogId, userId);
+        Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
+        String url = storageService.uploadImage(file, "products");
+        product.setImageUrl(url);
+        productRepository.save(product);
+        return Map.of("imageUrl", url);
+    }
+
+    @Transactional
+    public Map<String, String> uploadCatalogBackground(Long catalogId, MultipartFile file, Long userId) throws IOException {
+        Catalog catalog = findOwned(catalogId, userId);
+        String url = storageService.uploadImage(file, "catalog-backgrounds");
+        catalog.setBackgroundImageUrl(url);
+        catalog.setBackgroundType("CUSTOM");
+        catalogRepository.save(catalog);
+        return Map.of("backgroundImageUrl", url);
     }
 
     private Catalog findOwned(Long id, Long userId) {

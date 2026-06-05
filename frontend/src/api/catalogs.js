@@ -11,6 +11,22 @@ export const catalogsApi = {
   updateProduct: (catalogId, productId, data) => api.put(`/catalogs/${catalogId}/products/${productId}`, data),
   deleteProduct: (catalogId, productId) => api.delete(`/catalogs/${catalogId}/products/${productId}`),
 
+  uploadProductImage: (catalogId, productId, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/catalogs/${catalogId}/products/${productId}/upload-image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
+  uploadBackground: (catalogId, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/catalogs/${catalogId}/upload-background`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
   uploadExcel: (catalogId, file) => {
     const form = new FormData()
     form.append('file', file)

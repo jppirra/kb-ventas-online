@@ -17,4 +17,17 @@ export const adminApi = {
 
   // Email
   sendEmail: (data) => api.post('/admin/email/send', data),
+
+  // Background templates
+  backgrounds: () => api.get('/admin/backgrounds'),
+  createBackground: (data) => api.post('/admin/backgrounds', data),
+  updateBackground: (id, data) => api.put(`/admin/backgrounds/${id}`, data),
+  deleteBackground: (id) => api.delete(`/admin/backgrounds/${id}`),
+  uploadBackgroundImage: (id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/admin/backgrounds/${id}/upload-image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
 }

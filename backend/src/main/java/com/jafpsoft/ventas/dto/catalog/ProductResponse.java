@@ -17,6 +17,10 @@ public class ProductResponse {
     private String category;
     private String imageUrl;
     private Integer sortOrder;
+    private Boolean showStock;
+    private String stockStatus;
+    private Integer stockCount;
+    private Boolean showStockQuantity;
     private LocalDateTime createdAt;
 
     public static ProductResponse from(Product p) {
@@ -30,6 +34,10 @@ public class ProductResponse {
         r.category = p.getCategory();
         r.imageUrl = p.getImageUrl();
         r.sortOrder = p.getSortOrder();
+        r.showStock = p.isShowStock();
+        r.stockStatus = p.getStockStatus();
+        r.stockCount = p.getStockCount();
+        r.showStockQuantity = p.isShowStockQuantity();
         r.createdAt = p.getCreatedAt();
         return r;
     }

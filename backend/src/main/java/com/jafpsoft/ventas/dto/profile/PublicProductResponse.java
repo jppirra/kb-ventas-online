@@ -16,8 +16,9 @@ public class PublicProductResponse {
     private String category;
     private String imageUrl;
     private Integer sortOrder;
+    private Boolean showStock;
+    private String stockStatus;
     private Integer stockCount;
-    private Long whatsappClicks;
 
     public static PublicProductResponse from(Product p) {
         PublicProductResponse r = new PublicProductResponse();
@@ -30,8 +31,13 @@ public class PublicProductResponse {
         r.category = p.getCategory();
         r.imageUrl = p.getImageUrl();
         r.sortOrder = p.getSortOrder();
-        r.stockCount = p.getStockCount();
-        r.whatsappClicks = p.getWhatsappClicks();
+        if (p.isShowStock()) {
+            r.showStock = true;
+            r.stockStatus = p.getStockStatus();
+            if (p.isShowStockQuantity()) {
+                r.stockCount = p.getStockCount();
+            }
+        }
         return r;
     }
 }

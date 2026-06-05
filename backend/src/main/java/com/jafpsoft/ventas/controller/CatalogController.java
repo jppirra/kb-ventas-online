@@ -95,6 +95,23 @@ public class CatalogController {
         return ResponseEntity.accepted().body(Map.of("message", "Generación de contenido IA iniciada"));
     }
 
+    @PostMapping("/{id}/products/{productId}/upload-image")
+    public ResponseEntity<Map<String, String>> uploadProductImage(
+            @PathVariable Long id,
+            @PathVariable Long productId,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails user) throws IOException {
+        return ResponseEntity.ok(catalogService.uploadProductImage(id, productId, file, getUserId(user)));
+    }
+
+    @PostMapping("/{id}/upload-background")
+    public ResponseEntity<Map<String, String>> uploadBackground(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails user) throws IOException {
+        return ResponseEntity.ok(catalogService.uploadCatalogBackground(id, file, getUserId(user)));
+    }
+
     private Long getUserId(CustomUserDetails user) { return user.getUserId(); }
 }
 

@@ -13,6 +13,10 @@ public class PublicCatalogResponse {
     private String aiContent;
     private String coverImageUrl;
     private String viewMode;
+    private String backgroundType;
+    private String backgroundColor;
+    private String backgroundImageUrl;
+    private Long backgroundTemplateId;
     private Long viewCount;
     private List<PublicProductResponse> products;
 
@@ -24,6 +28,10 @@ public class PublicCatalogResponse {
         r.aiContent = c.getAiContent();
         r.coverImageUrl = c.getCoverImageUrl();
         r.viewMode = c.getViewMode();
+        r.backgroundType = c.getBackgroundType();
+        r.backgroundColor = c.getBackgroundColor();
+        r.backgroundImageUrl = c.getBackgroundImageUrl();
+        r.backgroundTemplateId = c.getBackgroundTemplateId();
         r.viewCount = c.getViewCount();
         r.products = c.getProducts().stream()
                 .sorted((a, b) -> {

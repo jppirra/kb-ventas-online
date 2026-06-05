@@ -22,6 +22,8 @@ export const profileApi = {
 
 export const publicApi = {
   getProfile: (slug) => axios.get(`${BASE_URL}/public/p/${slug}`),
+  getCatalog: (catalogId) => axios.get(`${BASE_URL}/public/catalog/${catalogId}`),
+  getBackgrounds: () => axios.get(`${BASE_URL}/public/backgrounds`),
   trackCatalogView: (catalogId) => axios.post(`${BASE_URL}/public/analytics/catalog/${catalogId}/view`).catch(() => {}),
   trackWhatsappClick: (productId) => axios.post(`${BASE_URL}/public/analytics/product/${productId}/whatsapp`).catch(() => {}),
 }
