@@ -1,0 +1,6 @@
+target/
+*.md
+mvnw
+mvnw.cmd
+.mvn/
+.git/
