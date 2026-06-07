@@ -233,6 +233,7 @@ function ShareButton({ url, catalogName }) {
 function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRemove, onClear }) {
   const [showModal, setShowModal] = useState(false)
   const [customerName, setCustomerName] = useState('')
+  const [customerPhone, setCustomerPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -260,6 +261,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
     setSubmitting(true)
     const payload = {
       customerName: customerName.trim() || null,
+      customerPhone: customerPhone.trim() || null,
       items: items.map(({ product, qty }) => ({
         productId: product.id,
         productName: product.name,
@@ -372,6 +374,14 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
                   value={customerName}
                   onChange={e => setCustomerName(e.target.value)}
                   placeholder="Ej: María García"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                />
+                <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1 mt-3">Tu teléfono <span className="text-gray-400">(opcional)</span></label>
+                <input
+                  type="tel"
+                  value={customerPhone}
+                  onChange={e => setCustomerPhone(e.target.value)}
+                  placeholder="Ej: 5491123456789"
                   className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
                 />
               </div>

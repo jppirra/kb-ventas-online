@@ -153,6 +153,7 @@ export default function Navbar() {
           {navLink('/catalogs', 'Catálogos')}
           {navLink('/stock', 'Stock')}
           {navLink('/locales', 'Locales')}
+          {navLink('/orders', 'Pedidos')}
           {navLink('/profile', 'Mi perfil')}
         </div>
         <div className="flex items-center gap-2">

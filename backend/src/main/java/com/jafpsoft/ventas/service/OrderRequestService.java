@@ -3,6 +3,8 @@ package com.jafpsoft.ventas.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jafpsoft.ventas.dto.order.OrderRequestPayload;
+import com.jafpsoft.ventas.dto.order.OrderResponse;
+import com.jafpsoft.ventas.dto.order.OrderUpdateRequest;
 import com.jafpsoft.ventas.model.Catalog;
 import com.jafpsoft.ventas.model.OrderRequest;
 import com.jafpsoft.ventas.model.User;
@@ -62,6 +64,7 @@ public class OrderRequestService {
                 .catalogName(catalog.getName())
                 .vendorUserId(vendor.getId())
                 .customerName(payload.getCustomerName())
+                .customerPhone(payload.getCustomerPhone())
                 .itemsJson(itemsJson)
                 .total(total)
                 .build());
@@ -90,6 +93,36 @@ public class OrderRequestService {
         );
 
         return order;
+    }
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> listForVendor(Long vendorUserId) {
+        return orderRequestRepository.findByVendorUserIdOrderByCreatedAtDesc(vendorUserId)
+                .stream()
+                .map(OrderResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public OrderResponse getForVendor(Long orderId, Long vendorUserId) {
+        return OrderResponse.from(findOwned(orderId, vendorUserId));
+    }
+
+    @Transactional
+    public OrderResponse update(Long orderId, Long vendorUserId, OrderUpdateRequest req) {
+        OrderRequest order = findOwned(orderId, vendorUserId);
+        if (req.getCustomerName() != null) order.setCustomerName(req.getCustomerName());
+        if (req.getCustomerPhone() != null) order.setCustomerPhone(req.getCustomerPhone());
+        if (req.getVendorNotes() != null) order.setVendorNotes(req.getVendorNotes());
+        if (req.getStatus() != null) order.setStatus(req.getStatus());
+        return OrderResponse.from(orderRequestRepository.save(order));
+    }
+
+    private OrderRequest findOwned(Long orderId, Long vendorUserId) {
+        OrderRequest o = orderRequestRepository.findById(orderId)
+                .orElseThrow(() -> new EntityNotFoundException("Pedido no encontrado"));
+        if (!o.getVendorUserId().equals(vendorUserId)) throw new EntityNotFoundException("Pedido no encontrado");
+        return o;
     }
 
     private String buildNotifMessage(String customer, List<OrderRequestPayload.Item> items, BigDecimal total) {

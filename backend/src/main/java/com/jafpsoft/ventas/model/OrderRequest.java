@@ -28,6 +28,12 @@ public class OrderRequest {
     @Column(name = "customer_name")
     private String customerName;
 
+    @Column(name = "customer_phone", length = 30)
+    private String customerPhone;
+
+    @Column(name = "vendor_notes", columnDefinition = "TEXT")
+    private String vendorNotes;
+
     @Column(name = "items_json", columnDefinition = "TEXT")
     private String itemsJson;
 

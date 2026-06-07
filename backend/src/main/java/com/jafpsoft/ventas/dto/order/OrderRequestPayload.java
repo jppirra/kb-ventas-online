@@ -8,6 +8,7 @@ import java.util.List;
 @Data
 public class OrderRequestPayload {
     private String customerName;
+    private String customerPhone;
     private List<Item> items;
 
     @Data
