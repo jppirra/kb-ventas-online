@@ -30,7 +30,7 @@ export default function Dashboard() {
           Hola, {user?.userName}
         </h1>
         <p className="text-gray-500 dark:text-slate-400 text-sm mb-8">
-          Bienvenido a CatalogIA — generador de catálogos de ventas con inteligencia artificial.
+          Bienvenido a Mercato — generador de catálogos de ventas con inteligencia artificial.
         </p>
 
         {/* Stats */}

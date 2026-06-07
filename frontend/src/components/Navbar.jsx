@@ -95,7 +95,6 @@ function NotificationBell() {
               </button>
             )}
           </div>
-
           <div className="max-h-96 overflow-y-auto">
             {loading ? (
               <div className="py-8 text-center text-sm text-gray-400 dark:text-slate-500">Cargando...</div>
@@ -126,42 +125,66 @@ function NotificationBell() {
   )
 }
 
+const NAV_LINKS = [
+  { to: '/catalogs', label: 'Catálogos' },
+  { to: '/stock', label: 'Stock' },
+  { to: '/locales', label: 'Locales' },
+  { to: '/orders', label: 'Pedidos' },
+  { to: '/profile', label: 'Mi perfil' },
+  { to: '/settings', label: 'Configuración' },
+]
+
 export default function Navbar() {
   const { logout, user } = useAuth()
   const location = useLocation()
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const menuRef = useRef(null)
 
-  const navLink = (to, label) => (
-    <Link
-      to={to}
-      className={`text-sm font-medium transition-colors ${
-        location.pathname.startsWith(to)
-          ? 'text-blue-600 dark:text-blue-400'
-          : 'text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white'
-      }`}
-    >
-      {label}
-    </Link>
-  )
+  // Cierra el menú al hacer click fuera
+  useEffect(() => {
+    function handleClick(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMobileOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  // Cierra al navegar
+  useEffect(() => { setMobileOpen(false) }, [location.pathname])
+
+  function isActive(to) {
+    return location.pathname.startsWith(to)
+  }
 
   return (
-    <nav className="sticky top-0 z-10 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700">
+    <nav className="sticky top-0 z-30 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700" ref={menuRef}>
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link to="/dashboard" className="font-bold text-gray-900 dark:text-white text-base tracking-tight">
-            CatalogIA
-          </Link>
-          {navLink('/catalogs', 'Catálogos')}
-          {navLink('/stock', 'Stock')}
-          {navLink('/locales', 'Locales')}
-          {navLink('/orders', 'Pedidos')}
-          {navLink('/profile', 'Mi perfil')}
-          {navLink('/settings', 'Configuración')}
+
+        {/* Logo */}
+        <Link to="/dashboard" className="font-bold text-gray-900 dark:text-white text-base tracking-tight shrink-0">
+          Mercato
+        </Link>
+
+        {/* Links desktop */}
+        <div className="hidden md:flex items-center gap-5 flex-1 ml-6">
+          {NAV_LINKS.map(({ to, label }) => (
+            <Link key={to} to={to}
+              className={`text-sm font-medium transition-colors ${
+                isActive(to)
+                  ? 'text-blue-600 dark:text-blue-400'
+                  : 'text-gray-600 dark:text-slate-300 hover:text-gray-900 dark:hover:text-white'
+              }`}>
+              {label}
+            </Link>
+          ))}
         </div>
+
+        {/* Acciones derecha */}
         <div className="flex items-center gap-2">
           {user?.appAdmin && (
             <Link
               to="/admin"
-              className="text-xs px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 font-medium transition-colors"
+              className="hidden sm:inline-flex text-xs px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 rounded-lg hover:bg-red-200 dark:hover:bg-red-900/60 font-medium transition-colors"
             >
               Admin
             </Link>
@@ -170,12 +193,57 @@ export default function Navbar() {
           <ThemeToggle />
           <button
             onClick={logout}
-            className="text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+            className="hidden md:block text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 px-3 py-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
           >
             Salir
           </button>
+
+          {/* Hamburguesa mobile */}
+          <button
+            onClick={() => setMobileOpen(v => !v)}
+            className="md:hidden p-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            aria-label="Menú"
+          >
+            {mobileOpen ? (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
+          </button>
         </div>
       </div>
+
+      {/* Menú mobile desplegable */}
+      {mobileOpen && (
+        <div className="md:hidden border-t border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 px-4 py-3 space-y-1">
+          {NAV_LINKS.map(({ to, label }) => (
+            <Link key={to} to={to}
+              className={`block px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                isActive(to)
+                  ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400'
+                  : 'text-gray-700 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'
+              }`}>
+              {label}
+            </Link>
+          ))}
+          {user?.appAdmin && (
+            <Link to="/admin"
+              className="block px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+              Admin
+            </Link>
+          )}
+          <div className="pt-2 border-t border-gray-100 dark:border-slate-700">
+            <button onClick={logout}
+              className="w-full text-left px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+              Cerrar sesión
+            </button>
+          </div>
+        </div>
+      )}
     </nav>
   )
 }

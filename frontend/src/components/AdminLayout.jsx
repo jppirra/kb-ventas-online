@@ -78,7 +78,7 @@ export default function AdminLayout({ children }) {
       <div className="flex items-center justify-between px-4 h-14 border-b border-gray-800 dark:border-slate-800">
         <div>
           <span className="text-white font-bold text-sm">Admin Panel</span>
-          <p className="text-gray-500 text-xs">CatalogIA</p>
+          <p className="text-gray-500 text-xs">Mercato</p>
         </div>
       </div>
 

@@ -942,7 +942,7 @@ export default function PublicCatalogPage() {
               : <span className="font-medium text-gray-600">{vendorName}</span>
             }
           </p>
-          <p>Desarrollado por <span className="font-medium text-gray-500">jafpsoft</span> · © {new Date().getFullYear()} Todos los derechos reservados</p>
+          <p>Desarrollado por <span className="font-medium text-gray-500">JAFPSoft</span> · © {new Date().getFullYear()} Todos los derechos reservados</p>
         </footer>
       </div>
 
