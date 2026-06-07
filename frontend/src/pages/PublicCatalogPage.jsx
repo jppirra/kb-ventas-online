@@ -819,15 +819,29 @@ export default function PublicCatalogPage() {
           <div className="max-w-5xl mx-auto px-4">
             <div className="flex items-end justify-between -mt-10 sm:-mt-12 mb-3">
               {/* Avatar */}
-              <div className="shrink-0">
-                {vendorProfileImageUrl ? (
-                  <img src={vendorProfileImageUrl} alt={vendorName}
-                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-md" />
+              <div className="shrink-0 relative z-10">
+                {vendorSlug ? (
+                  <Link to={`/p/${vendorSlug}`}>
+                    {vendorProfileImageUrl ? (
+                      <img src={vendorProfileImageUrl} alt={vendorName}
+                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-md hover:opacity-90 transition-opacity" />
+                    ) : (
+                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white shadow-md flex items-center justify-center text-white text-2xl font-bold hover:opacity-90 transition-opacity"
+                        style={{ backgroundColor: brandColor }}>
+                        {vendorName?.charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </Link>
                 ) : (
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white shadow-md flex items-center justify-center text-white text-2xl font-bold"
-                    style={{ backgroundColor: brandColor }}>
-                    {vendorName?.charAt(0).toUpperCase()}
-                  </div>
+                  vendorProfileImageUrl ? (
+                    <img src={vendorProfileImageUrl} alt={vendorName}
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-full object-cover border-4 border-white shadow-md" />
+                  ) : (
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white shadow-md flex items-center justify-center text-white text-2xl font-bold"
+                      style={{ backgroundColor: brandColor }}>
+                      {vendorName?.charAt(0).toUpperCase()}
+                    </div>
+                  )
                 )}
               </div>
               {/* WhatsApp button */}
@@ -840,19 +854,15 @@ export default function PublicCatalogPage() {
               )}
             </div>
 
-            {/* Name + bio + profile link */}
+            {/* Name */}
             <div className="pb-4">
-              <h2 className="text-xl font-bold text-gray-900">{vendorName}</h2>
-              {vendorBio && <p className="text-sm text-gray-500 mt-1 leading-relaxed max-w-xl">{vendorBio}</p>}
-              {vendorSlug && (
+              {vendorSlug ? (
                 <Link to={`/p/${vendorSlug}`}
-                  className="inline-flex items-center gap-1 mt-2 text-xs font-medium hover:underline"
-                  style={{ color: brandColor }}>
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Ver perfil completo
+                  className="text-xl font-bold text-gray-900 hover:underline">
+                  {vendorName}
                 </Link>
+              ) : (
+                <h2 className="text-xl font-bold text-gray-900">{vendorName}</h2>
               )}
             </div>
           </div>
