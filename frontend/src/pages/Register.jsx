@@ -5,11 +5,16 @@ import api from '../api/axios'
 
 export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [acceptedTerms, setAcceptedTerms] = useState(false)
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (!acceptedTerms) {
+      toast.error('Debés aceptar los términos y condiciones para registrarte.')
+      return
+    }
     setLoading(true)
     try {
       await api.post('/auth/register', form)
@@ -48,7 +53,22 @@ export default function Register() {
                 required className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl text-gray-900 dark:text-white bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
             </div>
           ))}
-          <button type="submit" disabled={loading}
+          <label className="flex items-start gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={e => setAcceptedTerms(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            />
+            <span className="text-sm text-gray-600 dark:text-slate-400">
+              Acepto los{' '}
+              <Link to="/terms" target="_blank" className="text-indigo-600 font-medium hover:underline">
+                términos y condiciones
+              </Link>
+              {' '}y soy responsable del contenido que publico.
+            </span>
+          </label>
+          <button type="submit" disabled={loading || !acceptedTerms}
             className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors">
             {loading ? 'Creando cuenta...' : 'Registrarse'}
           </button>

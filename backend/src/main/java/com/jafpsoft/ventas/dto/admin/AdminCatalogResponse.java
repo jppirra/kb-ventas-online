@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Data
 public class AdminCatalogResponse {
     private Long id;
+    private String publicId;
     private String name;
     private CatalogStatus status;
     private boolean active;
@@ -23,6 +24,7 @@ public class AdminCatalogResponse {
     public static AdminCatalogResponse from(Catalog c, User owner) {
         AdminCatalogResponse r = new AdminCatalogResponse();
         r.id = c.getId();
+        r.publicId = c.getPublicId();
         r.name = c.getName();
         r.status = c.getStatus();
         r.active = c.isActive();

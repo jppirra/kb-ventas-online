@@ -71,6 +71,12 @@ public class AdminController {
         return adminService.getAllOrders();
     }
 
+    // ── Reports ───────────────────────────────────────────────────────────────
+    @GetMapping("/reports")
+    public List<AdminReportResponse> reports() {
+        return adminService.getAdminReports();
+    }
+
     // ── Email ─────────────────────────────────────────────────────────────────
     @PostMapping("/email/send")
     public ResponseEntity<Map<String, String>> sendEmail(@Valid @RequestBody AdminEmailRequest req) {

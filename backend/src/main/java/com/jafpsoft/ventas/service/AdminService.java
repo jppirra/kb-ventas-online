@@ -2,10 +2,12 @@ package com.jafpsoft.ventas.service;
 
 import com.jafpsoft.ventas.dto.admin.*;
 import com.jafpsoft.ventas.model.Catalog;
+import com.jafpsoft.ventas.model.CatalogReport;
 import com.jafpsoft.ventas.model.CatalogStatus;
 import com.jafpsoft.ventas.model.OrderRequest;
 import com.jafpsoft.ventas.model.User;
 import com.jafpsoft.ventas.repository.CatalogRepository;
+import com.jafpsoft.ventas.repository.CatalogReportRepository;
 import com.jafpsoft.ventas.repository.OrderRequestRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
@@ -26,6 +28,7 @@ public class AdminService {
     private final CatalogRepository catalogRepository;
     private final ProductRepository productRepository;
     private final OrderRequestRepository orderRequestRepository;
+    private final CatalogReportRepository catalogReportRepository;
     private final EmailService emailService;
 
     @Transactional(readOnly = true)
@@ -123,6 +126,28 @@ public class AdminService {
         return orders.stream()
                 .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(o -> AdminOrderResponse.from(o, userMap.get(o.getVendorUserId())))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminReportResponse> getAdminReports() {
+        List<CatalogReport> reports = catalogReportRepository.findAll();
+        Map<Long, Catalog> catalogMap = catalogRepository.findAll().stream()
+                .collect(Collectors.toMap(Catalog::getId, c -> c));
+        Map<Long, User> userMap = userRepository.findAll().stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return reports.stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .map(r -> {
+                    Catalog cat = catalogMap.get(r.getCatalogId());
+                    String catalogName = cat != null ? cat.getName() : "Desconocido";
+                    User owner = cat != null ? userMap.get(cat.getUserId()) : null;
+                    String vendorName = owner != null ? owner.getName() : "Desconocido";
+                    String vendorEmail = owner != null ? owner.getEmail() : "";
+                    long total = catalogReportRepository.countByCatalogId(r.getCatalogId());
+                    return AdminReportResponse.from(r, catalogName, vendorName, vendorEmail, total);
+                })
                 .toList();
     }
 

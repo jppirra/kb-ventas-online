@@ -136,6 +136,21 @@ public class MigrationRunner implements ApplicationRunner {
 
         try {
             jdbc.execute(
+                "CREATE TABLE IF NOT EXISTS catalog_reports (" +
+                "  id BIGSERIAL PRIMARY KEY," +
+                "  catalog_id BIGINT NOT NULL," +
+                "  reason VARCHAR(50) NOT NULL," +
+                "  details TEXT," +
+                "  created_at TIMESTAMP NOT NULL DEFAULT NOW()" +
+                ")"
+            );
+            log.info("Migration applied: catalog_reports table");
+        } catch (Exception e) {
+            log.warn("Migration skipped for catalog_reports table: {}", e.getMessage());
+        }
+
+        try {
+            jdbc.execute(
                 "CREATE TABLE IF NOT EXISTS notifications (" +
                 "  id BIGSERIAL PRIMARY KEY," +
                 "  user_id BIGINT NOT NULL," +

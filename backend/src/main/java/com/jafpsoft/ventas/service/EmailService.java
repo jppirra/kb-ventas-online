@@ -82,6 +82,21 @@ public class EmailService {
     }
 
     @Async
+    public void sendCatalogPausedEmail(String toEmail, String vendorName, String catalogName, long reportCount) {
+        String body = """
+            Hola <strong>%s</strong>,<br><br>
+            Tu catálogo <strong>"%s"</strong> ha recibido <strong>%d denuncias</strong> de usuarios y ha sido pausado automáticamente para revisión.<br><br>
+            Nuestro equipo revisará el contenido y te contactará a la brevedad. Si considerás que fue un error, podés responder este email para iniciar el proceso de apelación.<br><br>
+            Mientras tanto, el catálogo no será visible para el público.
+            """.formatted(vendorName, catalogName, reportCount);
+        String html = buildActionEmail(
+                "Tu catálogo fue pausado",
+                body, null, null,
+                FROM_NAME + " — Notificación de moderación");
+        send(toEmail, "Catálogo pausado: " + catalogName, html);
+    }
+
+    @Async
     public void sendAdminEmail(String toEmail, String subject, String body) {
         String html = buildActionEmail(subject, body, null, null, FROM_NAME + " — Admin");
         send(toEmail, subject, html);

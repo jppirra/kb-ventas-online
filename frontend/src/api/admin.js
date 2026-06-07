@@ -13,6 +13,9 @@ export const adminApi = {
   // Orders
   orders: () => api.get('/admin/orders'),
 
+  // Reports
+  reports: () => api.get('/admin/reports'),
+
   // Catalogs
   catalogs: () => api.get('/admin/catalogs'),
   toggleCatalogActive: (id) => api.patch(`/admin/catalogs/${id}/toggle-active`),

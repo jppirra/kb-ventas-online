@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
+import { reportsApi } from '../api/reports'
 
 const STOCK_LABELS = { IN_STOCK: 'En stock', ON_DEMAND: 'A pedido' }
 const STOCK_COLORS = {
@@ -675,6 +676,11 @@ export default function PublicCatalogPage() {
   // variants selection per product: { [productId]: { VariantName: option } }
   const [variantSelections, setVariantSelections] = useState({})
   const viewedRef = useRef(false)
+  const [showReportModal, setShowReportModal] = useState(false)
+  const [reportReason, setReportReason] = useState('')
+  const [reportDetails, setReportDetails] = useState('')
+  const [reportLoading, setReportLoading] = useState(false)
+  const [reportDone, setReportDone] = useState(false)
 
   useEffect(() => {
     publicApi.getCatalog(catalogId)
@@ -943,6 +949,12 @@ export default function PublicCatalogPage() {
             }
           </p>
           <p>Desarrollado por <span className="font-medium text-gray-500">JAFPSoft</span> · © {new Date().getFullYear()} Todos los derechos reservados</p>
+          <button
+            onClick={() => setShowReportModal(true)}
+            className="mt-2 text-xs text-gray-400 hover:text-red-500 underline transition-colors"
+          >
+            Denunciar este catálogo
+          </button>
         </footer>
       </div>
 
@@ -967,6 +979,82 @@ export default function PublicCatalogPage() {
           productName={lightbox.productName}
           onClose={() => setLightbox(null)}
         />
+      )}
+
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 print:hidden">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6">
+            {reportDone ? (
+              <div className="text-center py-4">
+                <div className="text-4xl mb-3">✓</div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Denuncia enviada</h3>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Gracias por informarnos. Revisaremos el contenido.</p>
+                <button onClick={() => { setShowReportModal(false); setReportDone(false); setReportReason(''); setReportDetails('') }}
+                  className="px-4 py-2 bg-gray-900 text-white rounded-xl text-sm font-medium">
+                  Cerrar
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Denunciar catálogo</h3>
+                  <button onClick={() => setShowReportModal(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">Tu denuncia será revisada por nuestro equipo. Si el catálogo acumula múltiples denuncias será pausado.</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Motivo</label>
+                    <select
+                      value={reportReason}
+                      onChange={e => setReportReason(e.target.value)}
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="">Seleccioná un motivo...</option>
+                      <option value="inappropriate">Contenido inapropiado</option>
+                      <option value="spam">Spam / Publicidad engañosa</option>
+                      <option value="fake">Información falsa</option>
+                      <option value="scam">Posible estafa</option>
+                      <option value="other">Otro</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Detalles (opcional)</label>
+                    <textarea
+                      value={reportDetails}
+                      onChange={e => setReportDetails(e.target.value)}
+                      rows={3}
+                      placeholder="Describí brevemente el problema..."
+                      className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
+                    />
+                  </div>
+                  <button
+                    onClick={async () => {
+                      if (!reportReason) return
+                      setReportLoading(true)
+                      try {
+                        await reportsApi.report(catalogId, { reason: reportReason, details: reportDetails })
+                        setReportDone(true)
+                      } catch {
+                        // silent
+                        setReportDone(true)
+                      } finally {
+                        setReportLoading(false)
+                      }
+                    }}
+                    disabled={!reportReason || reportLoading}
+                    className="w-full py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-colors"
+                  >
+                    {reportLoading ? 'Enviando...' : 'Enviar denuncia'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </>
   )

@@ -4,10 +4,12 @@ import com.jafpsoft.ventas.dto.admin.BackgroundTemplateResponse;
 import com.jafpsoft.ventas.dto.order.OrderRequestPayload;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.dto.profile.PublicProfileResponse;
+import com.jafpsoft.ventas.dto.report.ReportRequest;
 import com.jafpsoft.ventas.dto.store.PublicStoreResponse;
 import com.jafpsoft.ventas.service.BackgroundTemplateService;
 import com.jafpsoft.ventas.service.OrderRequestService;
 import com.jafpsoft.ventas.service.PublicProfileService;
+import com.jafpsoft.ventas.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +25,7 @@ public class PublicController {
     private final PublicProfileService publicProfileService;
     private final BackgroundTemplateService backgroundTemplateService;
     private final OrderRequestService orderRequestService;
+    private final ReportService reportService;
 
     @GetMapping("/p/{slug}")
     public PublicProfileResponse getProfile(@PathVariable String slug) {
@@ -62,5 +65,13 @@ public class PublicController {
             @RequestBody OrderRequestPayload payload) {
         var order = orderRequestService.submit(catalogId, payload);
         return ResponseEntity.ok(Map.of("orderId", order.getId()));
+    }
+
+    @PostMapping("/catalog/{publicId}/report")
+    public ResponseEntity<Map<String, String>> reportCatalog(
+            @PathVariable String publicId,
+            @RequestBody ReportRequest req) {
+        reportService.report(publicId, req.getReason(), req.getDetails());
+        return ResponseEntity.ok(Map.of("message", "Denuncia registrada"));
     }
 }
