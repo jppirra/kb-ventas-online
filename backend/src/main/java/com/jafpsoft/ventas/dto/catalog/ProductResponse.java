@@ -27,6 +27,9 @@ public class ProductResponse {
     private Integer stockCount;
     private Boolean showStockQuantity;
     private Boolean showWhenOutOfStock;
+    private String extraImagesJson;
+    private String videoUrl;
+    private String variantsJson;
     private LocalDateTime createdAt;
 
     public static ProductResponse from(Product p) {
@@ -50,6 +53,9 @@ public class ProductResponse {
         r.stockCount = p.getStockCount();
         r.showStockQuantity = p.isShowStockQuantity();
         r.showWhenOutOfStock = p.isShowWhenOutOfStock();
+        r.extraImagesJson = p.getExtraImagesJson();
+        r.videoUrl = p.getVideoUrl();
+        r.variantsJson = p.getVariantsJson();
         r.createdAt = p.getCreatedAt();
         return r;
     }

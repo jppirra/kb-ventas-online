@@ -103,6 +103,24 @@ public class MigrationRunner implements ApplicationRunner {
             log.warn("Migration skipped for order_requests table: {}", e.getMessage());
         }
 
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='extra_images_json'",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS extra_images_json TEXT",
+            "extra_images_json column"
+        );
+
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='video_url'",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS video_url TEXT",
+            "video_url column"
+        );
+
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='variants_json'",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS variants_json TEXT",
+            "variants_json column"
+        );
+
         try {
             jdbc.execute(
                 "CREATE TABLE IF NOT EXISTS notifications (" +

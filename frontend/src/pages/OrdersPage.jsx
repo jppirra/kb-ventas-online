@@ -230,6 +230,35 @@ function OrderCard({ order, onUpdated }) {
 
 const STATUS_FILTER_OPTIONS = [{ value: '', label: 'Todos' }, ...STATUS_OPTIONS]
 
+function exportToCSV(orders) {
+  const rows = [
+    ['ID', 'Cliente', 'Teléfono', 'Catálogo', 'Total', 'Estado', 'Fecha', 'Notas', 'Productos']
+  ]
+  orders.forEach(o => {
+    const items = (() => { try { return JSON.parse(o.itemsJson) || [] } catch { return [] } })()
+    const productsStr = items.map(i => `${i.productName} x${i.quantity}`).join(' | ')
+    rows.push([
+      o.id,
+      o.customerName || '',
+      o.customerPhone || '',
+      o.catalogName || '',
+      o.total != null ? Number(o.total).toFixed(2) : '',
+      statusMeta(o.status).label,
+      formatDate(o.createdAt),
+      o.vendorNotes || '',
+      productsStr,
+    ])
+  })
+  const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `pedidos-${new Date().toISOString().slice(0, 10)}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function OrdersPage() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
@@ -263,12 +292,21 @@ export default function OrdersPage() {
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Pedidos</h1>
             {pendingCount > 0 && (
               <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 text-xs font-semibold rounded-full">
                 {pendingCount} pendiente{pendingCount !== 1 ? 's' : ''}
               </span>
+            )}
+            {orders.length > 0 && (
+              <button onClick={() => exportToCSV(filtered.length > 0 ? filtered : orders)}
+                className="ml-auto flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 text-xs font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Exportar CSV
+              </button>
             )}
           </div>
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{orders.length} pedido{orders.length !== 1 ? 's' : ''} en total</p>

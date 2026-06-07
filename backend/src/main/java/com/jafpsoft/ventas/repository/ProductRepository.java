@@ -15,6 +15,8 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<Product> findByIdAndUserId(Long id, Long userId);
 
+    long countByUserId(Long userId);
+
     @Modifying
     @Query("UPDATE Product p SET p.catalog = null WHERE p.catalog.id = :catalogId")
     void unlinkAllFromCatalog(@Param("catalogId") Long catalogId);

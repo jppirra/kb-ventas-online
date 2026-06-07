@@ -22,4 +22,7 @@ public class ProductRequest {
     private Integer stockCount;
     private Boolean showStockQuantity;
     private Boolean showWhenOutOfStock;
+    private String extraImagesJson;
+    private String videoUrl;
+    private String variantsJson;
 }

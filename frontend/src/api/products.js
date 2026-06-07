@@ -12,4 +12,11 @@ export const productsApi = {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
   },
+  uploadGalleryImage: (id, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/products/${id}/upload-gallery-image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
 }

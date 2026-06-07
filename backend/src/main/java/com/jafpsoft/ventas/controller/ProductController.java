@@ -57,5 +57,13 @@ public class ProductController {
         return ResponseEntity.ok(productService.uploadImage(id, file, userId(user)));
     }
 
+    @PostMapping("/{id}/upload-gallery-image")
+    public ResponseEntity<Map<String, String>> uploadGalleryImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails user) throws IOException {
+        return ResponseEntity.ok(productService.uploadGalleryImage(id, file, userId(user)));
+    }
+
     private Long userId(CustomUserDetails user) { return user.getUserId(); }
 }

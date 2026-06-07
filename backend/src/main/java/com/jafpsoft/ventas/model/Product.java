@@ -71,6 +71,15 @@ public class Product {
     @Builder.Default
     private Long whatsappClicks = 0L;
 
+    @Column(name = "extra_images_json", columnDefinition = "TEXT")
+    private String extraImagesJson;
+
+    @Column(name = "video_url", columnDefinition = "TEXT")
+    private String videoUrl;
+
+    @Column(name = "variants_json", columnDefinition = "TEXT")
+    private String variantsJson;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

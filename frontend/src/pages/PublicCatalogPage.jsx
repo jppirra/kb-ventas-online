@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
 
@@ -11,9 +11,20 @@ const STOCK_COLORS = {
 function StockBadge({ stockStatus, stockCount }) {
   if (!stockStatus) return null
   return (
-    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium print:border print:border-current ${STOCK_COLORS[stockStatus] || 'bg-gray-100 text-gray-600'}`}>
+    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${STOCK_COLORS[stockStatus] || 'bg-gray-100 text-gray-600'}`}>
       {STOCK_LABELS[stockStatus] || stockStatus}
       {stockCount != null && <span>({stockCount})</span>}
+    </span>
+  )
+}
+
+function DiscountBadge({ price, offerPrice }) {
+  if (!price || !offerPrice) return null
+  const pct = Math.round((1 - Number(offerPrice) / Number(price)) * 100)
+  if (pct <= 0) return null
+  return (
+    <span className="inline-block px-1.5 py-0.5 bg-red-500 text-white text-xs font-bold rounded-md leading-none">
+      -{pct}%
     </span>
   )
 }
@@ -22,10 +33,13 @@ function PriceDisplay({ price, offerPrice, size = 'sm' }) {
   const bold = size === 'base' ? 'text-base' : 'text-sm'
   if (offerPrice != null) {
     return (
-      <div className="flex flex-col items-end">
-        <span className={`${bold} font-bold text-green-600 dark:text-green-400 leading-tight`}>
-          ${Number(offerPrice).toLocaleString('es-AR')}
-        </span>
+      <div className="flex flex-col items-end gap-0.5">
+        <div className="flex items-center gap-1">
+          <DiscountBadge price={price} offerPrice={offerPrice} />
+          <span className={`${bold} font-bold text-green-600 dark:text-green-400 leading-tight`}>
+            ${Number(offerPrice).toLocaleString('es-AR')}
+          </span>
+        </div>
         {price != null && (
           <span className="text-xs text-gray-400 line-through leading-tight">
             ${Number(price).toLocaleString('es-AR')}
@@ -44,7 +58,171 @@ function PriceDisplay({ price, offerPrice, size = 'sm' }) {
   return null
 }
 
-function AddToCartButton({ inCart, onAdd, onRemove }) {
+// Gallery helpers
+function parseExtraImages(json) {
+  try { return JSON.parse(json) || [] } catch { return [] }
+}
+
+function isYouTube(url) {
+  return url && (url.includes('youtube.com') || url.includes('youtu.be'))
+}
+
+function getYouTubeId(url) {
+  if (!url) return null
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([^&?\s]+)/)
+  return m ? m[1] : null
+}
+
+function getGalleryItems(product) {
+  const items = []
+  if (product.imageUrl) items.push({ type: 'image', url: product.imageUrl })
+  parseExtraImages(product.extraImagesJson).forEach(url => items.push({ type: 'image', url }))
+  if (product.videoUrl) {
+    items.push({ type: isYouTube(product.videoUrl) ? 'youtube' : 'video', url: product.videoUrl })
+  }
+  return items
+}
+
+function LightboxModal({ items, startIndex, productName, onClose }) {
+  const [current, setCurrent] = useState(startIndex)
+
+  const prev = useCallback(() => setCurrent(c => Math.max(0, c - 1)), [])
+  const next = useCallback(() => setCurrent(c => Math.min(items.length - 1, c + 1)), [items.length])
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'ArrowLeft') prev()
+      else if (e.key === 'ArrowRight') next()
+      else if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [prev, next, onClose])
+
+  const item = items[current]
+
+  return (
+    <div className="fixed inset-0 bg-black/95 z-50 flex flex-col" onClick={onClose}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 shrink-0" onClick={e => e.stopPropagation()}>
+        <span className="text-white font-medium text-sm truncate">{productName}</span>
+        <div className="flex items-center gap-3">
+          <span className="text-gray-400 text-xs">{current + 1} / {items.length}</span>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-1">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex-1 flex items-center justify-center relative overflow-hidden px-12" onClick={e => e.stopPropagation()}>
+        {/* Prev arrow */}
+        {current > 0 && (
+          <button onClick={prev}
+            className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors z-10">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+        )}
+
+        {/* Content */}
+        <div className="max-w-3xl w-full flex items-center justify-center">
+          {item.type === 'image' && (
+            <img src={item.url} alt={productName}
+              className="max-h-[65vh] max-w-full object-contain rounded-xl select-none"
+              draggable={false} />
+          )}
+          {item.type === 'youtube' && (
+            <div className="w-full aspect-video">
+              <iframe
+                src={`https://www.youtube.com/embed/${getYouTubeId(item.url)}?autoplay=1`}
+                title={productName}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full rounded-xl"
+              />
+            </div>
+          )}
+          {item.type === 'video' && (
+            <video src={item.url} controls autoPlay
+              className="max-h-[65vh] max-w-full rounded-xl">
+              Tu navegador no soporta video.
+            </video>
+          )}
+        </div>
+
+        {/* Next arrow */}
+        {current < items.length - 1 && (
+          <button onClick={next}
+            className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors z-10">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        )}
+      </div>
+
+      {/* Thumbnail strip */}
+      {items.length > 1 && (
+        <div className="flex gap-2 justify-center px-4 py-3 shrink-0 overflow-x-auto" onClick={e => e.stopPropagation()}>
+          {items.map((it, i) => (
+            <button key={i} onClick={() => setCurrent(i)}
+              className={`w-14 h-14 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${i === current ? 'border-white' : 'border-transparent opacity-60 hover:opacity-80'}`}>
+              {it.type === 'image' ? (
+                <img src={it.url} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Variant selector
+function parseVariants(json) {
+  try { return JSON.parse(json) || [] } catch { return [] }
+}
+
+function VariantSelector({ variantsJson, selected, onChange }) {
+  const variants = parseVariants(variantsJson)
+  if (!variants.length) return null
+  return (
+    <div className="space-y-2 mt-1">
+      {variants.map(v => (
+        <div key={v.name}>
+          <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">{v.name}</p>
+          <div className="flex flex-wrap gap-1">
+            {v.options.map(opt => (
+              <button key={opt} type="button"
+                onClick={() => onChange({ ...selected, [v.name]: opt })}
+                className={`px-2 py-1 text-xs rounded-lg border transition-colors ${
+                  selected[v.name] === opt
+                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium'
+                    : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-400'
+                }`}>
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function AddToCartButton({ inCart, onAdd, onRemove, hasVariants, variantSelected }) {
+  const allSelected = !hasVariants || variantSelected
   if (inCart) {
     return (
       <button onClick={onRemove}
@@ -57,33 +235,58 @@ function AddToCartButton({ inCart, onAdd, onRemove }) {
     )
   }
   return (
-    <button onClick={onAdd}
-      className="mt-1 w-full py-2 rounded-xl bg-gray-900 hover:bg-gray-700 dark:bg-slate-600 dark:hover:bg-slate-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors print:hidden">
+    <button onClick={allSelected ? onAdd : undefined}
+      disabled={!allSelected}
+      className={`mt-1 w-full py-2 rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors print:hidden ${
+        allSelected
+          ? 'bg-gray-900 hover:bg-gray-700 dark:bg-slate-600 dark:hover:bg-slate-500'
+          : 'bg-gray-300 dark:bg-slate-700 cursor-not-allowed'
+      }`}>
       <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
       </svg>
-      Agregar al pedido
+      {allSelected ? 'Agregar al pedido' : 'Elegí variante'}
     </button>
   )
 }
 
-function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, onAdd, onRemove }) {
+function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery }) {
+  const galleryItems = getGalleryItems(product)
+  const hasGallery = galleryItems.length > 1
+  const variants = parseVariants(product.variantsJson)
+  const hasVariants = variants.length > 0
+  const variantLabel = Object.entries(selectedVariants || {}).map(([k, v]) => `${k}: ${v}`).join(', ')
+
   function handleWhatsapp() {
     const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
     window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
   }
 
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-2xl border overflow-hidden flex flex-col print:break-inside-avoid print:border print:border-gray-200 transition-colors ${inCart ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-gray-100 dark:border-slate-700'}`}>
-      {product.imageUrl ? (
-        <img src={product.imageUrl} alt={product.name} className="w-full aspect-square object-cover" />
-      ) : (
-        <div className="w-full aspect-square bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-        </div>
-      )}
+    <div className={`bg-white dark:bg-slate-800 rounded-2xl border overflow-hidden flex flex-col print:break-inside-avoid transition-colors ${inCart ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-gray-100 dark:border-slate-700'}`}>
+      {/* Image */}
+      <div className="relative">
+        {product.imageUrl ? (
+          <img src={product.imageUrl} alt={product.name} className="w-full aspect-square object-cover cursor-pointer"
+            onClick={() => galleryItems.length > 0 && onOpenGallery(galleryItems, 0)} />
+        ) : (
+          <div className="w-full aspect-square bg-gray-100 dark:bg-slate-700 flex items-center justify-center cursor-pointer"
+            onClick={() => galleryItems.length > 0 && onOpenGallery(galleryItems, 0)}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )}
+        {hasGallery && (
+          <button onClick={() => onOpenGallery(galleryItems, 0)}
+            className="absolute bottom-2 right-2 bg-black/60 text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1 print:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            {galleryItems.length}
+          </button>
+        )}
+      </div>
       <div className="p-4 flex flex-col flex-1 gap-2">
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{product.name}</h4>
@@ -98,7 +301,11 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, onAdd, 
           <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1">{product.description}</p>
         ) : null}
         {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
-        <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} />
+        {hasVariants && (
+          <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
+        )}
+        <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} hasVariants={hasVariants}
+          variantSelected={!hasVariants || (selectedVariants && Object.keys(selectedVariants).length === variants.length)} />
         {vendorWhatsapp && (
           <button onClick={handleWhatsapp}
             className="w-full py-1.5 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium flex items-center justify-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors print:hidden">
@@ -111,23 +318,38 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, onAdd, 
   )
 }
 
-function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, onAdd, onRemove }) {
+function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery }) {
+  const galleryItems = getGalleryItems(product)
+  const hasGallery = galleryItems.length > 1
+  const variants = parseVariants(product.variantsJson)
+  const hasVariants = variants.length > 0
+
   function handleWhatsapp() {
     const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
     window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
   }
 
   return (
-    <div className={`bg-white dark:bg-slate-800 rounded-2xl border overflow-hidden flex print:break-inside-avoid print:border print:border-gray-200 transition-colors ${inCart ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-gray-100 dark:border-slate-700'}`}>
-      <div className="w-32 sm:w-44 shrink-0">
+    <div className={`bg-white dark:bg-slate-800 rounded-2xl border overflow-hidden flex print:break-inside-avoid transition-colors ${inCart ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-gray-100 dark:border-slate-700'}`}>
+      <div className="w-32 sm:w-44 shrink-0 relative">
         {product.imageUrl ? (
-          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
+          <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover cursor-pointer"
+            onClick={() => galleryItems.length > 0 && onOpenGallery(galleryItems, 0)} />
         ) : (
           <div className="w-full h-full min-h-[7rem] bg-gray-100 dark:bg-slate-700 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
+        )}
+        {hasGallery && (
+          <button onClick={() => onOpenGallery(galleryItems, 0)}
+            className="absolute bottom-1 right-1 bg-black/60 text-white text-xs px-1.5 py-0.5 rounded-md flex items-center gap-1 print:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            {galleryItems.length}
+          </button>
         )}
       </div>
       <div className="p-4 flex flex-col flex-1 gap-1.5">
@@ -145,8 +367,12 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, onAdd, 
           <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{product.description}</p>
         ) : null}
         {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
+        {hasVariants && (
+          <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
+        )}
         <div className="flex items-center gap-2 mt-auto pt-2 flex-wrap print:hidden">
-          <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} />
+          <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} hasVariants={hasVariants}
+            variantSelected={!hasVariants || (selectedVariants && Object.keys(selectedVariants).length === variants.length)} />
           {vendorWhatsapp && (
             <button onClick={handleWhatsapp}
               className="px-3 py-1.5 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium flex items-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
@@ -205,7 +431,7 @@ function ShareButton({ url, catalogName }) {
   return (
     <div className="relative">
       <button onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition-colors">
+        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition-colors bg-white/90 backdrop-blur-sm shadow-sm">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
         </svg>
@@ -244,10 +470,13 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
   }, 0)
 
   function buildWhatsappMsg(name) {
-    const lines = items.map(({ product, qty }) => {
+    const lines = items.map(({ product, qty, variants }) => {
       const price = product.offerPrice ?? product.price
       const priceStr = price != null ? ` — $${Number(price).toLocaleString('es-AR')}` : ''
-      return `• ${product.name} × ${qty}${priceStr}`
+      const varStr = variants && Object.keys(variants).length > 0
+        ? ` (${Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})`
+        : ''
+      return `• ${product.name}${varStr} × ${qty}${priceStr}`
     })
     const totalStr = total > 0 ? `\n\n💰 Total estimado: $${total.toLocaleString('es-AR')}` : ''
     const nameStr = name?.trim() ? `\n\nMi nombre: ${name.trim()}` : ''
@@ -262,9 +491,10 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
     const payload = {
       customerName: customerName.trim() || null,
       customerPhone: customerPhone.trim() || null,
-      items: items.map(({ product, qty }) => ({
+      items: items.map(({ product, qty, variants }) => ({
         productId: product.id,
-        productName: product.name,
+        productName: product.name + (variants && Object.keys(variants).length > 0
+          ? ` (${Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''),
         price: product.price,
         offerPrice: product.offerPrice,
         quantity: qty,
@@ -273,7 +503,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
     try {
       await publicApi.submitOrderRequest(catalogId, payload)
     } catch {
-      // silently continue — WhatsApp still opens
+      // silently continue
     }
     const msg = buildWhatsappMsg(customerName)
     window.open(`https://wa.me/${vendorWhatsapp || ''}?text=${msg}`, '_blank')
@@ -319,9 +549,16 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
             </div>
 
             <div className="flex flex-col gap-1.5 mb-3 max-h-36 overflow-y-auto">
-              {items.map(({ product, qty }) => (
+              {items.map(({ product, qty, variants }) => (
                 <div key={product.id} className="flex items-center gap-2 text-sm">
-                  <span className="flex-1 text-gray-700 dark:text-slate-200 truncate">{product.name}</span>
+                  <span className="flex-1 text-gray-700 dark:text-slate-200 truncate">
+                    {product.name}
+                    {variants && Object.keys(variants).length > 0 && (
+                      <span className="text-xs text-gray-400 ml-1">
+                        ({Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})
+                      </span>
+                    )}
+                  </span>
                   <div className="flex items-center gap-1 shrink-0">
                     <button onClick={() => onUpdateQty(product.id, qty - 1)}
                       className="w-6 h-6 rounded-full border border-gray-300 dark:border-slate-600 flex items-center justify-center text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 text-xs font-bold transition-colors">
@@ -386,11 +623,13 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
                 />
               </div>
               <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 space-y-1.5">
-                {items.map(({ product, qty }) => {
+                {items.map(({ product, qty, variants }) => {
                   const price = product.offerPrice ?? product.price
+                  const varStr = variants && Object.keys(variants).length > 0
+                    ? ` (${Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''
                   return (
                     <div key={product.id} className="flex justify-between text-sm">
-                      <span className="text-gray-700 dark:text-slate-200">{product.name} × {qty}</span>
+                      <span className="text-gray-700 dark:text-slate-200">{product.name}{varStr} × {qty}</span>
                       {price != null && (
                         <span className="text-gray-500 dark:text-slate-400">${(Number(price) * qty).toLocaleString('es-AR')}</span>
                       )}
@@ -427,15 +666,26 @@ export default function PublicCatalogPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [activeCategory, setActiveCategory] = useState(null)
+  const [search, setSearch] = useState('')
   const [showQR, setShowQR] = useState(false)
-  // cart: { [productId]: { product, qty } }
+  const [lightbox, setLightbox] = useState(null) // { items, startIndex, productName }
+  // cart: { [productId]: { product, qty, variants } }
   const [cart, setCart] = useState({})
+  // variants selection per product: { [productId]: { VariantName: option } }
+  const [variantSelections, setVariantSelections] = useState({})
   const viewedRef = useRef(false)
 
   useEffect(() => {
     publicApi.getCatalog(catalogId)
       .then(({ data: d }) => {
         setData(d)
+        // SEO meta tags
+        document.title = `${d.catalog.name} — ${d.vendorName}`
+        setOrUpdateMeta('og:title', `${d.catalog.name} — ${d.vendorName}`)
+        setOrUpdateMeta('og:description', d.catalog.description || d.catalog.aiContent || `Catálogo de ${d.vendorName}`)
+        if (d.catalog.coverImageUrl) setOrUpdateMeta('og:image', d.catalog.coverImageUrl)
+        setOrUpdateMeta('og:url', window.location.href)
+        setOrUpdateMeta('og:type', 'website')
         if (!viewedRef.current) {
           viewedRef.current = true
           publicApi.trackCatalogView(d.catalog.id)
@@ -445,8 +695,23 @@ export default function PublicCatalogPage() {
       .finally(() => setLoading(false))
   }, [catalogId])
 
+  function setOrUpdateMeta(property, content) {
+    if (!content) return
+    let el = document.querySelector(`meta[property="${property}"]`)
+    if (!el) {
+      el = document.createElement('meta')
+      el.setAttribute('property', property)
+      document.head.appendChild(el)
+    }
+    el.setAttribute('content', content)
+  }
+
   function addToCart(product) {
-    setCart(c => ({ ...c, [product.id]: { product, qty: (c[product.id]?.qty || 0) + 1 } }))
+    const vs = variantSelections[product.id] || {}
+    setCart(c => ({
+      ...c,
+      [product.id]: { product, qty: (c[product.id]?.qty || 0) + 1, variants: vs }
+    }))
   }
   function removeFromCart(productId) {
     setCart(c => { const n = { ...c }; delete n[productId]; return n })
@@ -485,7 +750,13 @@ export default function PublicCatalogPage() {
 
   const allProducts = catalog.products || []
   const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
-  const visibleProducts = activeCategory ? allProducts.filter(p => p.category === activeCategory) : allProducts
+
+  const visibleProducts = allProducts.filter(p => {
+    const matchCat = !activeCategory || p.category === activeCategory
+    const q = search.toLowerCase()
+    const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q)
+    return matchCat && matchSearch
+  })
 
   return (
     <>
@@ -583,30 +854,46 @@ export default function PublicCatalogPage() {
               {catalog.aiContent && <p className="text-gray-500 text-sm italic mt-2 max-w-2xl leading-relaxed">{catalog.aiContent}</p>}
             </div>
 
-            {/* Category filter */}
-            {categories.length > 0 && (
-              <div className="flex gap-2 flex-wrap mb-6 print:hidden">
-                <button onClick={() => setActiveCategory(null)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === null ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
-                  Todos ({allProducts.length})
-                </button>
-                {categories.map(cat => (
-                  <button key={cat} onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
-                    {cat} ({allProducts.filter(p => p.category === cat).length})
+            {/* Search + Category filter */}
+            <div className="mb-6 print:hidden space-y-3">
+              <input
+                type="text"
+                placeholder="Buscar producto..."
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                className="w-full sm:max-w-sm px-4 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm shadow-sm"
+              />
+              {categories.length > 0 && (
+                <div className="flex gap-2 flex-wrap">
+                  <button onClick={() => setActiveCategory(null)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === null ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                    Todos ({allProducts.length})
                   </button>
-                ))}
-              </div>
-            )}
+                  {categories.map(cat => (
+                    <button key={cat} onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                      {cat} ({allProducts.filter(p => p.category === cat).length})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
             {/* Products */}
             {visibleProducts.length === 0 ? (
-              <div className="text-center py-16 text-gray-400">Sin productos en este catálogo.</div>
+              <div className="text-center py-16 text-gray-400">
+                {search ? `Sin resultados para "${search}".` : 'Sin productos en este catálogo.'}
+              </div>
             ) : viewMode === 'LIST' ? (
               <div className="flex flex-col gap-4">
                 {visibleProducts.map(p => (
                   <ProductCardList key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
-                    inCart={!!cart[p.id]} onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)} />
+                    inCart={!!cart[p.id]}
+                    selectedVariants={variantSelections[p.id] || {}}
+                    onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
+                    onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
+                    onOpenGallery={(items, idx) => setLightbox({ items, startIndex: idx, productName: p.name })}
+                  />
                 ))}
               </div>
             ) : viewMode === 'MOSAIC' ? (
@@ -614,7 +901,12 @@ export default function PublicCatalogPage() {
                 {visibleProducts.map(p => (
                   <div key={p.id} className="break-inside-avoid">
                     <ProductCardGrid product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
-                      inCart={!!cart[p.id]} onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)} />
+                      inCart={!!cart[p.id]}
+                      selectedVariants={variantSelections[p.id] || {}}
+                      onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
+                      onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
+                      onOpenGallery={(items, idx) => setLightbox({ items, startIndex: idx, productName: p.name })}
+                    />
                   </div>
                 ))}
               </div>
@@ -622,7 +914,12 @@ export default function PublicCatalogPage() {
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {visibleProducts.map(p => (
                   <ProductCardGrid key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
-                    inCart={!!cart[p.id]} onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)} />
+                    inCart={!!cart[p.id]}
+                    selectedVariants={variantSelections[p.id] || {}}
+                    onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
+                    onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
+                    onOpenGallery={(items, idx) => setLightbox({ items, startIndex: idx, productName: p.name })}
+                  />
                 ))}
               </div>
             )}
@@ -648,6 +945,15 @@ export default function PublicCatalogPage() {
       )}
 
       {showQR && <QRModal url={pageUrl} catalogName={catalog.name} onClose={() => setShowQR(false)} />}
+
+      {lightbox && (
+        <LightboxModal
+          items={lightbox.items}
+          startIndex={lightbox.startIndex}
+          productName={lightbox.productName}
+          onClose={() => setLightbox(null)}
+        />
+      )}
     </>
   )
 }

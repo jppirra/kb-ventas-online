@@ -12,9 +12,13 @@ public class PublicProductResponse {
     private String description;
     private String aiDescription;
     private BigDecimal price;
+    private BigDecimal offerPrice;
     private String sku;
     private String category;
     private String imageUrl;
+    private String extraImagesJson;
+    private String videoUrl;
+    private String variantsJson;
     private Integer sortOrder;
     private Boolean showStock;
     private String stockStatus;
@@ -27,9 +31,13 @@ public class PublicProductResponse {
         r.description = p.getDescription();
         r.aiDescription = p.getAiDescription();
         r.price = p.getPrice();
+        r.offerPrice = p.getOfferPrice();
         r.sku = p.getSku();
         r.category = p.getCategory();
         r.imageUrl = p.getImageUrl();
+        r.extraImagesJson = p.getExtraImagesJson();
+        r.videoUrl = p.getVideoUrl();
+        r.variantsJson = p.getVariantsJson();
         r.sortOrder = p.getSortOrder();
         if (p.isShowStock()) {
             r.showStock = true;

@@ -42,6 +42,9 @@ public class ProductService {
                 .category(req.getCategory())
                 .imageUrl(req.getImageUrl())
                 .sortOrder(req.getSortOrder())
+                .extraImagesJson(req.getExtraImagesJson())
+                .videoUrl(req.getVideoUrl())
+                .variantsJson(req.getVariantsJson())
                 .active(true)
                 .build();
         applyStockFields(product, req);
@@ -59,6 +62,9 @@ public class ProductService {
         product.setCategory(req.getCategory());
         product.setImageUrl(req.getImageUrl());
         product.setSortOrder(req.getSortOrder());
+        product.setExtraImagesJson(req.getExtraImagesJson());
+        product.setVideoUrl(req.getVideoUrl());
+        product.setVariantsJson(req.getVariantsJson());
         if (req.getActive() != null) product.setActive(req.getActive());
         applyStockFields(product, req);
         return ProductResponse.from(productRepository.save(product));
@@ -76,6 +82,12 @@ public class ProductService {
         String url = storageService.uploadImage(file, "products");
         product.setImageUrl(url);
         productRepository.save(product);
+        return Map.of("imageUrl", url);
+    }
+
+    public Map<String, String> uploadGalleryImage(Long productId, MultipartFile file, Long userId) throws IOException {
+        findOwned(productId, userId);
+        String url = storageService.uploadImage(file, "products");
         return Map.of("imageUrl", url);
     }
 
