@@ -3,8 +3,10 @@ package com.jafpsoft.ventas.service;
 import com.jafpsoft.ventas.dto.admin.*;
 import com.jafpsoft.ventas.model.Catalog;
 import com.jafpsoft.ventas.model.CatalogStatus;
+import com.jafpsoft.ventas.model.OrderRequest;
 import com.jafpsoft.ventas.model.User;
 import com.jafpsoft.ventas.repository.CatalogRepository;
+import com.jafpsoft.ventas.repository.OrderRequestRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -23,6 +25,7 @@ public class AdminService {
     private final UserRepository userRepository;
     private final CatalogRepository catalogRepository;
     private final ProductRepository productRepository;
+    private final OrderRequestRepository orderRequestRepository;
     private final EmailService emailService;
 
     @Transactional(readOnly = true)
@@ -109,6 +112,18 @@ public class AdminService {
         Catalog catalog = catalogRepository.findById(catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
         catalogRepository.delete(catalog);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AdminOrderResponse> getAllOrders() {
+        List<OrderRequest> orders = orderRequestRepository.findAll();
+        Map<Long, User> userMap = userRepository.findAll().stream()
+                .collect(Collectors.toMap(User::getId, u -> u));
+
+        return orders.stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                .map(o -> AdminOrderResponse.from(o, userMap.get(o.getVendorUserId())))
+                .toList();
     }
 
     public void sendTestEmail(AdminEmailRequest req) {

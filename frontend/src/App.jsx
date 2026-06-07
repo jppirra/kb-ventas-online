@@ -21,6 +21,8 @@ import AdminUsersPage from './pages/admin/AdminUsersPage'
 import AdminCatalogsPage from './pages/admin/AdminCatalogsPage'
 import AdminEmailPage from './pages/admin/AdminEmailPage'
 import AdminBackgroundsPage from './pages/admin/AdminBackgroundsPage'
+import AdminOrdersPage from './pages/admin/AdminOrdersPage'
+import SettingsPage from './pages/SettingsPage'
 import PublicCatalogPage from './pages/PublicCatalogPage'
 import StockPage from './pages/StockPage'
 import LocalesPage from './pages/LocalesPage'
@@ -70,6 +72,9 @@ export default function App() {
               <Route path="/orders" element={
                 <ProtectedRoute><OrdersPage /></ProtectedRoute>
               } />
+              <Route path="/settings" element={
+                <ProtectedRoute><SettingsPage /></ProtectedRoute>
+              } />
               <Route path="/p/:slug" element={<PublicProfilePage />} />
               <Route path="/c/:catalogId" element={<PublicCatalogPage />} />
               <Route path="/s/:storeSlug" element={<StorePage />} />
@@ -78,6 +83,7 @@ export default function App() {
               <Route path="/admin/catalogs" element={<AdminProtectedRoute><AdminCatalogsPage /></AdminProtectedRoute>} />
               <Route path="/admin/email" element={<AdminProtectedRoute><AdminEmailPage /></AdminProtectedRoute>} />
               <Route path="/admin/backgrounds" element={<AdminProtectedRoute><AdminBackgroundsPage /></AdminProtectedRoute>} />
+              <Route path="/admin/orders" element={<AdminProtectedRoute><AdminOrdersPage /></AdminProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </BrowserRouter>

@@ -65,6 +65,12 @@ public class AdminController {
         adminService.deleteCatalog(id);
     }
 
+    // ── Orders ────────────────────────────────────────────────────────────────
+    @GetMapping("/orders")
+    public List<AdminOrderResponse> orders() {
+        return adminService.getAllOrders();
+    }
+
     // ── Email ─────────────────────────────────────────────────────────────────
     @PostMapping("/email/send")
     public ResponseEntity<Map<String, String>> sendEmail(@Valid @RequestBody AdminEmailRequest req) {

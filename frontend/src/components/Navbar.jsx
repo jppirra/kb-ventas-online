@@ -155,6 +155,7 @@ export default function Navbar() {
           {navLink('/locales', 'Locales')}
           {navLink('/orders', 'Pedidos')}
           {navLink('/profile', 'Mi perfil')}
+          {navLink('/settings', 'Configuración')}
         </div>
         <div className="flex items-center gap-2">
           {user?.appAdmin && (

@@ -10,6 +10,9 @@ export const adminApi = {
   toggleAdmin: (id) => api.patch(`/admin/users/${id}/toggle-admin`),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
 
+  // Orders
+  orders: () => api.get('/admin/orders'),
+
   // Catalogs
   catalogs: () => api.get('/admin/catalogs'),
   toggleCatalogActive: (id) => api.patch(`/admin/catalogs/${id}/toggle-active`),
