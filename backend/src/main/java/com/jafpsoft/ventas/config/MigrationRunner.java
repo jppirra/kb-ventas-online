@@ -17,13 +17,13 @@ public class MigrationRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         applyIfNeeded(
-            "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='products' AND column_name='user_id' AND is_nullable='YES'",
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='user_id' AND is_nullable='YES'",
             "ALTER TABLE products ADD COLUMN IF NOT EXISTS user_id BIGINT",
             "user_id column"
         );
 
         applyIfNeeded(
-            "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='products' AND column_name='is_active'",
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='is_active'",
             "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE",
             "is_active column"
         );
@@ -35,13 +35,13 @@ public class MigrationRunner implements ApplicationRunner {
         backfillUserId();
 
         applyIfNeeded(
-            "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='products' AND column_name='show_when_out_of_stock'",
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='show_when_out_of_stock'",
             "ALTER TABLE products ADD COLUMN IF NOT EXISTS show_when_out_of_stock BOOLEAN NOT NULL DEFAULT FALSE",
             "show_when_out_of_stock column"
         );
 
         applyIfNeeded(
-            "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='catalogs' AND column_name='store_id'",
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='catalogs' AND column_name='store_id'",
             "ALTER TABLE catalogs ADD COLUMN IF NOT EXISTS store_id BIGINT",
             "catalogs.store_id column"
         );
@@ -83,7 +83,7 @@ public class MigrationRunner implements ApplicationRunner {
         try {
             // Check if catalog_id is still NOT NULL
             Integer notNullCount = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='products' AND column_name='catalog_id' AND is_nullable='NO'",
+                "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='catalog_id' AND is_nullable='NO'",
                 Integer.class
             );
             if (notNullCount != null && notNullCount > 0) {

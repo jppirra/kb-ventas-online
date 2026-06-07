@@ -3,6 +3,7 @@ package com.jafpsoft.ventas.model;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.Formula;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
@@ -65,6 +66,9 @@ public class Catalog {
     @Column(name = "view_count", nullable = false)
     @Builder.Default
     private Long viewCount = 0L;
+
+    @Formula("(select count(*) from products p where p.catalog_id = id)")
+    private int productCount;
 
     @OneToMany(mappedBy = "catalog", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Builder.Default

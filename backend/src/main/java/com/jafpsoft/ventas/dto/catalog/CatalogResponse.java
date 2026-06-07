@@ -38,7 +38,7 @@ public class CatalogResponse {
         r.backgroundImageUrl = c.getBackgroundImageUrl();
         r.backgroundTemplateId = c.getBackgroundTemplateId();
         r.storeId = c.getStoreId();
-        r.productCount = c.getProducts().size();
+        r.productCount = c.getProductCount();
         r.createdAt = c.getCreatedAt();
         r.updatedAt = c.getUpdatedAt();
         if (includeProducts) {
