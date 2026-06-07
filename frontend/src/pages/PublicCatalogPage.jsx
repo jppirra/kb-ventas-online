@@ -431,7 +431,7 @@ function ShareButton({ url, catalogName }) {
   return (
     <div className="relative">
       <button onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition-colors bg-white/90 backdrop-blur-sm shadow-sm">
+        className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 text-gray-800 hover:bg-gray-50 text-xs font-semibold rounded-xl transition-colors bg-white shadow-md">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
         </svg>
@@ -688,7 +688,7 @@ export default function PublicCatalogPage() {
         setOrUpdateMeta('og:type', 'website')
         if (!viewedRef.current) {
           viewedRef.current = true
-          publicApi.trackCatalogView(d.catalog.id)
+          publicApi.trackCatalogView(d.catalog.id).catch(() => {})
         }
       })
       .catch(() => setNotFound(true))
@@ -785,15 +785,15 @@ export default function PublicCatalogPage() {
             <div className="absolute top-3 right-3 flex items-center gap-2">
               <ShareButton url={pageUrl} catalogName={catalog.name} />
               <button onClick={() => setShowQR(true)}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-700 hover:bg-white text-xs font-medium rounded-xl transition-colors shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 text-xs font-semibold rounded-xl transition-colors shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                 </svg>
                 QR
               </button>
               <button onClick={() => window.print()}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-700 hover:bg-white text-xs font-medium rounded-xl transition-colors shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-300 text-gray-800 hover:bg-gray-50 text-xs font-semibold rounded-xl transition-colors shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2v-5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
                 PDF
@@ -850,7 +850,7 @@ export default function PublicCatalogPage() {
           <div className="relative max-w-5xl mx-auto px-4 py-8">
             <div className="mb-6 print:mb-4">
               <h1 className="text-3xl font-bold text-gray-900 mb-2 print:text-2xl">{catalog.name}</h1>
-              {catalog.description && <p className="text-gray-600 text-base">{catalog.description}</p>}
+              {catalog.description && <p className="hidden sm:block text-gray-600 text-base">{catalog.description}</p>}
               {catalog.aiContent && <p className="text-gray-500 text-sm italic mt-2 max-w-2xl leading-relaxed">{catalog.aiContent}</p>}
             </div>
 
@@ -926,9 +926,15 @@ export default function PublicCatalogPage() {
           </div>
         </div>
 
-        <footer className="py-4 text-center text-xs text-gray-400 border-t border-gray-200 bg-white print:hidden">
-          Catálogo digital · {vendorName}
-          {vendorSlug && <> · <Link to={`/p/${vendorSlug}`} className="text-blue-500 hover:underline">Ver perfil</Link></>}
+        <footer className="py-5 text-center text-xs text-gray-400 border-t border-gray-200 bg-white print:hidden space-y-1">
+          <p>
+            Catálogo digital de{' '}
+            {vendorSlug
+              ? <Link to={`/p/${vendorSlug}`} className="font-medium text-gray-600 hover:underline">{vendorName}</Link>
+              : <span className="font-medium text-gray-600">{vendorName}</span>
+            }
+          </p>
+          <p>Desarrollado por <span className="font-medium text-gray-500">jafpsoft</span> · © {new Date().getFullYear()} Todos los derechos reservados</p>
         </footer>
       </div>
 

@@ -13,6 +13,6 @@ public interface CatalogRepository extends JpaRepository<Catalog, Long> {
     Optional<Catalog> findByIdAndUserId(Long id, Long userId);
     long countByUserIdAndActive(Long userId, boolean active);
 
-    @Query("SELECT COALESCE(SUM(c.viewCount), 0) FROM Catalog c WHERE c.userId = :userId AND c.active = true")
+    @Query(value = "SELECT COALESCE(SUM(view_count), 0) FROM catalogs WHERE user_id = :userId AND is_active = true", nativeQuery = true)
     Long sumViewCountByUserId(@Param("userId") Long userId);
 }
