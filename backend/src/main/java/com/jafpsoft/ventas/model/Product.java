@@ -17,9 +17,16 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "user_id")
+    private Long userId;
+
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "catalog_id", nullable = false)
+    @JoinColumn(name = "catalog_id", nullable = true)
     private Catalog catalog;
+
+    @Column(name = "is_active", nullable = false, columnDefinition = "boolean default true")
+    @Builder.Default
+    private boolean active = true;
 
     @Column(nullable = false)
     private String name;
@@ -52,6 +59,10 @@ public class Product {
     @Column(name = "show_stock_quantity", nullable = false)
     @Builder.Default
     private boolean showStockQuantity = false;
+
+    @Column(name = "show_when_out_of_stock", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean showWhenOutOfStock = false;
 
     @Column(name = "whatsapp_clicks", nullable = false)
     @Builder.Default

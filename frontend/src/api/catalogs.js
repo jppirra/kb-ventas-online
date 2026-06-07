@@ -10,6 +10,9 @@ export const catalogsApi = {
   addProduct: (catalogId, data) => api.post(`/catalogs/${catalogId}/products`, data),
   updateProduct: (catalogId, productId, data) => api.put(`/catalogs/${catalogId}/products/${productId}`, data),
   deleteProduct: (catalogId, productId) => api.delete(`/catalogs/${catalogId}/products/${productId}`),
+  toggleProductActive: (catalogId, productId) => api.put(`/catalogs/${catalogId}/products/${productId}/toggle-active`),
+  unlinkProduct: (catalogId, productId) => api.put(`/catalogs/${catalogId}/products/${productId}/unlink`),
+  assignProduct: (catalogId, productId) => api.put(`/catalogs/${catalogId}/assign/${productId}`),
 
   uploadProductImage: (catalogId, productId, file) => {
     const form = new FormData()

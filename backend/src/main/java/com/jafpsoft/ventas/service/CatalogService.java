@@ -75,6 +75,8 @@ public class CatalogService {
     @Transactional
     public void delete(Long id, Long userId) {
         Catalog catalog = findOwned(id, userId);
+        // Move products back to repository (set catalog to null) before deleting
+        productRepository.unlinkAllFromCatalog(id);
         catalogRepository.delete(catalog);
     }
 
@@ -82,6 +84,7 @@ public class CatalogService {
     public ProductResponse addProduct(Long catalogId, ProductRequest req, Long userId) {
         Catalog catalog = findOwned(catalogId, userId);
         Product product = Product.builder()
+                .userId(userId)
                 .catalog(catalog)
                 .name(req.getName())
                 .description(req.getDescription())
@@ -90,6 +93,7 @@ public class CatalogService {
                 .category(req.getCategory())
                 .imageUrl(req.getImageUrl())
                 .sortOrder(req.getSortOrder())
+                .active(req.getActive() == null || req.getActive())
                 .build();
         applyStockFields(product, req);
         return ProductResponse.from(productRepository.save(product));
@@ -107,7 +111,37 @@ public class CatalogService {
         product.setCategory(req.getCategory());
         product.setImageUrl(req.getImageUrl());
         product.setSortOrder(req.getSortOrder());
+        if (req.getActive() != null) product.setActive(req.getActive());
         applyStockFields(product, req);
+        return ProductResponse.from(productRepository.save(product));
+    }
+
+    @Transactional
+    public ProductResponse toggleProductActive(Long catalogId, Long productId, Long userId) {
+        findOwned(catalogId, userId);
+        Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
+        product.setActive(!product.isActive());
+        return ProductResponse.from(productRepository.save(product));
+    }
+
+    @Transactional
+    public ProductResponse unlinkProduct(Long catalogId, Long productId, Long userId) {
+        findOwned(catalogId, userId);
+        Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
+        product.setCatalog(null);
+        product.setActive(true);
+        return ProductResponse.from(productRepository.save(product));
+    }
+
+    @Transactional
+    public ProductResponse assignProductToCatalog(Long catalogId, Long productId, Long userId) {
+        Catalog catalog = findOwned(catalogId, userId);
+        Product product = productRepository.findByIdAndUserId(productId, userId)
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
+        product.setCatalog(catalog);
+        product.setActive(true);
         return ProductResponse.from(productRepository.save(product));
     }
 
@@ -116,6 +150,7 @@ public class CatalogService {
         if (req.getStockStatus() != null) product.setStockStatus(req.getStockStatus());
         if (req.getStockCount() != null) product.setStockCount(req.getStockCount());
         if (req.getShowStockQuantity() != null) product.setShowStockQuantity(req.getShowStockQuantity());
+        if (req.getShowWhenOutOfStock() != null) product.setShowWhenOutOfStock(req.getShowWhenOutOfStock());
     }
 
     @Transactional
@@ -132,6 +167,7 @@ public class CatalogService {
         List<ProductRequest> parsed = excelService.parseProducts(file);
 
         List<Product> products = parsed.stream().map(req -> Product.builder()
+                .userId(userId)
                 .catalog(catalog)
                 .name(req.getName())
                 .description(req.getDescription())
@@ -139,6 +175,7 @@ public class CatalogService {
                 .sku(req.getSku())
                 .category(req.getCategory())
                 .sortOrder(req.getSortOrder())
+                .active(true)
                 .build()
         ).toList();
 

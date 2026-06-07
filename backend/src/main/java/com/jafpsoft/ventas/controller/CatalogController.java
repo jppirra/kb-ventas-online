@@ -79,6 +79,27 @@ public class CatalogController {
         catalogService.deleteProduct(id, productId, getUserId(user));
     }
 
+    @PutMapping("/{id}/products/{productId}/toggle-active")
+    public ProductResponse toggleProductActive(@PathVariable Long id,
+                                               @PathVariable Long productId,
+                                               @AuthenticationPrincipal CustomUserDetails user) {
+        return catalogService.toggleProductActive(id, productId, getUserId(user));
+    }
+
+    @PutMapping("/{id}/products/{productId}/unlink")
+    public ProductResponse unlinkProduct(@PathVariable Long id,
+                                         @PathVariable Long productId,
+                                         @AuthenticationPrincipal CustomUserDetails user) {
+        return catalogService.unlinkProduct(id, productId, getUserId(user));
+    }
+
+    @PutMapping("/{id}/assign/{productId}")
+    public ProductResponse assignProduct(@PathVariable Long id,
+                                         @PathVariable Long productId,
+                                         @AuthenticationPrincipal CustomUserDetails user) {
+        return catalogService.assignProductToCatalog(id, productId, getUserId(user));
+    }
+
     @PostMapping("/{id}/upload")
     public ResponseEntity<Map<String, Object>> uploadExcel(
             @PathVariable Long id,
