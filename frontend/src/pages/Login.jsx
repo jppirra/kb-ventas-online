@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+const VERSION = 'v1.000.01'
+const YEAR = new Date().getFullYear()
 
 export default function Login() {
   const { login, storeUser } = useAuth()
@@ -86,6 +88,14 @@ export default function Login() {
           <Link to="/register" className="text-indigo-600 font-medium hover:underline">Registrate</Link>
         </p>
       </div>
+      <p className="mt-6 text-center text-xs text-gray-400 dark:text-slate-600">
+        Desarrollado por{' '}
+        <a href="https://jafpsoft.com" target="_blank" rel="noopener noreferrer"
+          className="hover:text-gray-500 dark:hover:text-slate-400 transition-colors">
+          JAFPSoft
+        </a>
+        {' '}© {YEAR} · Todos los derechos reservados · {VERSION}
+      </p>
     </div>
   )
 }

@@ -66,3 +66,7 @@ Ver carpeta [`/docs`](./docs/) para arquitectura, setup completo, patrones de se
 ---
 
 Template por [JAFPSoft.com](https://jafpsoft.com)
+
+## Versión
+
+**v1.000.01**
