@@ -39,6 +39,9 @@ public class Product {
 
     private BigDecimal price;
 
+    @Column(name = "offer_price")
+    private BigDecimal offerPrice;
+
     private String sku;
 
     private String category;

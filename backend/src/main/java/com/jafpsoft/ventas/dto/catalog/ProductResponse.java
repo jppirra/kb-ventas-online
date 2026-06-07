@@ -17,6 +17,7 @@ public class ProductResponse {
     private String description;
     private String aiDescription;
     private BigDecimal price;
+    private BigDecimal offerPrice;
     private String sku;
     private String category;
     private String imageUrl;
@@ -39,6 +40,7 @@ public class ProductResponse {
         r.description = p.getDescription();
         r.aiDescription = p.getAiDescription();
         r.price = p.getPrice();
+        r.offerPrice = p.getOfferPrice();
         r.sku = p.getSku();
         r.category = p.getCategory();
         r.imageUrl = p.getImageUrl();

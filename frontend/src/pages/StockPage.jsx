@@ -6,7 +6,7 @@ import { productsApi } from '../api/products'
 import { catalogsApi } from '../api/catalogs'
 
 const emptyForm = {
-  name: '', description: '', price: '', sku: '', category: '', imageUrl: '',
+  name: '', description: '', price: '', offerPrice: '', sku: '', category: '', imageUrl: '',
   showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false,
   showWhenOutOfStock: false,
 }
@@ -61,6 +61,7 @@ export default function StockPage() {
         name: product.name || '',
         description: product.description || '',
         price: product.price ?? '',
+        offerPrice: product.offerPrice ?? '',
         sku: product.sku || '',
         category: product.category || '',
         imageUrl: product.imageUrl || '',
@@ -84,6 +85,7 @@ export default function StockPage() {
     const payload = {
       ...form,
       price: form.price !== '' ? parseFloat(form.price) : null,
+      offerPrice: form.offerPrice !== '' ? parseFloat(form.offerPrice) : null,
       stockCount: form.stockCount !== '' ? parseInt(form.stockCount) : null,
     }
     try {
@@ -261,6 +263,12 @@ export default function StockPage() {
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Precio oferta <span className="text-gray-400">(opcional)</span></label>
+                <input type="number" step="0.01" value={form.offerPrice} onChange={e => setForm(f => ({ ...f, offerPrice: e.target.value }))}
+                  placeholder="Precio con descuento"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
                 <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">SKU</label>
                 <input type="text" value={form.sku} onChange={e => setForm(f => ({ ...f, sku: e.target.value }))}
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -361,7 +369,12 @@ export default function StockPage() {
                           {product.category}
                         </span>
                       )}
-                      {product.price != null && (
+                      {product.offerPrice != null ? (
+                        <span className="flex items-center gap-1">
+                          <span className="text-xs font-semibold text-green-600 dark:text-green-400">${Number(product.offerPrice).toLocaleString('es-AR')}</span>
+                          {product.price != null && <span className="text-xs text-gray-400 line-through">${Number(product.price).toLocaleString('es-AR')}</span>}
+                        </span>
+                      ) : product.price != null && (
                         <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
                           ${Number(product.price).toLocaleString('es-AR')}
                         </span>

@@ -4,6 +4,25 @@ import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { catalogsApi } from '../api/catalogs'
 
+function QRModal({ catalogId, catalogName, onClose }) {
+  const url = `${window.location.origin}/c/${catalogId}`
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 flex flex-col items-center gap-4 max-w-xs w-full" onClick={e => e.stopPropagation()}>
+        <h3 className="font-semibold text-gray-900 dark:text-white text-sm">QR — {catalogName}</h3>
+        <img src={qrSrc} alt="QR" className="w-48 h-48 rounded-xl" />
+        <p className="text-xs text-gray-400 text-center break-all">{url}</p>
+        <a href={qrSrc} download={`qr-${catalogName}.png`}
+          className="w-full py-2 text-center text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors">
+          Descargar QR
+        </a>
+        <button onClick={onClose} className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">Cerrar</button>
+      </div>
+    </div>
+  )
+}
+
 const STATUS_LABEL = {
   DRAFT: 'Borrador',
   GENERATING: 'Generando...',
@@ -23,6 +42,7 @@ export default function CatalogsPage() {
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState({ name: '', description: '' })
   const [showForm, setShowForm] = useState(false)
+  const [qrCatalog, setQrCatalog] = useState(null)
 
   useEffect(() => {
     load()
@@ -145,23 +165,53 @@ export default function CatalogsPage() {
                   {catalog.description && (
                     <p className="text-sm text-gray-500 dark:text-slate-400 truncate">{catalog.description}</p>
                   )}
-                  <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
-                    {catalog.productCount} {catalog.productCount === 1 ? 'producto' : 'productos'}
-                  </p>
+                  <div className="flex items-center gap-3 mt-1">
+                    <p className="text-xs text-gray-400 dark:text-slate-500">
+                      {catalog.productCount} {catalog.productCount === 1 ? 'producto' : 'productos'}
+                    </p>
+                    {catalog.viewCount > 0 && (
+                      <p className="text-xs text-gray-400 dark:text-slate-500 flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        {catalog.viewCount} {catalog.viewCount === 1 ? 'vista' : 'vistas'}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <button
-                  onClick={e => { e.stopPropagation(); handleDelete(catalog.id, catalog.name) }}
-                  className="ml-4 p-2 text-gray-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                  </svg>
-                </button>
+                <div className="ml-4 flex items-center gap-1">
+                  <button
+                    onClick={e => { e.stopPropagation(); setQrCatalog(catalog) }}
+                    className="p-2 text-gray-400 hover:text-blue-500 dark:text-slate-500 dark:hover:text-blue-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                    title="Ver QR"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
+                    </svg>
+                  </button>
+                  <button
+                    onClick={e => { e.stopPropagation(); handleDelete(catalog.id, catalog.name) }}
+                    className="p-2 text-gray-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {qrCatalog && (
+        <QRModal
+          catalogId={qrCatalog.id}
+          catalogName={qrCatalog.name}
+          onClose={() => setQrCatalog(null)}
+        />
+      )}
     </Layout>
   )
 }

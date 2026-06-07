@@ -21,6 +21,7 @@ public class CatalogResponse {
     private Long backgroundTemplateId;
     private Long storeId;
     private int productCount;
+    private Long viewCount;
     private List<ProductResponse> products;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
@@ -39,6 +40,7 @@ public class CatalogResponse {
         r.backgroundTemplateId = c.getBackgroundTemplateId();
         r.storeId = c.getStoreId();
         r.productCount = c.getProductCount();
+        r.viewCount = c.getViewCount();
         r.createdAt = c.getCreatedAt();
         r.updatedAt = c.getUpdatedAt();
         if (includeProducts) {

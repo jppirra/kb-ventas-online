@@ -37,6 +37,7 @@ public class ProductService {
                 .name(req.getName())
                 .description(req.getDescription())
                 .price(req.getPrice())
+                .offerPrice(req.getOfferPrice())
                 .sku(req.getSku())
                 .category(req.getCategory())
                 .imageUrl(req.getImageUrl())
@@ -53,6 +54,7 @@ public class ProductService {
         product.setName(req.getName());
         product.setDescription(req.getDescription());
         product.setPrice(req.getPrice());
+        product.setOfferPrice(req.getOfferPrice());
         product.setSku(req.getSku());
         product.setCategory(req.getCategory());
         product.setImageUrl(req.getImageUrl());
@@ -82,6 +84,7 @@ public class ProductService {
         if (req.getStockStatus() != null) product.setStockStatus(req.getStockStatus());
         if (req.getStockCount() != null) product.setStockCount(req.getStockCount());
         if (req.getShowStockQuantity() != null) product.setShowStockQuantity(req.getShowStockQuantity());
+        if (req.getShowWhenOutOfStock() != null) product.setShowWhenOutOfStock(req.getShowWhenOutOfStock());
     }
 
     private Product findOwned(Long id, Long userId) {

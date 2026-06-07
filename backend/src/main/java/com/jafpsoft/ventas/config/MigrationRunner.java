@@ -41,6 +41,12 @@ public class MigrationRunner implements ApplicationRunner {
         );
 
         applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='offer_price'",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS offer_price NUMERIC(19,2)",
+            "offer_price column"
+        );
+
+        applyIfNeeded(
             "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='catalogs' AND column_name='store_id'",
             "ALTER TABLE catalogs ADD COLUMN IF NOT EXISTS store_id BIGINT",
             "catalogs.store_id column"
