@@ -15,6 +15,7 @@ public class ProductRequest {
     private String category;
     private String imageUrl;
     private Integer sortOrder;
+    private Boolean active;
     private Boolean showStock;
     private String stockStatus;
     private Integer stockCount;

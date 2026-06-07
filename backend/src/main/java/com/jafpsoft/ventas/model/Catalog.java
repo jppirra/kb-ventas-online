@@ -63,7 +63,7 @@ public class Catalog {
     @Builder.Default
     private Long viewCount = 0L;
 
-    @OneToMany(mappedBy = "catalog", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "catalog", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Builder.Default
     private List<Product> products = new ArrayList<>();
 

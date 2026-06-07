@@ -34,6 +34,7 @@ public class PublicCatalogResponse {
         r.backgroundTemplateId = c.getBackgroundTemplateId();
         r.viewCount = c.getViewCount();
         r.products = c.getProducts().stream()
+                .filter(p -> p.isActive())
                 .sorted((a, b) -> {
                     if (a.getSortOrder() == null && b.getSortOrder() == null) return 0;
                     if (a.getSortOrder() == null) return 1;

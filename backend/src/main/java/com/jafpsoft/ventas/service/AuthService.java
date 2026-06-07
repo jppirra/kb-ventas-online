@@ -144,15 +144,25 @@ public class AuthService {
         String name = (String) data.getOrDefault("name", email);
         String googleId = (String) data.get("sub");
 
+        if (email == null || email.isBlank()) {
+            throw new IllegalArgumentException("No se pudo obtener el email de Google.");
+        }
+
         User user = userRepository.findByEmail(email).orElse(null);
         if (user == null) {
             user = userRepository.save(User.builder()
                     .email(email).name(name)
                     .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-                    .googleId(googleId).emailVerified(true).build());
-        } else if (!user.isEmailVerified()) {
-            user.setEmailVerified(true);
-            userRepository.save(user);
+                    .googleId(googleId).emailVerified(true).enabled(true).build());
+        } else {
+            if (!user.isEnabled()) {
+                throw new IllegalArgumentException("Tu cuenta está deshabilitada.");
+            }
+            if (!user.isEmailVerified() || user.getGoogleId() == null) {
+                user.setEmailVerified(true);
+                if (user.getGoogleId() == null) user.setGoogleId(googleId);
+                userRepository.save(user);
+            }
         }
         return buildAuthResponse(user);
     }

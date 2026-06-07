@@ -22,6 +22,7 @@ import AdminCatalogsPage from './pages/admin/AdminCatalogsPage'
 import AdminEmailPage from './pages/admin/AdminEmailPage'
 import AdminBackgroundsPage from './pages/admin/AdminBackgroundsPage'
 import PublicCatalogPage from './pages/PublicCatalogPage'
+import RepositorioPage from './pages/RepositorioPage'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
@@ -56,6 +57,9 @@ export default function App() {
               } />
               <Route path="/profile" element={
                 <ProtectedRoute><ProfilePage /></ProtectedRoute>
+              } />
+              <Route path="/repositorio" element={
+                <ProtectedRoute><RepositorioPage /></ProtectedRoute>
               } />
               <Route path="/p/:slug" element={<PublicProfilePage />} />
               <Route path="/c/:catalogId" element={<PublicCatalogPage />} />
