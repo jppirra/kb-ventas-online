@@ -19,6 +19,7 @@ public class CatalogResponse {
     private String backgroundColor;
     private String backgroundImageUrl;
     private Long backgroundTemplateId;
+    private Long storeId;
     private int productCount;
     private List<ProductResponse> products;
     private LocalDateTime createdAt;
@@ -36,6 +37,7 @@ public class CatalogResponse {
         r.backgroundColor = c.getBackgroundColor();
         r.backgroundImageUrl = c.getBackgroundImageUrl();
         r.backgroundTemplateId = c.getBackgroundTemplateId();
+        r.storeId = c.getStoreId();
         r.productCount = c.getProducts().size();
         r.createdAt = c.getCreatedAt();
         r.updatedAt = c.getUpdatedAt();

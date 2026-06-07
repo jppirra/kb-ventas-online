@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import ImageUpload from '../components/ImageUpload'
@@ -25,9 +25,10 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false)
   const [bioGen, setBioGen] = useState({ open: false, rubro: '', productTypes: '', tone: 'PROFESIONAL', loading: false })
   const [form, setForm] = useState({
-    slug: '', bio: '', brandColorPrimary: '#2563eb', brandColorSecondary: '#7c3aed',
+    name: '', slug: '', bio: '', brandColorPrimary: '#2563eb', brandColorSecondary: '#7c3aed',
     whatsappNumber: '', socialLinks: [],
   })
+  const slugDebounce = useRef(null)
 
   useEffect(() => { load() }, [])
 
@@ -36,6 +37,7 @@ export default function ProfilePage() {
       const { data } = await profileApi.get()
       setProfile(data)
       setForm({
+        name: data.name || '',
         slug: data.slug || '',
         bio: data.bio || '',
         brandColorPrimary: data.brandColorPrimary || '#2563eb',
@@ -57,6 +59,19 @@ export default function ProfilePage() {
       const { data } = await profileApi.getSlugSuggestion()
       setForm(f => ({ ...f, slug: data.slug }))
     } catch { /* ignore */ }
+  }
+
+  function handleNameChange(value) {
+    setForm(f => ({ ...f, name: value }))
+    if (form.slug) return
+    clearTimeout(slugDebounce.current)
+    if (!value.trim()) return
+    slugDebounce.current = setTimeout(async () => {
+      try {
+        const { data } = await profileApi.getSlugSuggestion()
+        setForm(f => f.slug ? f : { ...f, slug: data.slug })
+      } catch { /* ignore */ }
+    }, 600)
   }
 
   async function handleSave(e) {
@@ -160,6 +175,21 @@ export default function ProfilePage() {
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+              Nombre para mostrar
+            </label>
+            <input
+              type="text"
+              value={form.name}
+              onChange={e => handleNameChange(e.target.value)}
+              maxLength={100}
+              placeholder="Tu nombre o nombre del negocio"
+              className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
           {/* Slug */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">

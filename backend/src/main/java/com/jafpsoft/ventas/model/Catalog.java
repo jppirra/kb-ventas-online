@@ -59,6 +59,9 @@ public class Catalog {
     @Builder.Default
     private boolean active = true;
 
+    @Column(name = "store_id")
+    private Long storeId;
+
     @Column(name = "view_count", nullable = false)
     @Builder.Default
     private Long viewCount = 0L;

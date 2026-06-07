@@ -20,4 +20,5 @@ public class ProductRequest {
     private String stockStatus;
     private Integer stockCount;
     private Boolean showStockQuantity;
+    private Boolean showWhenOutOfStock;
 }

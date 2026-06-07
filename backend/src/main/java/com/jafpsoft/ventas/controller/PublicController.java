@@ -3,6 +3,7 @@ package com.jafpsoft.ventas.controller;
 import com.jafpsoft.ventas.dto.admin.BackgroundTemplateResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.dto.profile.PublicProfileResponse;
+import com.jafpsoft.ventas.dto.store.PublicStoreResponse;
 import com.jafpsoft.ventas.service.BackgroundTemplateService;
 import com.jafpsoft.ventas.service.PublicProfileService;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,11 @@ public class PublicController {
     @GetMapping("/p/{slug}")
     public PublicProfileResponse getProfile(@PathVariable String slug) {
         return publicProfileService.getPublicProfile(slug);
+    }
+
+    @GetMapping("/s/{storeSlug}")
+    public PublicStoreResponse getPublicStore(@PathVariable String storeSlug) {
+        return publicProfileService.getPublicStore(storeSlug);
     }
 
     @GetMapping("/catalog/{catalogId}")

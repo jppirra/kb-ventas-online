@@ -3,13 +3,16 @@ package com.jafpsoft.ventas.service;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogResponse;
 import com.jafpsoft.ventas.dto.profile.PublicProfileResponse;
+import com.jafpsoft.ventas.dto.store.PublicStoreResponse;
 import com.jafpsoft.ventas.model.Catalog;
 import com.jafpsoft.ventas.model.SocialLink;
+import com.jafpsoft.ventas.model.Store;
 import com.jafpsoft.ventas.model.User;
 import com.jafpsoft.ventas.repository.BackgroundTemplateRepository;
 import com.jafpsoft.ventas.repository.CatalogRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.SocialLinkRepository;
+import com.jafpsoft.ventas.repository.StoreRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,7 @@ public class PublicProfileService {
     private final ProductRepository productRepository;
     private final SocialLinkRepository socialLinkRepository;
     private final BackgroundTemplateRepository backgroundTemplateRepository;
+    private final StoreRepository storeRepository;
 
     @Transactional
     public PublicProfileResponse getPublicProfile(String slug) {
@@ -93,5 +97,33 @@ public class PublicProfileService {
             p.setWhatsappClicks(p.getWhatsappClicks() + 1);
             productRepository.save(p);
         });
+    }
+
+    @Transactional
+    public PublicStoreResponse getPublicStore(String storeSlug) {
+        Store store = storeRepository.findBySlug(storeSlug)
+                .orElseThrow(() -> new EntityNotFoundException("Local no encontrado"));
+        if (!store.isActive()) throw new EntityNotFoundException("Local no disponible");
+
+        User owner = userRepository.findById(store.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("Local no disponible"));
+        if (!owner.isEnabled()) throw new EntityNotFoundException("Local no disponible");
+
+        PublicStoreResponse response = PublicStoreResponse.from(store);
+        List<Catalog> catalogs = catalogRepository.findByUserIdOrderByCreatedAtDesc(store.getUserId())
+                .stream()
+                .filter(c -> c.isActive() && store.getId().equals(c.getStoreId()))
+                .toList();
+
+        List<PublicCatalogResponse> catalogResponses = catalogs.stream().map(c -> {
+            PublicCatalogResponse cr = PublicCatalogResponse.from(c);
+            if ("PREDEFINED".equals(c.getBackgroundType()) && c.getBackgroundTemplateId() != null) {
+                backgroundTemplateRepository.findById(c.getBackgroundTemplateId())
+                        .ifPresent(t -> cr.setBackgroundImageUrl(t.getImageUrl()));
+            }
+            return cr;
+        }).toList();
+        response.setCatalogs(catalogResponses);
+        return response;
     }
 }

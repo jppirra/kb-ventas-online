@@ -60,6 +60,10 @@ public class Product {
     @Builder.Default
     private boolean showStockQuantity = false;
 
+    @Column(name = "show_when_out_of_stock", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean showWhenOutOfStock = false;
+
     @Column(name = "whatsapp_clicks", nullable = false)
     @Builder.Default
     private Long whatsappClicks = 0L;

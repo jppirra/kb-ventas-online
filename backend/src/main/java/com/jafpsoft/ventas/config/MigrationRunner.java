@@ -33,6 +33,38 @@ public class MigrationRunner implements ApplicationRunner {
 
         // Backfill user_id from catalog's user_id for existing products
         backfillUserId();
+
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='products' AND column_name='show_when_out_of_stock'",
+            "ALTER TABLE products ADD COLUMN IF NOT EXISTS show_when_out_of_stock BOOLEAN NOT NULL DEFAULT FALSE",
+            "show_when_out_of_stock column"
+        );
+
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_name='catalogs' AND column_name='store_id'",
+            "ALTER TABLE catalogs ADD COLUMN IF NOT EXISTS store_id BIGINT",
+            "catalogs.store_id column"
+        );
+
+        try {
+            jdbc.execute(
+                "CREATE TABLE IF NOT EXISTS stores (" +
+                "  id BIGSERIAL PRIMARY KEY," +
+                "  user_id BIGINT NOT NULL REFERENCES users(id)," +
+                "  name VARCHAR(255) NOT NULL," +
+                "  slug VARCHAR(40) UNIQUE," +
+                "  description TEXT," +
+                "  logo_url TEXT," +
+                "  whatsapp_number VARCHAR(30)," +
+                "  is_active BOOLEAN NOT NULL DEFAULT TRUE," +
+                "  created_at TIMESTAMP NOT NULL DEFAULT NOW()," +
+                "  updated_at TIMESTAMP NOT NULL DEFAULT NOW()" +
+                ")"
+            );
+            log.info("Migration applied: stores table");
+        } catch (Exception e) {
+            log.warn("Migration skipped for stores table: {}", e.getMessage());
+        }
     }
 
     private void applyIfNeeded(String checkSql, String migrationSql, String label) {

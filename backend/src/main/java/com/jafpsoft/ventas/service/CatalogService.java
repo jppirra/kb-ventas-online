@@ -150,6 +150,7 @@ public class CatalogService {
         if (req.getStockStatus() != null) product.setStockStatus(req.getStockStatus());
         if (req.getStockCount() != null) product.setStockCount(req.getStockCount());
         if (req.getShowStockQuantity() != null) product.setShowStockQuantity(req.getShowStockQuantity());
+        if (req.getShowWhenOutOfStock() != null) product.setShowWhenOutOfStock(req.getShowWhenOutOfStock());
     }
 
     @Transactional

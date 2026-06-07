@@ -8,13 +8,14 @@ import { catalogsApi } from '../api/catalogs'
 const emptyForm = {
   name: '', description: '', price: '', sku: '', category: '', imageUrl: '',
   showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false,
+  showWhenOutOfStock: false,
 }
 
 const FILTER_ALL = 'all'
 const FILTER_IN_CATALOG = 'in_catalog'
 const FILTER_REPO_ONLY = 'repo_only'
 
-export default function RepositorioPage() {
+export default function StockPage() {
   const navigate = useNavigate()
   const imgRef = useRef()
 
@@ -67,6 +68,7 @@ export default function RepositorioPage() {
         stockStatus: product.stockStatus || 'IN_STOCK',
         stockCount: product.stockCount ?? '',
         showStockQuantity: product.showStockQuantity || false,
+        showWhenOutOfStock: product.showWhenOutOfStock || false,
       })
     } else {
       setEditingId(null)
@@ -178,7 +180,7 @@ export default function RepositorioPage() {
         {/* Header */}
         <div className="flex items-start justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Repositorio</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Stock</h1>
             <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">
               {products.length} productos — {inCatalogCount} en catálogos, {repoOnlyCount} sin asignar
             </p>
@@ -291,17 +293,24 @@ export default function RepositorioPage() {
                     </button>
                   </div>
                   {form.stockStatus === 'IN_STOCK' && (
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" id="showQtyRepo" checked={form.showStockQuantity}
-                        onChange={e => setForm(f => ({ ...f, showStockQuantity: e.target.checked }))} className="rounded" />
-                      <label htmlFor="showQtyRepo" className="text-sm text-gray-600 dark:text-slate-400">Mostrar cantidad</label>
-                      {form.showStockQuantity && (
-                        <input type="number" min="0" value={form.stockCount}
-                          onChange={e => setForm(f => ({ ...f, stockCount: e.target.value }))}
-                          placeholder="0"
-                          className="ml-2 w-20 px-2 py-1 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                      )}
-                    </div>
+                    <>
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id="showQtyRepo" checked={form.showStockQuantity}
+                          onChange={e => setForm(f => ({ ...f, showStockQuantity: e.target.checked }))} className="rounded" />
+                        <label htmlFor="showQtyRepo" className="text-sm text-gray-600 dark:text-slate-400">Mostrar cantidad</label>
+                        {form.showStockQuantity && (
+                          <input type="number" min="0" value={form.stockCount}
+                            onChange={e => setForm(f => ({ ...f, stockCount: e.target.value }))}
+                            placeholder="0"
+                            className="ml-2 w-20 px-2 py-1 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id="showWhenOutOfStockRepo" checked={form.showWhenOutOfStock}
+                          onChange={e => setForm(f => ({ ...f, showWhenOutOfStock: e.target.checked }))} className="rounded" />
+                        <label htmlFor="showWhenOutOfStockRepo" className="text-sm text-gray-600 dark:text-slate-400">Mostrar en catálogo sin stock</label>
+                      </div>
+                    </>
                   )}
                 </div>
               )}

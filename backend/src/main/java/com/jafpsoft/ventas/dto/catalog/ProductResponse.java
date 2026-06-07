@@ -25,6 +25,7 @@ public class ProductResponse {
     private String stockStatus;
     private Integer stockCount;
     private Boolean showStockQuantity;
+    private Boolean showWhenOutOfStock;
     private LocalDateTime createdAt;
 
     public static ProductResponse from(Product p) {
@@ -46,6 +47,7 @@ public class ProductResponse {
         r.stockStatus = p.getStockStatus();
         r.stockCount = p.getStockCount();
         r.showStockQuantity = p.isShowStockQuantity();
+        r.showWhenOutOfStock = p.isShowWhenOutOfStock();
         r.createdAt = p.getCreatedAt();
         return r;
     }

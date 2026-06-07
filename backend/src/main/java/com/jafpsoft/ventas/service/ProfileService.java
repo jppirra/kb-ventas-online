@@ -36,6 +36,8 @@ public class ProfileService {
     public ProfileResponse updateProfile(Long userId, ProfileUpdateRequest req) {
         User user = findUser(userId);
 
+        if (req.getName() != null && !req.getName().isBlank()) user.setName(req.getName());
+
         if (req.getSlug() != null && !req.getSlug().isBlank()) {
             String slug = req.getSlug().toLowerCase().trim();
             if (userRepository.existsBySlugAndIdNot(slug, userId)) {
