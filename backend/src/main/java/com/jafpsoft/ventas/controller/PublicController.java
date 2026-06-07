@@ -1,10 +1,12 @@
 package com.jafpsoft.ventas.controller;
 
 import com.jafpsoft.ventas.dto.admin.BackgroundTemplateResponse;
+import com.jafpsoft.ventas.dto.order.OrderRequestPayload;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.dto.profile.PublicProfileResponse;
 import com.jafpsoft.ventas.dto.store.PublicStoreResponse;
 import com.jafpsoft.ventas.service.BackgroundTemplateService;
+import com.jafpsoft.ventas.service.OrderRequestService;
 import com.jafpsoft.ventas.service.PublicProfileService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +22,7 @@ public class PublicController {
 
     private final PublicProfileService publicProfileService;
     private final BackgroundTemplateService backgroundTemplateService;
+    private final OrderRequestService orderRequestService;
 
     @GetMapping("/p/{slug}")
     public PublicProfileResponse getProfile(@PathVariable String slug) {
@@ -51,5 +54,13 @@ public class PublicController {
     public ResponseEntity<Map<String, String>> whatsappClick(@PathVariable Long productId) {
         publicProfileService.registerWhatsappClick(productId);
         return ResponseEntity.ok(Map.of("ok", "true"));
+    }
+
+    @PostMapping("/catalog/{catalogId}/order-request")
+    public ResponseEntity<Map<String, Long>> submitOrderRequest(
+            @PathVariable Long catalogId,
+            @RequestBody OrderRequestPayload payload) {
+        var order = orderRequestService.submit(catalogId, payload);
+        return ResponseEntity.ok(Map.of("orderId", order.getId()));
     }
 }

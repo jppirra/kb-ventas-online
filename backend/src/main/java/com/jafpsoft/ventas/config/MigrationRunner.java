@@ -71,6 +71,43 @@ public class MigrationRunner implements ApplicationRunner {
         } catch (Exception e) {
             log.warn("Migration skipped for stores table: {}", e.getMessage());
         }
+
+        try {
+            jdbc.execute(
+                "CREATE TABLE IF NOT EXISTS order_requests (" +
+                "  id BIGSERIAL PRIMARY KEY," +
+                "  catalog_id BIGINT," +
+                "  catalog_name VARCHAR(255)," +
+                "  vendor_user_id BIGINT," +
+                "  customer_name VARCHAR(255)," +
+                "  items_json TEXT," +
+                "  total NUMERIC(19,2)," +
+                "  status VARCHAR(20) NOT NULL DEFAULT 'PENDING'," +
+                "  created_at TIMESTAMP NOT NULL DEFAULT NOW()" +
+                ")"
+            );
+            log.info("Migration applied: order_requests table");
+        } catch (Exception e) {
+            log.warn("Migration skipped for order_requests table: {}", e.getMessage());
+        }
+
+        try {
+            jdbc.execute(
+                "CREATE TABLE IF NOT EXISTS notifications (" +
+                "  id BIGSERIAL PRIMARY KEY," +
+                "  user_id BIGINT NOT NULL," +
+                "  type VARCHAR(50)," +
+                "  title VARCHAR(200)," +
+                "  message TEXT," +
+                "  reference_id BIGINT," +
+                "  is_read BOOLEAN NOT NULL DEFAULT FALSE," +
+                "  created_at TIMESTAMP NOT NULL DEFAULT NOW()" +
+                ")"
+            );
+            log.info("Migration applied: notifications table");
+        } catch (Exception e) {
+            log.warn("Migration skipped for notifications table: {}", e.getMessage());
+        }
     }
 
     private void applyIfNeeded(String checkSql, String migrationSql, String label) {

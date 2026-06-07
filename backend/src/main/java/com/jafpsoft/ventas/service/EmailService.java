@@ -1,5 +1,6 @@
 package com.jafpsoft.ventas.service;
 
+import com.jafpsoft.ventas.dto.order.OrderRequestPayload;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -7,6 +8,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
+import java.math.BigDecimal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +85,62 @@ public class EmailService {
     public void sendAdminEmail(String toEmail, String subject, String body) {
         String html = buildActionEmail(subject, body, null, null, FROM_NAME + " — Admin");
         send(toEmail, subject, html);
+    }
+
+    @Async
+    public void sendOrderRequestEmail(String toEmail, String vendorName, String catalogName,
+                                      Long catalogId, String customerName,
+                                      List<OrderRequestPayload.Item> items, BigDecimal total) {
+        StringBuilder rows = new StringBuilder();
+        for (OrderRequestPayload.Item item : items) {
+            BigDecimal unitPrice = item.getOfferPrice() != null ? item.getOfferPrice() : item.getPrice();
+            BigDecimal subtotal = unitPrice != null ? unitPrice.multiply(BigDecimal.valueOf(item.getQuantity())) : BigDecimal.ZERO;
+            rows.append("<tr>")
+                .append("<td style='padding:6px 0;border-bottom:1px solid #f3f4f6;color:#374151;'>")
+                .append(item.getProductName()).append(" × ").append(item.getQuantity())
+                .append("</td>")
+                .append("<td style='padding:6px 0;border-bottom:1px solid #f3f4f6;color:#374151;text-align:right;'>")
+                .append(item.getOfferPrice() != null
+                        ? "$" + String.format("%,.0f", item.getOfferPrice()) + " <s style='color:#9ca3af'>$" + String.format("%,.0f", item.getPrice()) + "</s>"
+                        : (unitPrice != null ? "$" + String.format("%,.0f", unitPrice) : "-"))
+                .append("</td>")
+                .append("<td style='padding:6px 0;border-bottom:1px solid #f3f4f6;color:#374151;text-align:right;font-weight:600;'>")
+                .append("$").append(String.format("%,.0f", subtotal))
+                .append("</td>")
+                .append("</tr>");
+        }
+
+        String body = """
+            Hola <strong>%s</strong>,<br><br>
+            Recibiste una nueva solicitud de pedido a través de tu catálogo <strong>"%s"</strong>.<br><br>
+            <strong>Cliente:</strong> %s<br><br>
+            <table width="100%%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:16px 0;">
+              <thead>
+                <tr style="background:#f9fafb;">
+                  <th style="padding:8px 0;text-align:left;font-size:13px;color:#6b7280;font-weight:600;">Producto</th>
+                  <th style="padding:8px 0;text-align:right;font-size:13px;color:#6b7280;font-weight:600;">Precio unit.</th>
+                  <th style="padding:8px 0;text-align:right;font-size:13px;color:#6b7280;font-weight:600;">Subtotal</th>
+                </tr>
+              </thead>
+              <tbody>%s</tbody>
+              <tfoot>
+                <tr>
+                  <td colspan="2" style="padding:10px 0;text-align:right;font-weight:700;color:#111827;">Total estimado:</td>
+                  <td style="padding:10px 0;text-align:right;font-weight:700;color:#2563eb;font-size:16px;">$%s</td>
+                </tr>
+              </tfoot>
+            </table>
+            El cliente puede contactarte directamente por WhatsApp.
+            """.formatted(vendorName, catalogName, customerName, rows, String.format("%,.0f", total));
+
+        String catalogUrl = baseUrl + "/c/" + catalogId;
+        String html = buildActionEmail(
+                "Nueva solicitud de pedido",
+                body,
+                catalogUrl, "Ver catálogo →",
+                FROM_NAME + " — Notificación de pedido");
+
+        send(toEmail, "Nueva solicitud — " + catalogName, html);
     }
 
     // ── HTML builder ──────────────────────────────────────────────────────────

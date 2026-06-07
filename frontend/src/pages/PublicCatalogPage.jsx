@@ -18,11 +18,12 @@ function StockBadge({ stockStatus, stockCount }) {
   )
 }
 
-function PriceDisplay({ price, offerPrice, className = '' }) {
+function PriceDisplay({ price, offerPrice, size = 'sm' }) {
+  const bold = size === 'base' ? 'text-base' : 'text-sm'
   if (offerPrice != null) {
     return (
-      <div className={`flex flex-col items-end ${className}`}>
-        <span className="text-sm font-bold text-green-600 dark:text-green-400 leading-tight">
+      <div className="flex flex-col items-end">
+        <span className={`${bold} font-bold text-green-600 dark:text-green-400 leading-tight`}>
           ${Number(offerPrice).toLocaleString('es-AR')}
         </span>
         {price != null && (
@@ -35,7 +36,7 @@ function PriceDisplay({ price, offerPrice, className = '' }) {
   }
   if (price != null) {
     return (
-      <span className={`text-sm font-bold text-blue-600 dark:text-blue-400 shrink-0 ${className}`}>
+      <span className={`${bold} font-bold text-blue-600 dark:text-blue-400 shrink-0`}>
         ${Number(price).toLocaleString('es-AR')}
       </span>
     )
@@ -43,15 +44,37 @@ function PriceDisplay({ price, offerPrice, className = '' }) {
   return null
 }
 
-function ProductCardGrid({ product, catalogName, vendorWhatsapp }) {
+function AddToCartButton({ inCart, onAdd, onRemove }) {
+  if (inCart) {
+    return (
+      <button onClick={onRemove}
+        className="mt-1 w-full py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors print:hidden">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+        </svg>
+        Agregado
+      </button>
+    )
+  }
+  return (
+    <button onClick={onAdd}
+      className="mt-1 w-full py-2 rounded-xl bg-gray-900 hover:bg-gray-700 dark:bg-slate-600 dark:hover:bg-slate-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors print:hidden">
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+      Agregar al pedido
+    </button>
+  )
+}
+
+function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, onAdd, onRemove }) {
   function handleWhatsapp() {
-    const number = vendorWhatsapp || ''
     const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
-    window.open(`https://wa.me/${number}?text=${msg}`, '_blank')
+    window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden flex flex-col print:break-inside-avoid print:border print:border-gray-200">
+    <div className={`bg-white dark:bg-slate-800 rounded-2xl border overflow-hidden flex flex-col print:break-inside-avoid print:border print:border-gray-200 transition-colors ${inCart ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-gray-100 dark:border-slate-700'}`}>
       {product.imageUrl ? (
         <img src={product.imageUrl} alt={product.name} className="w-full aspect-square object-cover" />
       ) : (
@@ -64,7 +87,7 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp }) {
       <div className="p-4 flex flex-col flex-1 gap-2">
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{product.name}</h4>
-          <PriceDisplay price={product.price} offerPrice={product.offerPrice} className="shrink-0" />
+          <PriceDisplay price={product.price} offerPrice={product.offerPrice} />
         </div>
         {product.category && (
           <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full self-start">{product.category}</span>
@@ -75,11 +98,12 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp }) {
           <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1">{product.description}</p>
         ) : null}
         {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
+        <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} />
         {vendorWhatsapp && (
           <button onClick={handleWhatsapp}
-            className="mt-1 w-full py-2 rounded-xl bg-green-500 hover:bg-green-600 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-opacity print:hidden">
-            <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-            Consultar
+            className="w-full py-1.5 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium flex items-center justify-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors print:hidden">
+            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+            Consultar individualmente
           </button>
         )}
       </div>
@@ -87,15 +111,14 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp }) {
   )
 }
 
-function ProductCardList({ product, catalogName, vendorWhatsapp }) {
+function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, onAdd, onRemove }) {
   function handleWhatsapp() {
-    const number = vendorWhatsapp || ''
     const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
-    window.open(`https://wa.me/${number}?text=${msg}`, '_blank')
+    window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
   }
 
   return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden flex print:break-inside-avoid print:border print:border-gray-200">
+    <div className={`bg-white dark:bg-slate-800 rounded-2xl border overflow-hidden flex print:break-inside-avoid print:border print:border-gray-200 transition-colors ${inCart ? 'border-blue-400 dark:border-blue-500 ring-2 ring-blue-100 dark:ring-blue-900/30' : 'border-gray-100 dark:border-slate-700'}`}>
       <div className="w-32 sm:w-44 shrink-0">
         {product.imageUrl ? (
           <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover" />
@@ -110,7 +133,7 @@ function ProductCardList({ product, catalogName, vendorWhatsapp }) {
       <div className="p-4 flex flex-col flex-1 gap-1.5">
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-semibold text-gray-900 dark:text-white text-base leading-tight">{product.name}</h4>
-          <PriceDisplay price={product.price} offerPrice={product.offerPrice} className="shrink-0" />
+          <PriceDisplay price={product.price} offerPrice={product.offerPrice} size="base" />
         </div>
         {product.sku && <p className="text-xs text-gray-400">SKU: {product.sku}</p>}
         {product.category && (
@@ -121,11 +144,12 @@ function ProductCardList({ product, catalogName, vendorWhatsapp }) {
         ) : product.description ? (
           <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{product.description}</p>
         ) : null}
-        <div className="flex items-center gap-2 mt-auto pt-1 flex-wrap">
-          {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
+        {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
+        <div className="flex items-center gap-2 mt-auto pt-2 flex-wrap print:hidden">
+          <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} />
           {vendorWhatsapp && (
             <button onClick={handleWhatsapp}
-              className="px-3 py-1.5 rounded-xl bg-green-500 hover:bg-green-600 text-white text-xs font-semibold flex items-center gap-1.5 transition-opacity print:hidden">
+              className="px-3 py-1.5 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium flex items-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
               <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
               Consultar
             </button>
@@ -139,15 +163,9 @@ function ProductCardList({ product, catalogName, vendorWhatsapp }) {
 function resolveBackground(catalog) {
   if (!catalog) return {}
   const type = catalog.backgroundType || 'NONE'
-  if (type === 'COLOR' && catalog.backgroundColor) {
-    return { backgroundColor: catalog.backgroundColor }
-  }
+  if (type === 'COLOR' && catalog.backgroundColor) return { backgroundColor: catalog.backgroundColor }
   if ((type === 'CUSTOM' || type === 'PREDEFINED') && catalog.backgroundImageUrl) {
-    return {
-      backgroundImage: `url(${catalog.backgroundImageUrl})`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-    }
+    return { backgroundImage: `url(${catalog.backgroundImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
   }
   return {}
 }
@@ -175,13 +193,9 @@ function ShareButton({ url, catalogName }) {
   const [open, setOpen] = useState(false)
 
   function copyLink() {
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
     setOpen(false)
   }
-
   function shareWhatsapp() {
     const msg = encodeURIComponent(`Mirá el catálogo "${catalogName}": ${url}`)
     window.open(`https://wa.me/?text=${msg}`, '_blank')
@@ -190,10 +204,8 @@ function ShareButton({ url, catalogName }) {
 
   return (
     <div className="relative">
-      <button
-        onClick={() => setOpen(v => !v)}
-        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition-colors"
-      >
+      <button onClick={() => setOpen(v => !v)}
+        className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition-colors">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
         </svg>
@@ -217,6 +229,188 @@ function ShareButton({ url, catalogName }) {
   )
 }
 
+// Cart floating panel
+function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRemove, onClear }) {
+  const [showModal, setShowModal] = useState(false)
+  const [customerName, setCustomerName] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [done, setDone] = useState(false)
+
+  const items = Object.values(cart)
+  const total = items.reduce((sum, { product, qty }) => {
+    const price = product.offerPrice ?? product.price ?? 0
+    return sum + Number(price) * qty
+  }, 0)
+
+  function buildWhatsappMsg(name) {
+    const lines = items.map(({ product, qty }) => {
+      const price = product.offerPrice ?? product.price
+      const priceStr = price != null ? ` — $${Number(price).toLocaleString('es-AR')}` : ''
+      return `• ${product.name} × ${qty}${priceStr}`
+    })
+    const totalStr = total > 0 ? `\n\n💰 Total estimado: $${total.toLocaleString('es-AR')}` : ''
+    const nameStr = name?.trim() ? `\n\nMi nombre: ${name.trim()}` : ''
+    return encodeURIComponent(
+      `¡Hola! Me interesa hacer el siguiente pedido del catálogo "${catalog.name}":\n\n${lines.join('\n')}${totalStr}${nameStr}`
+    )
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setSubmitting(true)
+    const payload = {
+      customerName: customerName.trim() || null,
+      items: items.map(({ product, qty }) => ({
+        productId: product.id,
+        productName: product.name,
+        price: product.price,
+        offerPrice: product.offerPrice,
+        quantity: qty,
+      })),
+    }
+    try {
+      await publicApi.submitOrderRequest(catalogId, payload)
+    } catch {
+      // silently continue — WhatsApp still opens
+    }
+    const msg = buildWhatsappMsg(customerName)
+    window.open(`https://wa.me/${vendorWhatsapp || ''}?text=${msg}`, '_blank')
+    setDone(true)
+    setShowModal(false)
+    setTimeout(() => { onClear(); setDone(false) }, 2000)
+    setSubmitting(false)
+  }
+
+  if (done) {
+    return (
+      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40 print:hidden">
+        <div className="bg-green-600 text-white px-6 py-3 rounded-2xl shadow-xl font-medium text-sm flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          Solicitud enviada
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <div className="fixed bottom-0 left-0 right-0 z-40 print:hidden">
+        <div className="max-w-5xl mx-auto px-4 pb-4">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-600 shadow-2xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{items.length}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {items.length === 1 ? '1 producto' : `${items.length} productos`} seleccionados
+                </span>
+                {total > 0 && (
+                  <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                    — Total: ${total.toLocaleString('es-AR')}
+                  </span>
+                )}
+              </div>
+              <button onClick={onClear} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">
+                Vaciar
+              </button>
+            </div>
+
+            <div className="flex flex-col gap-1.5 mb-3 max-h-36 overflow-y-auto">
+              {items.map(({ product, qty }) => (
+                <div key={product.id} className="flex items-center gap-2 text-sm">
+                  <span className="flex-1 text-gray-700 dark:text-slate-200 truncate">{product.name}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button onClick={() => onUpdateQty(product.id, qty - 1)}
+                      className="w-6 h-6 rounded-full border border-gray-300 dark:border-slate-600 flex items-center justify-center text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 text-xs font-bold transition-colors">
+                      −
+                    </button>
+                    <span className="w-5 text-center text-xs font-medium text-gray-900 dark:text-white">{qty}</span>
+                    <button onClick={() => onUpdateQty(product.id, qty + 1)}
+                      className="w-6 h-6 rounded-full border border-gray-300 dark:border-slate-600 flex items-center justify-center text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 text-xs font-bold transition-colors">
+                      +
+                    </button>
+                  </div>
+                  {(() => {
+                    const price = product.offerPrice ?? product.price
+                    return price != null ? (
+                      <span className="text-xs text-gray-500 dark:text-slate-400 w-20 text-right shrink-0">
+                        ${(Number(price) * qty).toLocaleString('es-AR')}
+                      </span>
+                    ) : null
+                  })()}
+                  <button onClick={() => onRemove(product.id)} className="text-gray-300 hover:text-red-400 transition-colors shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button onClick={() => setShowModal(true)}
+              className="w-full py-3 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors">
+              <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+              Solicitar por WhatsApp
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-4" onClick={() => setShowModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Confirmar solicitud</h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
+              Se enviará el pedido al vendedor por WhatsApp y recibirá una notificación.
+            </p>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1">Tu nombre <span className="text-gray-400">(opcional)</span></label>
+                <input
+                  type="text"
+                  value={customerName}
+                  onChange={e => setCustomerName(e.target.value)}
+                  placeholder="Ej: María García"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500 text-sm"
+                />
+              </div>
+              <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 space-y-1.5">
+                {items.map(({ product, qty }) => {
+                  const price = product.offerPrice ?? product.price
+                  return (
+                    <div key={product.id} className="flex justify-between text-sm">
+                      <span className="text-gray-700 dark:text-slate-200">{product.name} × {qty}</span>
+                      {price != null && (
+                        <span className="text-gray-500 dark:text-slate-400">${(Number(price) * qty).toLocaleString('es-AR')}</span>
+                      )}
+                    </div>
+                  )
+                })}
+                {total > 0 && (
+                  <div className="flex justify-between text-sm font-bold pt-1 border-t border-gray-200 dark:border-slate-600">
+                    <span className="text-gray-900 dark:text-white">Total estimado</span>
+                    <span className="text-blue-600 dark:text-blue-400">${total.toLocaleString('es-AR')}</span>
+                  </div>
+                )}
+              </div>
+              <button type="submit" disabled={submitting}
+                className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors">
+                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                {submitting ? 'Enviando...' : 'Enviar y abrir WhatsApp'}
+              </button>
+              <button type="button" onClick={() => setShowModal(false)}
+                className="w-full py-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">
+                Cancelar
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 export default function PublicCatalogPage() {
   const { catalogId } = useParams()
   const [data, setData] = useState(null)
@@ -224,6 +418,8 @@ export default function PublicCatalogPage() {
   const [notFound, setNotFound] = useState(false)
   const [activeCategory, setActiveCategory] = useState(null)
   const [showQR, setShowQR] = useState(false)
+  // cart: { [productId]: { product, qty } }
+  const [cart, setCart] = useState({})
   const viewedRef = useRef(false)
 
   useEffect(() => {
@@ -238,6 +434,20 @@ export default function PublicCatalogPage() {
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [catalogId])
+
+  function addToCart(product) {
+    setCart(c => ({ ...c, [product.id]: { product, qty: (c[product.id]?.qty || 0) + 1 } }))
+  }
+  function removeFromCart(productId) {
+    setCart(c => { const n = { ...c }; delete n[productId]; return n })
+  }
+  function updateQty(productId, qty) {
+    if (qty <= 0) { removeFromCart(productId); return }
+    setCart(c => ({ ...c, [productId]: { ...c[productId], qty } }))
+  }
+  function clearCart() { setCart({}) }
+
+  const cartCount = Object.keys(cart).length
 
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -260,9 +470,7 @@ export default function PublicCatalogPage() {
 
   const allProducts = catalog.products || []
   const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
-  const visibleProducts = activeCategory
-    ? allProducts.filter(p => p.category === activeCategory)
-    : allProducts
+  const visibleProducts = activeCategory ? allProducts.filter(p => p.category === activeCategory) : allProducts
 
   return (
     <>
@@ -275,7 +483,7 @@ export default function PublicCatalogPage() {
         }
       `}</style>
 
-      <div className="min-h-screen flex flex-col bg-gray-50">
+      <div className={`min-h-screen flex flex-col bg-gray-50 ${cartCount > 0 ? 'pb-52' : ''}`}>
         {/* Top bar */}
         <header className="bg-white border-b border-gray-200 print:hidden">
           <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
@@ -290,38 +498,28 @@ export default function PublicCatalogPage() {
               <div className="min-w-0">
                 <p className="font-semibold text-gray-900 text-sm truncate">{vendorName}</p>
                 {vendorSlug && (
-                  <Link to={`/p/${vendorSlug}`} className="text-xs text-blue-500 hover:underline">
-                    Ver perfil completo
-                  </Link>
+                  <Link to={`/p/${vendorSlug}`} className="text-xs text-blue-500 hover:underline">Ver perfil completo</Link>
                 )}
               </div>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {vendorWhatsapp && (
-                <a
-                  href={`https://wa.me/${vendorWhatsapp}`}
-                  target="_blank" rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-xl transition-colors"
-                >
+                <a href={`https://wa.me/${vendorWhatsapp}`} target="_blank" rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-xs font-medium rounded-xl transition-colors">
                   <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                   WhatsApp
                 </a>
               )}
               <ShareButton url={pageUrl} catalogName={catalog.name} />
-              <button
-                onClick={() => setShowQR(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition-colors"
-                title="Ver QR del catálogo"
-              >
+              <button onClick={() => setShowQR(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                 </svg>
                 QR
               </button>
-              <button
-                onClick={() => window.print()}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition-colors"
-              >
+              <button onClick={() => window.print()}
+                className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 text-gray-700 hover:bg-gray-50 text-xs font-medium rounded-xl transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2v-5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
@@ -333,44 +531,24 @@ export default function PublicCatalogPage() {
 
         {/* Catalog content */}
         <div className={`flex-1 catalog-bg ${hasBg ? 'relative' : ''}`} style={bgStyle}>
-          {hasBg && (
-            <div className="absolute inset-0 bg-white/70 pointer-events-none" />
-          )}
+          {hasBg && <div className="absolute inset-0 bg-white/70 pointer-events-none" />}
           <div className="relative max-w-5xl mx-auto px-4 py-8">
-            {/* Catalog header */}
             <div className="mb-6 print:mb-4">
               <h1 className="text-3xl font-bold text-gray-900 mb-2 print:text-2xl">{catalog.name}</h1>
-              {catalog.description && (
-                <p className="text-gray-600 text-base">{catalog.description}</p>
-              )}
-              {catalog.aiContent && (
-                <p className="text-gray-500 text-sm italic mt-2 max-w-2xl leading-relaxed">{catalog.aiContent}</p>
-              )}
+              {catalog.description && <p className="text-gray-600 text-base">{catalog.description}</p>}
+              {catalog.aiContent && <p className="text-gray-500 text-sm italic mt-2 max-w-2xl leading-relaxed">{catalog.aiContent}</p>}
             </div>
 
             {/* Category filter */}
             {categories.length > 0 && (
               <div className="flex gap-2 flex-wrap mb-6 print:hidden">
-                <button
-                  onClick={() => setActiveCategory(null)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                    activeCategory === null
-                      ? 'bg-blue-600 border-blue-600 text-white'
-                      : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
+                <button onClick={() => setActiveCategory(null)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === null ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
                   Todos ({allProducts.length})
                 </button>
                 {categories.map(cat => (
-                  <button
-                    key={cat}
-                    onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      activeCategory === cat
-                        ? 'bg-blue-600 border-blue-600 text-white'
-                        : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                    }`}
-                  >
+                  <button key={cat} onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
                     {cat} ({allProducts.filter(p => p.category === cat).length})
                   </button>
                 ))}
@@ -383,21 +561,24 @@ export default function PublicCatalogPage() {
             ) : viewMode === 'LIST' ? (
               <div className="flex flex-col gap-4">
                 {visibleProducts.map(p => (
-                  <ProductCardList key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp} />
+                  <ProductCardList key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
+                    inCart={!!cart[p.id]} onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)} />
                 ))}
               </div>
             ) : viewMode === 'MOSAIC' ? (
               <div className="columns-2 sm:columns-3 gap-4 space-y-4">
                 {visibleProducts.map(p => (
                   <div key={p.id} className="break-inside-avoid">
-                    <ProductCardGrid product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp} />
+                    <ProductCardGrid product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
+                      inCart={!!cart[p.id]} onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)} />
                   </div>
                 ))}
               </div>
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {visibleProducts.map(p => (
-                  <ProductCardGrid key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp} />
+                  <ProductCardGrid key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
+                    inCart={!!cart[p.id]} onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)} />
                 ))}
               </div>
             )}
@@ -406,11 +587,21 @@ export default function PublicCatalogPage() {
 
         <footer className="py-4 text-center text-xs text-gray-400 border-t border-gray-200 bg-white print:hidden">
           Catálogo digital · {vendorName}
-          {vendorSlug && (
-            <> · <Link to={`/p/${vendorSlug}`} className="text-blue-500 hover:underline">Ver perfil</Link></>
-          )}
+          {vendorSlug && <> · <Link to={`/p/${vendorSlug}`} className="text-blue-500 hover:underline">Ver perfil</Link></>}
         </footer>
       </div>
+
+      {cartCount > 0 && (
+        <CartPanel
+          cart={cart}
+          catalog={catalog}
+          vendorWhatsapp={vendorWhatsapp}
+          catalogId={catalogId}
+          onUpdateQty={updateQty}
+          onRemove={removeFromCart}
+          onClear={clearCart}
+        />
+      )}
 
       {showQR && <QRModal url={pageUrl} catalogName={catalog.name} onClose={() => setShowQR(false)} />}
     </>
