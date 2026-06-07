@@ -19,6 +19,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +35,7 @@ public class CatalogService {
     public List<CatalogResponse> listByUser(Long userId) {
         return catalogRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
+                .filter(Catalog::isActive)
                 .map(c -> CatalogResponse.from(c, false))
                 .toList();
     }
@@ -48,6 +50,7 @@ public class CatalogService {
     public CatalogResponse create(CatalogRequest req, Long userId) {
         Catalog catalog = Catalog.builder()
                 .userId(userId)
+                .publicId(UUID.randomUUID().toString())
                 .name(req.getName())
                 .description(req.getDescription())
                 .build();
@@ -75,9 +78,9 @@ public class CatalogService {
     @Transactional
     public void delete(Long id, Long userId) {
         Catalog catalog = findOwned(id, userId);
-        // Move products back to repository (set catalog to null) before deleting
-        productRepository.unlinkAllFromCatalog(id);
-        catalogRepository.delete(catalog);
+        // Soft-delete: marca inactivo para que el link público pueda redirigir al perfil del vendedor
+        catalog.setActive(false);
+        catalogRepository.save(catalog);
     }
 
     @Transactional

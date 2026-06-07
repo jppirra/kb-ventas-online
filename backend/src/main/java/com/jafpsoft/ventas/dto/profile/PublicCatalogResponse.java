@@ -8,6 +8,8 @@ import java.util.List;
 @Data
 public class PublicCatalogResponse {
     private Long id;
+    private String publicId;
+    private boolean available = true;
     private String name;
     private String description;
     private String aiContent;
@@ -23,6 +25,7 @@ public class PublicCatalogResponse {
     public static PublicCatalogResponse from(Catalog c) {
         PublicCatalogResponse r = new PublicCatalogResponse();
         r.id = c.getId();
+        r.publicId = c.getPublicId();
         r.name = c.getName();
         r.description = c.getDescription();
         r.aiContent = c.getAiContent();

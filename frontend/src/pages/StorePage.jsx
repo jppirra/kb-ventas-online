@@ -85,7 +85,7 @@ export default function StorePage() {
                 return (
                   <Link
                     key={catalog.id}
-                    to={`/c/${catalog.id}`}
+                    to={`/c/${catalog.publicId}`}
                     className="group relative rounded-2xl overflow-hidden border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:shadow-lg transition-shadow"
                   >
                     <div

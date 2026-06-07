@@ -34,9 +34,9 @@ public class PublicController {
         return publicProfileService.getPublicStore(storeSlug);
     }
 
-    @GetMapping("/catalog/{catalogId}")
-    public PublicCatalogPageResponse getCatalog(@PathVariable Long catalogId) {
-        return publicProfileService.getCatalogById(catalogId);
+    @GetMapping("/catalog/{publicId}")
+    public PublicCatalogPageResponse getCatalog(@PathVariable String publicId) {
+        return publicProfileService.getCatalogByPublicId(publicId);
     }
 
     @GetMapping("/backgrounds")

@@ -121,6 +121,19 @@ public class MigrationRunner implements ApplicationRunner {
             "variants_json column"
         );
 
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='catalogs' AND column_name='public_id'",
+            "ALTER TABLE catalogs ADD COLUMN IF NOT EXISTS public_id VARCHAR(36)",
+            "catalogs.public_id column"
+        );
+
+        try {
+            jdbc.update("UPDATE catalogs SET public_id = gen_random_uuid()::text WHERE public_id IS NULL OR public_id = ''");
+            log.info("Migration applied: backfill catalogs.public_id UUIDs");
+        } catch (Exception e) {
+            log.warn("Migration skipped for backfill catalogs.public_id: {}", e.getMessage());
+        }
+
         try {
             jdbc.execute(
                 "CREATE TABLE IF NOT EXISTS notifications (" +

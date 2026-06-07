@@ -6,6 +6,7 @@ import lombok.Data;
 
 @Data
 public class PublicCatalogPageResponse {
+    private boolean available = true;
     private PublicCatalogResponse catalog;
     private String vendorName;
     private String vendorSlug;
@@ -18,6 +19,7 @@ public class PublicCatalogPageResponse {
 
     public static PublicCatalogPageResponse from(Catalog c, User owner) {
         PublicCatalogPageResponse r = new PublicCatalogPageResponse();
+        r.available = true;
         r.catalog = PublicCatalogResponse.from(c);
         r.vendorName = owner.getName();
         r.vendorSlug = owner.getSlug();
@@ -27,6 +29,17 @@ public class PublicCatalogPageResponse {
         r.vendorBio = owner.getBio();
         r.vendorBrandColorPrimary = owner.getBrandColorPrimary();
         r.vendorBrandColorSecondary = owner.getBrandColorSecondary();
+        return r;
+    }
+
+    public static PublicCatalogPageResponse unavailable(Catalog c, User owner) {
+        PublicCatalogPageResponse r = new PublicCatalogPageResponse();
+        r.available = false;
+        r.vendorName = owner.getName();
+        r.vendorSlug = owner.getSlug();
+        PublicCatalogResponse cr = new PublicCatalogResponse();
+        cr.setName(c.getName());
+        r.catalog = cr;
         return r;
     }
 }

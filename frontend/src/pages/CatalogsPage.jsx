@@ -5,7 +5,7 @@ import Layout from '../components/Layout'
 import { catalogsApi } from '../api/catalogs'
 
 function QRModal({ catalogId, catalogName, onClose }) {
-  const url = `${window.location.origin}/c/${catalogId}`
+  const url = `${window.location.origin}/c/${catalogId || ''}`
   const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -207,7 +207,7 @@ export default function CatalogsPage() {
 
       {qrCatalog && (
         <QRModal
-          catalogId={qrCatalog.id}
+          catalogId={qrCatalog.publicId}
           catalogName={qrCatalog.name}
           onClose={() => setQrCatalog(null)}
         />

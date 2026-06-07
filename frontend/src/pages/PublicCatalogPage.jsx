@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
 
 const STOCK_LABELS = { IN_STOCK: 'En stock', ON_DEMAND: 'A pedido' }
@@ -662,6 +662,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
 
 export default function PublicCatalogPage() {
   const { catalogId } = useParams()
+  const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -678,6 +679,13 @@ export default function PublicCatalogPage() {
   useEffect(() => {
     publicApi.getCatalog(catalogId)
       .then(({ data: d }) => {
+        if (d.available === false) {
+          navigate(d.vendorSlug ? `/p/${d.vendorSlug}` : '/', {
+            replace: true,
+            state: { catalogNotFound: true, catalogName: d.catalog?.name }
+          })
+          return
+        }
         setData(d)
         // SEO meta tags
         document.title = `${d.catalog.name} — ${d.vendorName}`

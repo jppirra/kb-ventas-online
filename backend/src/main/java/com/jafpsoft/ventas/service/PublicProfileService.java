@@ -66,23 +66,18 @@ public class PublicProfileService {
     }
 
     @Transactional
-    public PublicCatalogPageResponse getCatalogById(Long catalogId) {
-        Catalog catalog = catalogRepository.findById(catalogId)
+    public PublicCatalogPageResponse getCatalogByPublicId(String publicId) {
+        Catalog catalog = catalogRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
-
-        if (!catalog.isActive()) {
-            throw new EntityNotFoundException("Catálogo no disponible");
-        }
 
         User owner = userRepository.findById(catalog.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no disponible"));
 
-        if (!owner.isEnabled()) {
-            throw new EntityNotFoundException("Catálogo no disponible");
+        if (!catalog.isActive() || !owner.isEnabled()) {
+            return PublicCatalogPageResponse.unavailable(catalog, owner);
         }
 
         PublicCatalogPageResponse response = PublicCatalogPageResponse.from(catalog, owner);
-        // Resolve predefined background URL
         if ("PREDEFINED".equals(catalog.getBackgroundType()) && catalog.getBackgroundTemplateId() != null) {
             backgroundTemplateRepository.findById(catalog.getBackgroundTemplateId()).ifPresent(t ->
                     response.getCatalog().setBackgroundImageUrl(t.getImageUrl())

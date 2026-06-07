@@ -10,6 +10,7 @@ import java.util.List;
 @Data
 public class CatalogResponse {
     private Long id;
+    private String publicId;
     private String name;
     private String description;
     private String aiContent;
@@ -29,6 +30,7 @@ public class CatalogResponse {
     public static CatalogResponse from(Catalog c, boolean includeProducts) {
         CatalogResponse r = new CatalogResponse();
         r.id = c.getId();
+        r.publicId = c.getPublicId();
         r.name = c.getName();
         r.description = c.getDescription();
         r.aiContent = c.getAiContent();

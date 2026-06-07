@@ -11,6 +11,7 @@ import java.util.Optional;
 public interface CatalogRepository extends JpaRepository<Catalog, Long> {
     List<Catalog> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<Catalog> findByIdAndUserId(Long id, Long userId);
+    Optional<Catalog> findByPublicId(String publicId);
     long countByUserIdAndActive(Long userId, boolean active);
 
     @Query(value = "SELECT COALESCE(SUM(view_count), 0) FROM catalogs WHERE user_id = :userId AND is_active = true", nativeQuery = true)

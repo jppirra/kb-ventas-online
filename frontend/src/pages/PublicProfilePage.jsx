@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
 import Footer from '../components/Footer'
 
@@ -115,7 +115,7 @@ function CatalogSection({ catalog, vendorWhatsapp, onWhatsappClick, onView }) {
           {catalog.description && <p className="text-sm text-gray-500 dark:text-slate-400 mt-0.5">{catalog.description}</p>}
         </div>
         <div className="flex items-center gap-2">
-          <Link to={`/c/${catalog.id}`} target="_blank"
+          <Link to={`/c/${catalog.publicId}`} target="_blank"
             className="text-xs px-2.5 py-1.5 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-1">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -169,6 +169,9 @@ function CatalogSection({ catalog, vendorWhatsapp, onWhatsappClick, onView }) {
 
 export default function PublicProfilePage() {
   const { slug } = useParams()
+  const location = useLocation()
+  const catalogNotFound = location.state?.catalogNotFound
+  const catalogNotFoundName = location.state?.catalogName
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
@@ -207,6 +210,18 @@ export default function PublicProfilePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950">
+      {/* Banner de catálogo no encontrado */}
+      {catalogNotFound && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 text-center">
+          <p className="text-sm text-amber-800">
+            {catalogNotFoundName
+              ? `El catálogo "${catalogNotFoundName}" ya no está disponible.`
+              : 'El catálogo que buscás ya no está disponible.'
+            }
+            {' '}Te redirigimos a la tienda de <span className="font-semibold">{profile?.name}</span>.
+          </p>
+        </div>
+      )}
       {/* Banner */}
       <div className="relative w-full" style={{ aspectRatio: '16/5', maxHeight: 280 }}>
         {profile.bannerImageUrl ? (

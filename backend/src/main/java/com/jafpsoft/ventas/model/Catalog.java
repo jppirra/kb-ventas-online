@@ -56,6 +56,9 @@ public class Catalog {
     @Column(name = "background_template_id")
     private Long backgroundTemplateId;
 
+    @Column(name = "public_id", length = 36, unique = true)
+    private String publicId;
+
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private boolean active = true;
