@@ -128,6 +128,7 @@ export default function AdminLayout({ children }) {
           </svg>
           Cerrar sesión
         </button>
+        <p className="px-3 pt-2 text-xs text-gray-600 dark:text-slate-600">v1.000.03</p>
       </div>
     </aside>
   )
