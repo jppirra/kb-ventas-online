@@ -78,10 +78,13 @@ export default function ProfilePage() {
     e.preventDefault()
     setSaving(true)
     try {
-      const { data } = await profileApi.update({
+      const payload = {
         ...form,
+        name: form.name.trim() || null,
+        slug: form.slug.trim() || null,
         socialLinks: form.socialLinks.filter(l => l.url?.trim()),
-      })
+      }
+      const { data } = await profileApi.update(payload)
       setProfile(data)
       toast.success('Perfil guardado')
     } catch (err) {
