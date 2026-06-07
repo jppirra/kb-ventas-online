@@ -90,13 +90,32 @@ public class AiService {
                     .path("content").path("parts").get(0)
                     .path("text").asText();
 
-        } catch (Exception e) {
-            log.error("Error llamando a Gemini API: {}", e.getMessage());
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("Gemini API HTTP {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
             if (claudeApiKey != null && !claudeApiKey.isBlank()) {
                 log.info("Reintentando con Claude como fallback...");
                 return callClaude(prompt);
             }
             return null;
+        } catch (Exception e) {
+            log.error("Error llamando a Gemini API: {}", e.getMessage(), e);
+            if (claudeApiKey != null && !claudeApiKey.isBlank()) {
+                log.info("Reintentando con Claude como fallback...");
+                return callClaude(prompt);
+            }
+            return null;
+        }
+    }
+
+    public String testConnection() {
+        if (geminiApiKey == null || geminiApiKey.isBlank()) {
+            return "ERROR: GEMINI_API_KEY no configurada";
+        }
+        try {
+            String result = callGemini("Respondé solo con la palabra: OK");
+            return result != null ? "OK: " + result.trim() : "ERROR: respuesta nula";
+        } catch (Exception e) {
+            return "ERROR: " + e.getMessage();
         }
     }
 

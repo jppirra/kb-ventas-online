@@ -2,6 +2,7 @@ package com.jafpsoft.ventas.controller;
 
 import com.jafpsoft.ventas.dto.admin.*;
 import com.jafpsoft.ventas.service.AdminService;
+import com.jafpsoft.ventas.service.AiService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,7 @@ import java.util.Map;
 public class AdminController {
 
     private final AdminService adminService;
+    private final AiService aiService;
 
     // ── Stats ─────────────────────────────────────────────────────────────────
     @GetMapping("/stats")
@@ -75,6 +77,13 @@ public class AdminController {
     @GetMapping("/reports")
     public List<AdminReportResponse> reports() {
         return adminService.getAdminReports();
+    }
+
+    // ── AI test ───────────────────────────────────────────────────────────────
+    @GetMapping("/ai/test")
+    public ResponseEntity<Map<String, String>> testAi() {
+        String result = aiService.testConnection();
+        return ResponseEntity.ok(Map.of("result", result));
     }
 
     // ── Email ─────────────────────────────────────────────────────────────────
