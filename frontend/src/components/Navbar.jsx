@@ -28,6 +28,7 @@ export default function Navbar() {
             CatalogIA
           </Link>
           {navLink('/catalogs', 'Catálogos')}
+          {navLink('/repositorio', 'Repositorio')}
           {navLink('/profile', 'Mi perfil')}
         </div>
         <div className="flex items-center gap-2">

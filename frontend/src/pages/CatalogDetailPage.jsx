@@ -30,6 +30,8 @@ const BG_TYPES = [
   { value: 'CUSTOM', label: 'Imagen propia' },
 ]
 
+import { productsApi } from '../api/products'
+
 const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false }
 
 export default function CatalogDetailPage() {
@@ -50,6 +52,9 @@ export default function CatalogDetailPage() {
   const [uploadingProductImg, setUploadingProductImg] = useState(false)
   const [pendingProductImgId, setPendingProductImgId] = useState(null)
   const [pollTimer, setPollTimer] = useState(null)
+  const [showRepoModal, setShowRepoModal] = useState(false)
+  const [repoProducts, setRepoProducts] = useState([])
+  const [loadingRepo, setLoadingRepo] = useState(false)
 
   // Appearance state (synced on load, saved separately)
   const [viewMode, setViewMode] = useState('GRID')
@@ -178,13 +183,58 @@ export default function CatalogDetailPage() {
   }
 
   async function handleDeleteProduct(productId) {
-    if (!confirm('¿Eliminar este producto?')) return
+    if (!confirm('¿Eliminar este producto definitivamente?')) return
     try {
       await catalogsApi.deleteProduct(id, productId)
       setCatalog(c => ({ ...c, products: c.products.filter(p => p.id !== productId) }))
       toast.success('Producto eliminado')
     } catch {
       toast.error('Error al eliminar producto')
+    }
+  }
+
+  async function handleToggleActive(productId) {
+    try {
+      const { data } = await catalogsApi.toggleProductActive(id, productId)
+      setCatalog(c => ({ ...c, products: c.products.map(p => p.id === productId ? { ...p, active: data.active } : p) }))
+      toast.success(data.active ? 'Producto visible en el catálogo' : 'Producto oculto (queda en repositorio)')
+    } catch {
+      toast.error('Error al cambiar visibilidad')
+    }
+  }
+
+  async function handleUnlinkProduct(productId) {
+    try {
+      await catalogsApi.unlinkProduct(id, productId)
+      setCatalog(c => ({ ...c, products: c.products.filter(p => p.id !== productId) }))
+      toast.success('Producto movido al repositorio')
+    } catch {
+      toast.error('Error al mover al repositorio')
+    }
+  }
+
+  async function openRepoModal() {
+    setShowRepoModal(true)
+    setLoadingRepo(true)
+    try {
+      const { data } = await productsApi.list()
+      const catalogProductIds = new Set(catalog.products.map(p => p.id))
+      setRepoProducts(data.filter(p => p.catalogId == null || !catalogProductIds.has(p.id)))
+    } catch {
+      toast.error('Error al cargar el repositorio')
+    } finally {
+      setLoadingRepo(false)
+    }
+  }
+
+  async function handleAssignFromRepo(productId) {
+    try {
+      await catalogsApi.assignProduct(id, productId)
+      setShowRepoModal(false)
+      load()
+      toast.success('Producto agregado al catálogo')
+    } catch {
+      toast.error('Error al agregar producto')
     }
   }
 
@@ -440,10 +490,17 @@ export default function CatalogDetailPage() {
         </div>
 
         {/* ── Products section ───────────────────────────────────────────────── */}
-        <div className="flex items-center gap-3 mb-5">
+        <div className="flex items-center gap-2 mb-5 flex-wrap">
           <button onClick={() => openProductForm()}
             className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors">
-            + Agregar producto
+            + Nuevo producto
+          </button>
+          <button onClick={openRepoModal}
+            className="px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors flex items-center gap-1.5">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+            </svg>
+            Desde repositorio
           </button>
           <button onClick={() => fileRef.current.click()} disabled={uploadingExcel}
             className="px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50">
@@ -452,7 +509,7 @@ export default function CatalogDetailPage() {
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcel} />
           <input ref={productImgRef} type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
           <span className="text-sm text-gray-400 dark:text-slate-500 ml-auto">
-            {catalog.products?.length ?? 0} productos
+            {catalog.products?.length ?? 0} productos ({catalog.products?.filter(p => p.active).length ?? 0} visibles)
           </span>
         </div>
 
@@ -584,13 +641,13 @@ export default function CatalogDetailPage() {
         {/* Products list */}
         {catalog.products?.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700">
-            <p className="text-gray-400 dark:text-slate-500 text-sm">Sin productos. Agrega uno manualmente o importa un Excel.</p>
+            <p className="text-gray-400 dark:text-slate-500 text-sm">Sin productos. Agrega uno manualmente, desde el repositorio o importa un Excel.</p>
             <p className="text-gray-300 dark:text-slate-600 text-xs mt-1">Columnas Excel: nombre, descripcion, precio, sku, categoria</p>
           </div>
         ) : (
           <div className="space-y-3">
             {catalog.products.map(product => (
-              <div key={product.id} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4">
+              <div key={product.id} className={`bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 transition-opacity ${!product.active ? 'opacity-60' : ''}`}>
                 <div className="flex items-start gap-3">
                   {product.imageUrl ? (
                     <img src={product.imageUrl} alt={product.name}
@@ -605,6 +662,9 @@ export default function CatalogDetailPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h4 className="font-medium text-gray-900 dark:text-white">{product.name}</h4>
+                      {!product.active && (
+                        <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full">Oculto</span>
+                      )}
                       {product.category && (
                         <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full">
                           {product.category}
@@ -637,6 +697,33 @@ export default function CatalogDetailPage() {
                     )}
                   </div>
                   <div className="flex items-center gap-1 ml-auto shrink-0">
+                    <button
+                      title={product.active ? 'Ocultar del catálogo' : 'Mostrar en catálogo'}
+                      onClick={() => handleToggleActive(product.id)}
+                      className={`p-1.5 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors ${
+                        product.active
+                          ? 'text-green-500 dark:text-green-400 hover:text-green-600'
+                          : 'text-gray-400 dark:text-slate-500 hover:text-green-500 dark:hover:text-green-400'
+                      }`}>
+                      {product.active ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                      ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      title="Mover al repositorio (queda guardado)"
+                      onClick={() => handleUnlinkProduct(product.id)}
+                      className="p-1.5 text-gray-400 hover:text-amber-500 dark:text-slate-500 dark:hover:text-amber-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                      </svg>
+                    </button>
                     <button onClick={() => openProductForm(product)}
                       className="p-1.5 text-gray-400 hover:text-blue-500 dark:text-slate-500 dark:hover:text-blue-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -655,6 +742,50 @@ export default function CatalogDetailPage() {
             ))}
           </div>
         )}
+
+      {/* Modal: Agregar desde repositorio */}
+      {showRepoModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowRepoModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 w-full max-w-lg max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-4">Agregar desde repositorio</h3>
+            {loadingRepo ? (
+              <p className="text-sm text-gray-400 dark:text-slate-500 text-center py-8">Cargando...</p>
+            ) : repoProducts.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-slate-500 text-center py-8">No hay productos disponibles en el repositorio.</p>
+            ) : (
+              <div className="overflow-y-auto space-y-2 flex-1">
+                {repoProducts.map(p => (
+                  <button key={p.id} onClick={() => handleAssignFromRepo(p.id)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl border border-gray-200 dark:border-slate-700 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-300 dark:hover:border-blue-700 transition-colors text-left">
+                    {p.imageUrl ? (
+                      <img src={p.imageUrl} alt={p.name} className="w-10 h-10 rounded-lg object-cover shrink-0" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-gray-900 dark:text-white text-sm">{p.name}</p>
+                      {p.category && <p className="text-xs text-gray-400 dark:text-slate-500">{p.category}</p>}
+                    </div>
+                    {p.price != null && (
+                      <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 shrink-0">
+                        ${Number(p.price).toLocaleString('es-AR')}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            <button onClick={() => setShowRepoModal(false)}
+              className="mt-4 w-full py-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 transition-colors">
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
       </div>
     </Layout>
   )
