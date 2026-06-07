@@ -5,6 +5,8 @@ import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
+
 export default function Login() {
   const { login, storeUser } = useAuth()
   const navigate = useNavigate()
@@ -30,8 +32,12 @@ export default function Login() {
       storeUser(res.data)
       navigate('/')
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Error con Google Sign-In.')
+      toast.error(err.response?.data?.message || 'Error al iniciar sesión con Google.')
     }
+  }
+
+  const handleGoogleError = () => {
+    toast.error('No se pudo conectar con Google. Verificá la configuración.')
   }
 
   return (
@@ -65,9 +71,15 @@ export default function Login() {
           <div className="flex-1 h-px bg-gray-200 dark:bg-slate-700" />
         </div>
 
-        <div className="flex justify-center">
-          <GoogleLogin onSuccess={handleGoogle} onError={() => toast.error('Error con Google.')} />
-        </div>
+        {GOOGLE_CLIENT_ID ? (
+          <div className="flex justify-center">
+            <GoogleLogin onSuccess={handleGoogle} onError={handleGoogleError} />
+          </div>
+        ) : (
+          <p className="text-center text-xs text-gray-400 dark:text-slate-500">
+            Google Sign-In no configurado.
+          </p>
+        )}
 
         <p className="text-center text-sm text-gray-500 dark:text-slate-400 mt-6">
           ¿No tenés cuenta?{' '}
