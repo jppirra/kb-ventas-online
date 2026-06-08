@@ -5,30 +5,8 @@ import ThemeToggle from './ThemeToggle'
 import { notificationsApi } from '../api/notifications'
 
 function LogoImg() {
-  const [iconOk, setIconOk] = useState(true)
-  const [textOk, setTextOk] = useState(true)
   return (
-    <>
-      {iconOk && (
-        <img
-          src="/logo-icon.png"
-          alt=""
-          className="h-9 w-auto object-contain mix-blend-multiply dark:mix-blend-screen"
-          style={{ filter: 'drop-shadow(0 0 4px rgba(59,130,246,0.5))' }}
-          onError={() => setIconOk(false)}
-        />
-      )}
-      {textOk ? (
-        <img
-          src="/logo-text.png"
-          alt="Mercato"
-          className="h-8 w-auto object-contain mix-blend-multiply dark:mix-blend-screen"
-          onError={() => setTextOk(false)}
-        />
-      ) : (
-        <span className="font-bold text-gray-900 dark:text-white text-lg tracking-tight">Mercato</span>
-      )}
-    </>
+    <span className="font-bold text-gray-900 dark:text-white text-lg tracking-tight">Mercato</span>
   )
 }
 
