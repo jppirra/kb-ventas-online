@@ -23,6 +23,10 @@ export const adminApi = {
 
   // Email
   sendEmail: (data) => api.post('/admin/email/send', data),
+  sendTestEmail: (toEmail) => api.post(`/admin/email-test?toEmail=${encodeURIComponent(toEmail)}`),
+  emailLogs: (page = 0, size = 30) => api.get(`/admin/email-logs?page=${page}&size=${size}`),
+  emailSettings: () => api.get('/admin/settings/email'),
+  saveEmailSettings: (data) => api.put('/admin/settings/email', data),
 
   // AI Settings
   aiConfig: () => api.get('/admin/settings/ai'),
