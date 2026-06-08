@@ -1,6 +1,7 @@
 package com.jafpsoft.ventas.controller;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,10 +17,21 @@ public class HealthController {
 
     private final JdbcTemplate jdbcTemplate;
 
+    @Value("${gemini.model:}")
+    private String geminiModel;
+
+    @Value("${gemini.api-key:}")
+    private String geminiApiKey;
+
     @GetMapping
     public ResponseEntity<Map<String, String>> health() {
         jdbcTemplate.queryForObject("SELECT 1", Integer.class);
-        return ResponseEntity.ok(Map.of("status", "ok", "version", "1.000.04"));
+        return ResponseEntity.ok(Map.of(
+            "status", "ok",
+            "version", "1.000.04",
+            "geminiModel", geminiModel,
+            "geminiKeySet", geminiApiKey.isBlank() ? "NO" : "SI"
+        ));
     }
 }
 
