@@ -7,7 +7,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import com.jafpsoft.ventas.service.AiService;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -16,6 +18,7 @@ import java.util.Map;
 public class HealthController {
 
     private final JdbcTemplate jdbcTemplate;
+    private final AiService aiService;
 
     @Value("${gemini.model:}")
     private String geminiModel;
@@ -32,6 +35,11 @@ public class HealthController {
             "geminiModel", geminiModel,
             "geminiKeySet", geminiApiKey.isBlank() ? "NO" : "SI"
         ));
+    }
+
+    @GetMapping("/ai-models")
+    public ResponseEntity<List<String>> aiModels() {
+        return ResponseEntity.ok(aiService.listAvailableModels());
     }
 }
 
