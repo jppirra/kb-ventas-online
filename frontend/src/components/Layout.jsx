@@ -1,15 +1,29 @@
-import React from 'react'
+import React, { useState } from 'react'
 import Navbar from './Navbar'
 import Footer from './Footer'
 
 export default function Layout({ children }) {
+  const [collapsed, setCollapsed] = useState(() =>
+    localStorage.getItem('sidebarCollapsed') === 'true'
+  )
+
+  function toggleCollapsed() {
+    setCollapsed(v => {
+      localStorage.setItem('sidebarCollapsed', String(!v))
+      return !v
+    })
+  }
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950">
-      <Navbar />
-      <main className="flex-1">
-        {children}
-      </main>
-      <Footer />
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
+      <Navbar collapsed={collapsed} onToggle={toggleCollapsed} />
+      {/* Offset: sidebar width on desktop, top bar on mobile */}
+      <div className={`transition-all duration-300 ${collapsed ? 'md:pl-16' : 'md:pl-56'} pt-14 md:pt-0 min-h-screen flex flex-col`}>
+        <main className="flex-1">
+          {children}
+        </main>
+        <Footer />
+      </div>
     </div>
   )
 }
