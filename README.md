@@ -69,4 +69,4 @@ Template por [JAFPSoft.com](https://jafpsoft.com)
 
 ## Versión
 
-**v1.000.03**
+**v1.000.04**
