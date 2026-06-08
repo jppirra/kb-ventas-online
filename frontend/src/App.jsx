@@ -23,6 +23,7 @@ import AdminEmailPage from './pages/admin/AdminEmailPage'
 import AdminBackgroundsPage from './pages/admin/AdminBackgroundsPage'
 import AdminOrdersPage from './pages/admin/AdminOrdersPage'
 import AdminReportsPage from './pages/admin/AdminReportsPage'
+import AdminDiagnosticsPage from './pages/admin/AdminDiagnosticsPage'
 import SettingsPage from './pages/SettingsPage'
 import TermsPage from './pages/TermsPage'
 import PublicCatalogPage from './pages/PublicCatalogPage'
@@ -87,6 +88,7 @@ export default function App() {
               <Route path="/admin/backgrounds" element={<AdminProtectedRoute><AdminBackgroundsPage /></AdminProtectedRoute>} />
               <Route path="/admin/orders" element={<AdminProtectedRoute><AdminOrdersPage /></AdminProtectedRoute>} />
               <Route path="/admin/reports" element={<AdminProtectedRoute><AdminReportsPage /></AdminProtectedRoute>} />
+              <Route path="/admin/diagnostics" element={<AdminProtectedRoute><AdminDiagnosticsPage /></AdminProtectedRoute>} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
