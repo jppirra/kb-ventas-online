@@ -118,8 +118,28 @@ public class AiService {
             return "ERROR: GEMINI_API_KEY no configurada";
         }
         try {
-            String result = callGemini("En una sola oración corta, ¿qué clima hace hoy aproximadamente en Córdoba, Argentina?");
-            return result != null ? result.trim() : "ERROR: respuesta nula";
+            String url = "https://generativelanguage.googleapis.com/v1beta/models/"
+                    + geminiModel + ":generateContent?key=" + geminiApiKey;
+
+            Map<String, Object> body = Map.of(
+                    "contents", List.of(Map.of("parts", List.of(Map.of("text",
+                            "En una sola oración corta, ¿qué clima hace hoy en Córdoba, Argentina?")))),
+                    "generationConfig", Map.of("maxOutputTokens", 100, "temperature", 0.7)
+            );
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    url, new HttpEntity<>(body, headers), String.class);
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            JsonNode text = root.path("candidates").get(0)
+                    .path("content").path("parts").get(0).path("text");
+
+            return text.isMissingNode() ? "WARN: respuesta inesperada: " + response.getBody() : text.asText().trim();
+
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            return "HTTP " + e.getStatusCode() + ": " + e.getResponseBodyAsString();
         } catch (Exception e) {
             return "ERROR: " + e.getMessage();
         }
