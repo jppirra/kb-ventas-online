@@ -211,9 +211,10 @@ export default function PublicProfilePage() {
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950">
       {/* Mercato brand bar */}
       <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <img src="/logo-icon.png" alt="" className="h-6 w-6 object-contain mix-blend-multiply dark:mix-blend-screen" />
-          <img src="/logo-text.png" alt="Mercato" className="h-4 object-contain mix-blend-multiply dark:mix-blend-screen" />
+        <div className="flex items-center gap-2">
+          <img src="/logo-icon.png" alt="" className="h-6 w-6 rounded-md object-cover shrink-0" />
+          <img src="/logo-text.png" alt="Mercato" className="h-4 object-contain mix-blend-multiply dark:hidden shrink-0" />
+          <span className="hidden dark:inline text-sm font-bold text-white tracking-tight">Mercato</span>
         </div>
         <p className="text-xs text-gray-400 dark:text-slate-500">Catálogos digitales</p>
       </div>
@@ -299,9 +300,10 @@ export default function PublicProfilePage() {
       </div>
 
       <footer className="mt-12 py-5 px-4 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col items-center gap-3">
-        <div className="flex items-center gap-1.5">
-          <img src="/logo-icon.png" alt="" className="h-5 w-5 object-contain mix-blend-multiply dark:mix-blend-screen" />
-          <img src="/logo-text.png" alt="Mercato" className="h-3.5 object-contain mix-blend-multiply dark:mix-blend-screen" />
+        <div className="flex items-center gap-2">
+          <img src="/logo-icon.png" alt="" className="h-5 w-5 rounded-md object-cover shrink-0" />
+          <img src="/logo-text.png" alt="Mercato" className="h-3.5 object-contain mix-blend-multiply dark:hidden shrink-0" />
+          <span className="hidden dark:inline text-xs font-bold text-white tracking-tight">Mercato</span>
         </div>
         <p className="text-xs text-gray-400 dark:text-slate-500 text-center">
           Catálogos digitales · Desarrollado por{' '}

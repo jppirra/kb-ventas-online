@@ -6,9 +6,10 @@ import { notificationsApi } from '../api/notifications'
 
 function LogoImg() {
   return (
-    <div className="flex items-center gap-1.5">
-      <img src="/logo-icon.png" alt="" className="h-7 w-7 object-contain mix-blend-multiply dark:mix-blend-screen" />
-      <img src="/logo-text.png" alt="Mercato" className="h-5 object-contain mix-blend-multiply dark:mix-blend-screen" />
+    <div className="flex items-center gap-2">
+      <img src="/logo-icon.png" alt="" className="h-8 w-8 rounded-lg object-cover shrink-0" />
+      <img src="/logo-text.png" alt="Mercato" className="h-5 object-contain mix-blend-multiply dark:hidden shrink-0" />
+      <span className="hidden dark:inline font-bold text-white text-lg tracking-tight">Mercato</span>
     </div>
   )
 }

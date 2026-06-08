@@ -784,6 +784,23 @@ export default function PublicCatalogPage() {
       `}</style>
 
       <div className={`min-h-screen flex flex-col bg-gray-50 ${cartCount > 0 ? 'pb-52' : ''}`}>
+        {/* Mercato CTA bar */}
+        <div className="bg-slate-900 dark:bg-slate-950 px-4 py-2 flex items-center justify-between print:hidden">
+          <div className="flex items-center gap-2 min-w-0">
+            <img src="/logo-icon.png" alt="" className="h-6 w-6 rounded-md object-cover shrink-0" />
+            <span className="text-xs text-slate-300 truncate">¿Querés hacer crecer tu negocio?</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            <Link to="/login" className="text-xs text-slate-300 hover:text-white transition-colors font-medium">
+              Iniciar sesión
+            </Link>
+            <Link to="/register"
+              className="text-xs font-semibold px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+              Registrarse
+            </Link>
+          </div>
+        </div>
+
         {/* Vendor profile header */}
         <header className="bg-white border-b border-gray-200 print:hidden">
           {/* Banner */}
