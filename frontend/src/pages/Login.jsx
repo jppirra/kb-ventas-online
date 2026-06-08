@@ -6,12 +6,21 @@ function LoginLogo() {
   return (
     <div className="flex flex-col items-center gap-2 mb-6">
       {iconOk && (
-        <img src="/logo-icon.png" alt="" className="h-16 w-auto"
-          onError={() => setIconOk(false)} />
+        <img
+          src="/logo-icon.png"
+          alt=""
+          className="h-20 w-auto object-contain mix-blend-multiply dark:mix-blend-screen"
+          style={{ filter: 'drop-shadow(0 0 8px rgba(59,130,246,0.6))' }}
+          onError={() => setIconOk(false)}
+        />
       )}
       {textOk ? (
-        <img src="/logo-text.png" alt="Mercato" className="h-9 w-auto"
-          onError={() => setTextOk(false)} />
+        <img
+          src="/logo-text.png"
+          alt="Mercato"
+          className="h-10 w-auto object-contain mix-blend-multiply dark:mix-blend-screen"
+          onError={() => setTextOk(false)}
+        />
       ) : (
         <span className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Mercato</span>
       )}
