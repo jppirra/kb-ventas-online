@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mercato — Catálogos digitales para tu negocio</title>
+  <meta name="description" content="Creá catálogos digitales, automatizá con IA y hacé crecer tu negocio con Mercato.">
+  <link rel="icon" href="/logo-icon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <header class="navbar">
+    <a href="/mercato/" class="logo" title="Mercato">
+      <img src="/logo-icon.png" alt="" class="logo-icon">
+      <img src="/logo-text.png" alt="Mercato" class="logo-text">
+    </a>
+    <nav>
+      <a href="#features">Características</a>
+      <a href="#demo">Demo</a>
+      <a href="#cta">Precios</a>
+    </nav>
+    <div class="actions">
+      <button id="theme-toggle" aria-label="Cambiar tema">🌙</button>
+      <a href="/login" class="btn-outline">Iniciar sesión</a>
+      <a href="/register" class="btn-primary">Comenzar gratis</a>
+    </div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-content">
+      <span class="badge">Plataforma Todo en Uno</span>
+      <h1>Tecnología que <span>impulsa las ventas</span> de tu negocio</h1>
+      <p>Catálogos digitales, automatización con IA y herramientas para emprendedores que quieren crecer.</p>
+      <div class="hero-buttons">
+        <a href="/register" class="btn-primary btn-large">Comenzar gratis</a>
+        <a href="/login" class="btn-outline btn-large">Ver demo</a>
+      </div>
+    </div>
+    <div class="hero-image">
+      <img src="/logo-icon.png" alt="Mercato" class="hero-icon">
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="section-header">
+      <h2>¿Qué podés hacer con Mercato?</h2>
+      <p>Todo lo que necesitás para digitalizar y hacer crecer tu negocio.</p>
+    </div>
+    <div class="feature-grid">
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <h3>Catálogos digitales</h3>
+        <p>Creá catálogos profesionales y compartílos por WhatsApp en segundos. Tus clientes pueden pedir directamente desde el catálogo.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>IA integrada</h3>
+        <p>Generá descripciones y presentaciones de productos con inteligencia artificial. Ahorrá tiempo y vendé más.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>Seguimiento de pedidos</h3>
+        <p>Gestioná pedidos y conocé el rendimiento de tu negocio en tiempo real con métricas claras.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="dashboard-preview" id="demo">
+    <div class="section-header">
+      <h2>Tu negocio en un panel</h2>
+      <p>Visualizá tus ventas, pedidos y métricas desde un solo lugar.</p>
+    </div>
+    <div class="dashboard">
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-label">Ventas del mes</span>
+          <h3 class="stat-value">$12.580</h3>
+          <span class="stat-delta positive">+18% vs mes anterior</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Pedidos</span>
+          <h3 class="stat-value">245</h3>
+          <span class="stat-delta positive">+32 esta semana</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Conversión</span>
+          <h3 class="stat-value">5.7%</h3>
+          <span class="stat-delta positive">Por encima del promedio</span>
+        </div>
+      </div>
+      <div class="chart">
+        <div class="chart-bars">
+          <div class="bar" style="height:40%"></div>
+          <div class="bar" style="height:60%"></div>
+          <div class="bar" style="height:45%"></div>
+          <div class="bar" style="height:75%"></div>
+          <div class="bar" style="height:55%"></div>
+          <div class="bar" style="height:85%"></div>
+          <div class="bar active" style="height:100%"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta" id="cta">
+    <div class="cta-inner">
+      <img src="/logo-icon.png" alt="" class="cta-icon">
+      <h2>Llevá tu negocio al siguiente nivel</h2>
+      <p>Todo lo que necesitás para crecer, en un solo lugar. Sin complicaciones.</p>
+      <a href="/register" class="btn-primary btn-large">Empezar gratis ahora</a>
+      <p class="cta-note">Sin tarjeta de crédito · Configuración en minutos</p>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-content">
+      <a href="/mercato/" class="footer-logo" title="Mercato">
+        <img src="/logo-icon.png" alt="" class="logo-icon-sm">
+        <img src="/logo-text.png" alt="Mercato" class="logo-text-sm">
+      </a>
+      <p class="footer-copy">
+        © <span id="year"></span> Mercato ·
+        Desarrollado por <a href="https://jafpsoft.com" target="_blank" rel="noopener">JAFPSoft</a>
+        · Todos los derechos reservados
+      </p>
+      <div class="footer-links">
+        <a href="/login">Iniciar sesión</a>
+        <a href="/register">Registrarse</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

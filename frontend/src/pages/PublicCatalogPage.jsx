@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
 import { reportsApi } from '../api/reports'
+import { useAuth } from '../context/AuthContext'
 
 const STOCK_LABELS = { IN_STOCK: 'En stock', ON_DEMAND: 'A pedido' }
 const STOCK_COLORS = {
@@ -662,6 +663,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
 }
 
 export default function PublicCatalogPage() {
+  const { isAuthenticated } = useAuth()
   const { catalogId } = useParams()
   const navigate = useNavigate()
   const [data, setData] = useState(null)
@@ -784,31 +786,37 @@ export default function PublicCatalogPage() {
       `}</style>
 
       <div className={`min-h-screen flex flex-col bg-gray-50 ${cartCount > 0 ? 'pb-52' : ''}`}>
-        {/* Mercato CTA bar */}
-        <div className="bg-slate-900 dark:bg-slate-950 px-4 py-2 flex items-center justify-between print:hidden">
-          <div className="flex items-center gap-2 min-w-0">
-            <img src="/logo-icon.png" alt="" className="h-6 w-6 rounded-md object-cover shrink-0" />
-            <span className="text-xs text-slate-300 truncate">¿Querés hacer crecer tu negocio?</span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ml-3">
-            <Link to="/login" className="text-xs text-slate-300 hover:text-white transition-colors font-medium">
-              Iniciar sesión
-            </Link>
-            <Link to="/register"
-              className="text-xs font-semibold px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
-              Registrarse
-            </Link>
-          </div>
+        {/* Mercato brand bar */}
+        <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3 print:hidden">
+          <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
+            <img src="/logo-icon.png" alt="" className="h-8 w-8 rounded-lg object-cover shrink-0" />
+            <img src="/logo-text.png" alt="Mercato" className="h-5 object-contain mix-blend-multiply dark:hidden shrink-0" />
+            <span className="hidden dark:inline text-sm font-bold text-white tracking-tight">Mercato</span>
+          </a>
+          {!isAuthenticated && (
+            <div className="flex items-center gap-2 ml-auto">
+              <span className="text-xs text-gray-500 dark:text-slate-400 hidden sm:inline">¿Querés hacer crecer tu negocio?</span>
+              <Link to="/login" className="text-xs font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+                Iniciar sesión
+              </Link>
+              <Link to="/register" className="text-xs font-semibold px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+                Registrarse
+              </Link>
+            </div>
+          )}
         </div>
 
         {/* Vendor profile header */}
         <header className="bg-white border-b border-gray-200 print:hidden">
           {/* Banner */}
-          <div className="relative w-full h-36 sm:h-48 overflow-hidden"
-            style={vendorBannerImageUrl
-              ? { backgroundImage: `url(${vendorBannerImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
-              : { backgroundColor: brandColor + '22' }
-            }>
+          <div className="relative w-full overflow-hidden"
+            style={{
+              aspectRatio: '16/5',
+              maxHeight: 240,
+              ...(vendorBannerImageUrl
+                ? { backgroundImage: `url(${vendorBannerImageUrl})`, backgroundSize: 'cover', backgroundPosition: 'center' }
+                : { backgroundColor: brandColor + '22' })
+            }}>
             {!vendorBannerImageUrl && (
               <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${brandColor}33 0%, ${brandColor}11 100%)` }} />
             )}

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
+import { useAuth } from '../context/AuthContext'
 
 const PLATFORM_ICONS = {
   WHATSAPP: { label: 'WhatsApp', color: '#25D366', icon: (
@@ -167,6 +168,7 @@ function CatalogSection({ catalog, vendorWhatsapp, onWhatsappClick, onView }) {
 }
 
 export default function PublicProfilePage() {
+  const { isAuthenticated } = useAuth()
   const { slug } = useParams()
   const location = useLocation()
   const catalogNotFound = location.state?.catalogNotFound
@@ -210,13 +212,23 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950">
       {/* Mercato brand bar */}
-      <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <img src="/logo-icon.png" alt="" className="h-6 w-6 rounded-md object-cover shrink-0" />
-          <img src="/logo-text.png" alt="Mercato" className="h-4 object-contain mix-blend-multiply dark:hidden shrink-0" />
+      <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3">
+        <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
+          <img src="/logo-icon.png" alt="" className="h-8 w-8 rounded-lg object-cover shrink-0" />
+          <img src="/logo-text.png" alt="Mercato" className="h-5 object-contain mix-blend-multiply dark:hidden shrink-0" />
           <span className="hidden dark:inline text-sm font-bold text-white tracking-tight">Mercato</span>
-        </div>
-        <p className="text-xs text-gray-400 dark:text-slate-500">Catálogos digitales</p>
+        </a>
+        {!isAuthenticated && (
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-xs text-gray-500 dark:text-slate-400 hidden sm:inline">¿Querés hacer crecer tu negocio?</span>
+            <Link to="/login" className="text-xs font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              Iniciar sesión
+            </Link>
+            <Link to="/register" className="text-xs font-semibold px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+              Registrarse
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Banner de catálogo no encontrado */}
@@ -233,7 +245,7 @@ export default function PublicProfilePage() {
       )}
 
       {/* Banner */}
-      <div className="relative w-full h-36 sm:h-48 overflow-hidden">
+      <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16/5', maxHeight: 240 }}>
         {profile.bannerImageUrl ? (
           <img src={profile.bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
         ) : (
@@ -300,11 +312,11 @@ export default function PublicProfilePage() {
       </div>
 
       <footer className="mt-12 py-5 px-4 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col items-center gap-3">
-        <div className="flex items-center gap-2">
-          <img src="/logo-icon.png" alt="" className="h-5 w-5 rounded-md object-cover shrink-0" />
-          <img src="/logo-text.png" alt="Mercato" className="h-3.5 object-contain mix-blend-multiply dark:hidden shrink-0" />
-          <span className="hidden dark:inline text-xs font-bold text-white tracking-tight">Mercato</span>
-        </div>
+        <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2">
+          <img src="/logo-icon.png" alt="" className="h-7 w-7 rounded-lg object-cover shrink-0" />
+          <img src="/logo-text.png" alt="Mercato" className="h-4 object-contain mix-blend-multiply dark:hidden shrink-0" />
+          <span className="hidden dark:inline text-sm font-bold text-white tracking-tight">Mercato</span>
+        </a>
         <p className="text-xs text-gray-400 dark:text-slate-500 text-center">
           Catálogos digitales · Desarrollado por{' '}
           <a href="https://jafpsoft.com" target="_blank" rel="noopener noreferrer"
