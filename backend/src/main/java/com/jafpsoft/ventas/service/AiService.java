@@ -122,13 +122,54 @@ public class AiService {
         return names;
     }
 
+    public List<String> listOpenRouterFreeModels() {
+        List<String> names = new ArrayList<>();
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            if (openrouterApiKey != null && !openrouterApiKey.isBlank()) {
+                headers.set("Authorization", "Bearer " + openrouterApiKey);
+            }
+            ResponseEntity<String> response = restTemplate.exchange(
+                    "https://openrouter.ai/api/v1/models",
+                    org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(headers), String.class);
+            JsonNode root = objectMapper.readTree(response.getBody());
+            root.path("data").forEach(m -> {
+                String id = m.path("id").asText();
+                if (id.endsWith(":free")) names.add(id);
+            });
+        } catch (Exception e) {
+            names.add("ERROR: " + e.getMessage());
+        }
+        return names;
+    }
+
     public String testConnection(String provider, String model) {
         String prompt = "En una sola oración corta, ¿qué clima hace hoy en Córdoba, Argentina?";
         if ("openrouter".equals(provider)) {
-            String key = openrouterApiKey;
-            if (key == null || key.isBlank()) return "ERROR: OPENROUTER_API_KEY no configurada";
-            String result = callOpenRouter(prompt, model != null && !model.isBlank() ? model : openrouterModel);
-            return result != null ? result : "ERROR: respuesta nula";
+            if (openrouterApiKey == null || openrouterApiKey.isBlank()) return "ERROR: OPENROUTER_API_KEY no configurada";
+            String m = (model != null && !model.isBlank()) ? model : openrouterModel;
+            try {
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
+                headers.set("Authorization", "Bearer " + openrouterApiKey);
+                headers.set("HTTP-Referer", "https://mercato.jafpsoft.com");
+                Map<String, Object> body = Map.of(
+                        "model", m,
+                        "max_tokens", 100,
+                        "messages", List.of(Map.of("role", "user", "content", prompt))
+                );
+                ResponseEntity<String> response = restTemplate.postForEntity(
+                        "https://openrouter.ai/api/v1/chat/completions",
+                        new HttpEntity<>(body, headers), String.class);
+                JsonNode root = objectMapper.readTree(response.getBody());
+                JsonNode content = root.path("choices").get(0).path("message").path("content");
+                return content.isMissingNode() ? "WARN: " + response.getBody() : content.asText().trim();
+            } catch (org.springframework.web.client.HttpClientErrorException e) {
+                return "HTTP " + e.getStatusCode() + ": " + e.getResponseBodyAsString();
+            } catch (Exception e) {
+                return "ERROR: " + e.getMessage();
+            }
         }
         // gemini (default)
         if (geminiApiKey == null || geminiApiKey.isBlank()) return "ERROR: GEMINI_API_KEY no configurada";

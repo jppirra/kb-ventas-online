@@ -132,16 +132,21 @@ export default function AdminDiagnosticsPage() {
         </div>
 
         {/* Botones individuales */}
-        <div className="grid grid-cols-2 gap-2 mb-6">
+        <div className="grid grid-cols-3 gap-2 mb-6">
           <button onClick={() => runOne('health', 'GET /api/health', async () => { const { data } = await api.get('/health'); return data })}
             disabled={running.health}
             className="py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 disabled:opacity-50 transition-colors">
             {running.health ? '...' : 'Health'}
           </button>
-          <button onClick={() => runOne('models', 'GET /api/health/ai-models', async () => { const { data } = await api.get('/health/ai-models'); return data })}
+          <button onClick={() => runOne('models', 'Modelos Gemini', async () => { const { data } = await api.get('/health/ai-models'); return data })}
             disabled={running.models}
             className="py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 disabled:opacity-50 transition-colors">
-            {running.models ? '...' : 'Modelos disponibles (Gemini)'}
+            {running.models ? '...' : 'Modelos Gemini'}
+          </button>
+          <button onClick={() => runOne('ormodels', 'Modelos OpenRouter (free)', async () => { const { data } = await api.get('/health/openrouter-models'); return data })}
+            disabled={running.ormodels}
+            className="py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 disabled:opacity-50 transition-colors">
+            {running.ormodels ? '...' : 'Modelos OpenRouter'}
           </button>
         </div>
 

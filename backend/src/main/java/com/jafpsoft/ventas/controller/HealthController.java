@@ -41,5 +41,10 @@ public class HealthController {
     public ResponseEntity<List<String>> aiModels() {
         return ResponseEntity.ok(aiService.listAvailableModels());
     }
+
+    @GetMapping("/openrouter-models")
+    public ResponseEntity<List<String>> openrouterModels() {
+        return ResponseEntity.ok(aiService.listOpenRouterFreeModels());
+    }
 }
 
