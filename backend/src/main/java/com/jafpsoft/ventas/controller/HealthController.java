@@ -19,7 +19,7 @@ public class HealthController {
     @GetMapping
     public ResponseEntity<Map<String, String>> health() {
         jdbcTemplate.queryForObject("SELECT 1", Integer.class);
-        return ResponseEntity.ok(Map.of("status", "ok"));
+        return ResponseEntity.ok(Map.of("status", "ok", "version", "1.000.04"));
     }
 }
 
