@@ -45,6 +45,12 @@ export function AuthProvider({ children }) {
     return response.data
   }
 
+  const acceptTerms = async () => {
+    await api.post('/auth/accept-terms')
+    localStorage.setItem('termsAccepted', 'true')
+    setUser(u => u ? { ...u, termsAccepted: true } : u)
+  }
+
   const logout = () => {
     const theme = localStorage.getItem('theme')
     localStorage.clear()
@@ -56,7 +62,7 @@ export function AuthProvider({ children }) {
   const isAuthenticated = Boolean(user?.token)
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, storeUser, isAuthenticated, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, storeUser, acceptTerms, isAuthenticated, loading }}>
       {children}
     </AuthContext.Provider>
   )

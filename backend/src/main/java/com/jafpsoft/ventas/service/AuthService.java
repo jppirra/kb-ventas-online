@@ -167,6 +167,14 @@ public class AuthService {
         return buildAuthResponse(user);
     }
 
+    @Transactional
+    public void acceptTerms(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
+        user.setTermsAcceptedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
     private AuthResponse buildAuthResponse(User user) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(user.getEmail());
         String token = jwtTokenProvider.generateToken(userDetails, user.getId());

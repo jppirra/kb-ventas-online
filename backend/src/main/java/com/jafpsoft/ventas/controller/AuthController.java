@@ -1,10 +1,13 @@
 package com.jafpsoft.ventas.controller;
 
 import com.jafpsoft.ventas.dto.auth.*;
+import com.jafpsoft.ventas.security.CustomUserDetails;
 import com.jafpsoft.ventas.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -55,6 +58,13 @@ public class AuthController {
     @PostMapping("/resend-verification")
     public ResponseEntity<Map<String, String>> resendVerification(@RequestBody ForgotPasswordRequest request) {
         return ResponseEntity.ok(authService.resendVerification(request.getEmail()));
+    }
+
+    @PostMapping("/accept-terms")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<Map<String, String>> acceptTerms(@AuthenticationPrincipal CustomUserDetails user) {
+        authService.acceptTerms(user.getUserId());
+        return ResponseEntity.ok(Map.of("message", "Términos aceptados."));
     }
 }
 

@@ -26,6 +26,7 @@ import AdminReportsPage from './pages/admin/AdminReportsPage'
 import AdminDiagnosticsPage from './pages/admin/AdminDiagnosticsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import SettingsPage from './pages/SettingsPage'
+import TermsGate from './components/TermsGate'
 import TermsPage from './pages/TermsPage'
 import PublicCatalogPage from './pages/PublicCatalogPage'
 import StockPage from './pages/StockPage'
@@ -47,6 +48,7 @@ export default function App() {
       <ThemeProvider>
         <AuthProvider>
           <BrowserRouter>
+            <TermsGate>
             <Toaster richColors position="top-right" />
             <Routes>
               <Route path="/" element={<RootRedirect />} />
@@ -94,6 +96,7 @@ export default function App() {
               <Route path="/terms" element={<TermsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </TermsGate>
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>

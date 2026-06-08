@@ -45,6 +45,10 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
+        <div className="flex flex-col items-center gap-2 mb-6">
+          <img src="/logo-icon.png" alt="Mercato" className="h-16 w-auto" onError={e => { e.target.style.display = 'none' }} />
+          <img src="/logo-text.png" alt="Mercato" className="h-8 w-auto" onError={e => { e.target.style.display = 'none' }} />
+        </div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Iniciar sesión</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">

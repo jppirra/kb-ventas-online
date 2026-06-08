@@ -161,8 +161,9 @@ export default function Navbar() {
       <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
 
         {/* Logo */}
-        <Link to="/dashboard" className="font-bold text-gray-900 dark:text-white text-base tracking-tight shrink-0">
-          Mercato
+        <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
+          <img src="/logo-icon.png" alt="Mercato" className="h-8 w-auto" onError={e => { e.target.style.display = 'none' }} />
+          <img src="/logo-text.png" alt="Mercato" className="h-7 w-auto hidden sm:block" onError={e => { e.target.style.display = 'none' }} />
         </Link>
 
         {/* Links desktop */}
