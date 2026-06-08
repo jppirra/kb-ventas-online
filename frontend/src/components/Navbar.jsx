@@ -4,6 +4,25 @@ import { useAuth } from '../context/AuthContext'
 import ThemeToggle from './ThemeToggle'
 import { notificationsApi } from '../api/notifications'
 
+function LogoImg() {
+  const [iconOk, setIconOk] = useState(true)
+  const [textOk, setTextOk] = useState(true)
+  return (
+    <>
+      {iconOk && (
+        <img src="/logo-icon.png" alt="" className="h-8 w-auto"
+          onError={() => setIconOk(false)} />
+      )}
+      {textOk ? (
+        <img src="/logo-text.png" alt="Mercato" className="h-7 w-auto"
+          onError={() => setTextOk(false)} />
+      ) : (
+        <span className="font-bold text-gray-900 dark:text-white text-lg tracking-tight">Mercato</span>
+      )}
+    </>
+  )
+}
+
 function timeAgo(dateStr) {
   const diff = (Date.now() - new Date(dateStr)) / 1000
   if (diff < 60) return 'ahora'
@@ -162,8 +181,7 @@ export default function Navbar() {
 
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
-          <img src="/logo-icon.png" alt="Mercato" className="h-8 w-auto" onError={e => { e.target.style.display = 'none' }} />
-          <img src="/logo-text.png" alt="Mercato" className="h-7 w-auto hidden sm:block" onError={e => { e.target.style.display = 'none' }} />
+          <LogoImg />
         </Link>
 
         {/* Links desktop */}

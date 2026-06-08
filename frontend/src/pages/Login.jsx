@@ -1,4 +1,23 @@
 import React, { useState } from 'react'
+
+function LoginLogo() {
+  const [iconOk, setIconOk] = useState(true)
+  const [textOk, setTextOk] = useState(true)
+  return (
+    <div className="flex flex-col items-center gap-2 mb-6">
+      {iconOk && (
+        <img src="/logo-icon.png" alt="" className="h-16 w-auto"
+          onError={() => setIconOk(false)} />
+      )}
+      {textOk ? (
+        <img src="/logo-text.png" alt="Mercato" className="h-9 w-auto"
+          onError={() => setTextOk(false)} />
+      ) : (
+        <span className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">Mercato</span>
+      )}
+    </div>
+  )
+}
 import { Link, useNavigate } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { toast } from 'sonner'
@@ -45,10 +64,7 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
-        <div className="flex flex-col items-center gap-2 mb-6">
-          <img src="/logo-icon.png" alt="Mercato" className="h-16 w-auto" onError={e => { e.target.style.display = 'none' }} />
-          <img src="/logo-text.png" alt="Mercato" className="h-8 w-auto" onError={e => { e.target.style.display = 'none' }} />
-        </div>
+        <LoginLogo />
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Iniciar sesión</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
