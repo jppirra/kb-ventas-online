@@ -24,6 +24,10 @@ export const adminApi = {
   // Email
   sendEmail: (data) => api.post('/admin/email/send', data),
 
+  // AI Settings
+  aiConfig: () => api.get('/admin/settings/ai'),
+  saveAiConfig: (data) => api.put('/admin/settings/ai', data),
+
   // Background templates
   backgrounds: () => api.get('/admin/backgrounds'),
   createBackground: (data) => api.post('/admin/backgrounds', data),

@@ -42,6 +42,7 @@ public class AiService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final AppSettingService appSettingService;
 
     // ── Métodos públicos (sin cambios de firma) ────────────────────────────────
 
@@ -57,15 +58,32 @@ public class AiService {
         return callAi(buildCatalogIntroPrompt(catalogName, products));
     }
 
-    // ── Dispatcher: Gemini → OpenRouter ───────────────────────────────────────
+    // ── Dispatcher con proveedor y modelo configurables ───────────────────────
 
     private String callAi(String prompt) {
-        if (geminiApiKey != null && !geminiApiKey.isBlank()) {
-            String result = callGemini(prompt);
-            if (result != null) return result;
-        }
-        if (openrouterApiKey != null && !openrouterApiKey.isBlank()) {
-            return callOpenRouter(prompt, openrouterModel);
+        String defaultProvider = (geminiApiKey != null && !geminiApiKey.isBlank()) ? "gemini" : "openrouter";
+        String activeProvider = appSettingService.get("ai.provider", defaultProvider);
+
+        if ("gemini".equals(activeProvider)) {
+            if (geminiApiKey != null && !geminiApiKey.isBlank()) {
+                String result = callGemini(prompt);
+                if (result != null) return result;
+            }
+            // fallback a openrouter si gemini falla
+            if (openrouterApiKey != null && !openrouterApiKey.isBlank()) {
+                String activeModel = appSettingService.get("ai.model.openrouter", openrouterModel);
+                return callOpenRouter(prompt, activeModel);
+            }
+        } else {
+            if (openrouterApiKey != null && !openrouterApiKey.isBlank()) {
+                String activeModel = appSettingService.get("ai.model.openrouter", openrouterModel);
+                return callOpenRouter(prompt, activeModel);
+            }
+            // fallback a gemini si openrouter falla
+            if (geminiApiKey != null && !geminiApiKey.isBlank()) {
+                String result = callGemini(prompt);
+                if (result != null) return result;
+            }
         }
         log.warn("Sin API key de IA configurada (GEMINI_API_KEY u OPENROUTER_API_KEY)");
         return null;
@@ -77,7 +95,8 @@ public class AiService {
 
     private String callGemini(String prompt) {
         try {
-            String url = GEMINI_BASE + geminiModel + ":generateContent?key=" + geminiApiKey;
+            String activeModel = appSettingService.get("ai.model.gemini", geminiModel);
+            String url = GEMINI_BASE + activeModel + ":generateContent?key=" + geminiApiKey;
 
             Map<String, Object> body = Map.of(
                     "contents", List.of(
@@ -148,7 +167,8 @@ public class AiService {
         String prompt = "En una sola oración corta, ¿qué clima hace hoy en Córdoba, Argentina?";
         if ("openrouter".equals(provider)) {
             if (openrouterApiKey == null || openrouterApiKey.isBlank()) return "ERROR: OPENROUTER_API_KEY no configurada";
-            String m = (model != null && !model.isBlank()) ? model : openrouterModel;
+            String activeModel = appSettingService.get("ai.model.openrouter", openrouterModel);
+            String m = (model != null && !model.isBlank()) ? model : activeModel;
             try {
                 HttpHeaders headers = new HttpHeaders();
                 headers.setContentType(MediaType.APPLICATION_JSON);
@@ -174,7 +194,8 @@ public class AiService {
         // gemini (default)
         if (geminiApiKey == null || geminiApiKey.isBlank()) return "ERROR: GEMINI_API_KEY no configurada";
         try {
-            String m = (model != null && !model.isBlank()) ? model : geminiModel;
+            String activeModel = appSettingService.get("ai.model.gemini", geminiModel);
+            String m = (model != null && !model.isBlank()) ? model : activeModel;
             String url = GEMINI_BASE + m + ":generateContent?key=" + geminiApiKey;
             Map<String, Object> body = Map.of(
                     "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),

@@ -166,6 +166,13 @@ public class MigrationRunner implements ApplicationRunner {
         } catch (Exception e) {
             log.warn("Migration skipped for notifications table: {}", e.getMessage());
         }
+
+        try {
+            jdbc.execute("CREATE TABLE IF NOT EXISTS app_settings (key VARCHAR(100) PRIMARY KEY, value TEXT)");
+            log.info("Migration applied: app_settings table");
+        } catch (Exception e) {
+            log.warn("Migration skipped for app_settings table: {}", e.getMessage());
+        }
     }
 
     private void applyIfNeeded(String checkSql, String migrationSql, String label) {

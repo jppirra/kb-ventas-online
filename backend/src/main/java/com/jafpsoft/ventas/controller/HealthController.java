@@ -31,7 +31,7 @@ public class HealthController {
         jdbcTemplate.queryForObject("SELECT 1", Integer.class);
         return ResponseEntity.ok(Map.of(
             "status", "ok",
-            "version", "1.000.05",
+            "version", "1.000.06",
             "geminiModel", geminiModel,
             "geminiKeySet", geminiApiKey.isBlank() ? "NO" : "SI"
         ));
