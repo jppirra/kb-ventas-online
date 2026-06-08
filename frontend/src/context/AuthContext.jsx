@@ -46,7 +46,7 @@ export function AuthProvider({ children }) {
   }
 
   const acceptTerms = async () => {
-    await api.post('/auth/accept-terms')
+    await api.post('/profile/accept-terms')
     localStorage.setItem('termsAccepted', 'true')
     setUser(u => u ? { ...u, termsAccepted: true } : u)
   }

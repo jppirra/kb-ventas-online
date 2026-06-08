@@ -5,6 +5,7 @@ import com.jafpsoft.ventas.dto.profile.ProfileResponse;
 import com.jafpsoft.ventas.dto.profile.ProfileUpdateRequest;
 import com.jafpsoft.ventas.security.CustomUserDetails;
 import com.jafpsoft.ventas.service.AiService;
+import com.jafpsoft.ventas.service.AuthService;
 import com.jafpsoft.ventas.service.ProfileService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,7 @@ public class ProfileController {
 
     private final ProfileService profileService;
     private final AiService aiService;
+    private final AuthService authService;
 
     @GetMapping
     public ProfileResponse get(@AuthenticationPrincipal CustomUserDetails user) {
@@ -72,6 +74,12 @@ public class ProfileController {
             return ResponseEntity.status(503).body(Map.of("error", "Servicio de IA no disponible. Configurá el proveedor en Admin → Configuración."));
         }
         return ResponseEntity.ok(Map.of("bio", bio));
+    }
+
+    @PostMapping("/accept-terms")
+    public ResponseEntity<Map<String, String>> acceptTerms(@AuthenticationPrincipal CustomUserDetails user) {
+        authService.acceptTerms(user.getUserId());
+        return ResponseEntity.ok(Map.of("message", "Términos aceptados."));
     }
 
     private Long id(CustomUserDetails user) { return user.getUserId(); }
