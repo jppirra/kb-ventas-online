@@ -25,6 +25,7 @@ const FREE_MODELS = {
 export default function AdminSettingsPage() {
   const [provider, setProvider] = useState('openrouter')
   const [model, setModel] = useState(FREE_MODELS.openrouter[0])
+  const [fallbackModel, setFallbackModel] = useState(FREE_MODELS.gemini[0])
   const [geminiKeySet, setGeminiKeySet] = useState(false)
   const [openrouterKeySet, setOpenrouterKeySet] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -35,6 +36,7 @@ export default function AdminSettingsPage() {
       .then(({ data }) => {
         setProvider(data.provider)
         setModel(data.model)
+        setFallbackModel(data.fallbackModel || (data.provider === 'gemini' ? FREE_MODELS.openrouter[0] : FREE_MODELS.gemini[0]))
         setGeminiKeySet(data.geminiKeySet)
         setOpenrouterKeySet(data.openrouterKeySet)
       })
@@ -46,15 +48,20 @@ export default function AdminSettingsPage() {
     const p = e.target.value
     setProvider(p)
     setModel(FREE_MODELS[p][0])
+    const fallbackProvider = p === 'gemini' ? 'openrouter' : 'gemini'
+    setFallbackModel(FREE_MODELS[fallbackProvider][0])
   }
+
+  const fallbackProvider = provider === 'gemini' ? 'openrouter' : 'gemini'
 
   async function handleSave(e) {
     e.preventDefault()
     setSaving(true)
     try {
-      const { data } = await adminApi.saveAiConfig({ provider, model })
+      const { data } = await adminApi.saveAiConfig({ provider, model, fallbackModel })
       setProvider(data.provider)
       setModel(data.model)
+      setFallbackModel(data.fallbackModel || fallbackModel)
       setGeminiKeySet(data.geminiKeySet)
       setOpenrouterKeySet(data.openrouterKeySet)
       toast.success('Configuracion guardada')
@@ -147,6 +154,40 @@ export default function AdminSettingsPage() {
                   placeholder="ej: liquid/lfm-2.5-1.2b-instruct:free"
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
+              </div>
+
+              {/* Fallback model */}
+              <div className="border-t border-gray-100 dark:border-slate-700 pt-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-3">
+                  Fallback — {fallbackProvider === 'gemini' ? 'Gemini' : 'OpenRouter'}
+                </p>
+                <p className="text-xs text-gray-400 dark:text-slate-500 mb-3">
+                  Si el proveedor principal falla, se usa este modelo como respaldo.
+                </p>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                    Modelo fallback ({fallbackProvider === 'gemini' ? 'Gemini' : 'OpenRouter'})
+                  </label>
+                  <select
+                    value={FREE_MODELS[fallbackProvider].includes(fallbackModel) ? fallbackModel : ''}
+                    onChange={e => setFallbackModel(e.target.value)}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2"
+                  >
+                    {FREE_MODELS[fallbackProvider].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                    {!FREE_MODELS[fallbackProvider].includes(fallbackModel) && fallbackModel && (
+                      <option value={fallbackModel}>{fallbackModel} (personalizado)</option>
+                    )}
+                  </select>
+                  <input
+                    type="text"
+                    value={fallbackModel}
+                    onChange={e => setFallbackModel(e.target.value)}
+                    placeholder={fallbackProvider === 'gemini' ? 'ej: gemini-2.0-flash' : 'ej: meta-llama/llama-3.3-70b-instruct:free'}
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </div>
 
               <div className="pt-1">

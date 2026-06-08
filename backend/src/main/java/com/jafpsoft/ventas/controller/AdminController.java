@@ -119,14 +119,18 @@ public class AdminController {
         String defaultProvider = (geminiApiKey != null && !geminiApiKey.isBlank()) ? "gemini" : "openrouter";
         String provider = appSettingService.get("ai.provider", defaultProvider);
         String model;
+        String fallbackModel;
         if ("gemini".equals(provider)) {
             model = appSettingService.get("ai.model.gemini", "gemini-2.0-flash");
+            fallbackModel = appSettingService.get("ai.model.openrouter", openrouterModelDefault);
         } else {
             model = appSettingService.get("ai.model.openrouter", openrouterModelDefault);
+            fallbackModel = appSettingService.get("ai.model.gemini", "gemini-2.0-flash");
         }
         return ResponseEntity.ok(Map.of(
                 "provider", provider,
                 "model", model,
+                "fallbackModel", fallbackModel,
                 "geminiKeySet", geminiApiKey != null && !geminiApiKey.isBlank(),
                 "openrouterKeySet", openrouterApiKey != null && !openrouterApiKey.isBlank()
         ));
@@ -136,6 +140,7 @@ public class AdminController {
     public ResponseEntity<Map<String, Object>> saveAiSettings(@RequestBody Map<String, String> body) {
         String provider = body.get("provider");
         String model = body.get("model");
+        String fallbackModel = body.get("fallbackModel");
         if (provider != null && !provider.isBlank()) {
             appSettingService.set("ai.provider", provider);
         }
@@ -143,17 +148,25 @@ public class AdminController {
             String modelKey = "gemini".equals(provider) ? "ai.model.gemini" : "ai.model.openrouter";
             appSettingService.set(modelKey, model);
         }
+        if (fallbackModel != null && !fallbackModel.isBlank()) {
+            String fallbackKey = "gemini".equals(provider) ? "ai.model.openrouter" : "ai.model.gemini";
+            appSettingService.set(fallbackKey, fallbackModel);
+        }
         String defaultProvider = (geminiApiKey != null && !geminiApiKey.isBlank()) ? "gemini" : "openrouter";
         String activeProvider = appSettingService.get("ai.provider", defaultProvider);
         String activeModel;
+        String activeFallbackModel;
         if ("gemini".equals(activeProvider)) {
             activeModel = appSettingService.get("ai.model.gemini", "gemini-2.0-flash");
+            activeFallbackModel = appSettingService.get("ai.model.openrouter", openrouterModelDefault);
         } else {
             activeModel = appSettingService.get("ai.model.openrouter", openrouterModelDefault);
+            activeFallbackModel = appSettingService.get("ai.model.gemini", "gemini-2.0-flash");
         }
         return ResponseEntity.ok(Map.of(
                 "provider", activeProvider,
                 "model", activeModel,
+                "fallbackModel", activeFallbackModel,
                 "geminiKeySet", geminiApiKey != null && !geminiApiKey.isBlank(),
                 "openrouterKeySet", openrouterApiKey != null && !openrouterApiKey.isBlank()
         ));

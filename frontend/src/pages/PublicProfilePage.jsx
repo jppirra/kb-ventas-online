@@ -223,7 +223,7 @@ export default function PublicProfilePage() {
         </div>
       )}
       {/* Banner */}
-      <div className="relative w-full" style={{ aspectRatio: '16/5', maxHeight: 280 }}>
+      <div className="relative w-full h-36 sm:h-48 overflow-hidden">
         {profile.bannerImageUrl ? (
           <img src={profile.bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
         ) : (
@@ -233,7 +233,7 @@ export default function PublicProfilePage() {
 
       {/* Profile header */}
       <div className="max-w-4xl mx-auto w-full px-4">
-        <div className="flex items-end gap-4 -mt-10 mb-4">
+        <div className="flex items-end gap-4 -mt-10 sm:-mt-12 mb-4">
           {profile.profileImageUrl ? (
             <img src={profile.profileImageUrl} alt={profile.name}
               className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-950 object-cover shadow-md shrink-0" />
