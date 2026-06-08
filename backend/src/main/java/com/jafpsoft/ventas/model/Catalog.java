@@ -56,7 +56,7 @@ public class Catalog {
     @Column(name = "background_template_id")
     private Long backgroundTemplateId;
 
-    @Column(name = "sizes_enabled", nullable = false)
+    @Column(name = "sizes_enabled", nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private boolean sizesEnabled = false;
 
