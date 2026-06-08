@@ -63,12 +63,13 @@ public class AiService {
         return null;
     }
 
+    private static final String GEMINI_BASE = "https://generativelanguage.googleapis.com/v1/models/";
+
     // ── Gemini REST API ────────────────────────────────────────────────────────
 
     private String callGemini(String prompt) {
         try {
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                    + geminiModel + ":generateContent?key=" + geminiApiKey;
+            String url = GEMINI_BASE + geminiModel + ":generateContent?key=" + geminiApiKey;
 
             Map<String, Object> body = Map.of(
                     "contents", List.of(
@@ -103,7 +104,7 @@ public class AiService {
     public List<String> listAvailableModels() {
         List<String> names = new ArrayList<>();
         try {
-            String url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + geminiApiKey;
+            String url = "https://generativelanguage.googleapis.com/v1/models?key=" + geminiApiKey;
             ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             JsonNode root = objectMapper.readTree(response.getBody());
             root.path("models").forEach(m -> names.add(m.path("name").asText()));
@@ -118,8 +119,7 @@ public class AiService {
             return "ERROR: GEMINI_API_KEY no configurada";
         }
         try {
-            String url = "https://generativelanguage.googleapis.com/v1beta/models/"
-                    + geminiModel + ":generateContent?key=" + geminiApiKey;
+            String url = GEMINI_BASE + geminiModel + ":generateContent?key=" + geminiApiKey;
 
             Map<String, Object> body = Map.of(
                     "contents", List.of(Map.of("parts", List.of(Map.of("text",
