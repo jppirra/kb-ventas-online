@@ -26,7 +26,14 @@ public class AiService {
     @Value("${gemini.model:gemini-2.0-flash}")
     private String geminiModel;
 
-    // ── Claude (fallback) ──────────────────────────────────────────────────────
+    // ── OpenRouter (fallback) ──────────────────────────────────────────────────
+    @Value("${openrouter.api-key:}")
+    private String openrouterApiKey;
+
+    @Value("${openrouter.model:google/gemini-2.0-flash-exp:free}")
+    private String openrouterModel;
+
+    // ── Claude (comentado) ────────────────────────────────────────────────────
     @Value("${anthropic.api-key:}")
     private String claudeApiKey;
 
@@ -50,16 +57,17 @@ public class AiService {
         return callAi(buildCatalogIntroPrompt(catalogName, products));
     }
 
-    // ── Dispatcher: Gemini → Claude ────────────────────────────────────────────
+    // ── Dispatcher: Gemini → OpenRouter ───────────────────────────────────────
 
     private String callAi(String prompt) {
         if (geminiApiKey != null && !geminiApiKey.isBlank()) {
-            return callGemini(prompt);
+            String result = callGemini(prompt);
+            if (result != null) return result;
         }
-        // if (claudeApiKey != null && !claudeApiKey.isBlank()) {
-        //     return callClaude(prompt);
-        // }
-        log.warn("Sin API key de IA configurada (GEMINI_API_KEY)");
+        if (openrouterApiKey != null && !openrouterApiKey.isBlank()) {
+            return callOpenRouter(prompt, openrouterModel);
+        }
+        log.warn("Sin API key de IA configurada (GEMINI_API_KEY u OPENROUTER_API_KEY)");
         return null;
     }
 
@@ -114,34 +122,64 @@ public class AiService {
         return names;
     }
 
-    public String testConnection() {
-        if (geminiApiKey == null || geminiApiKey.isBlank()) {
-            return "ERROR: GEMINI_API_KEY no configurada";
+    public String testConnection(String provider, String model) {
+        String prompt = "En una sola oración corta, ¿qué clima hace hoy en Córdoba, Argentina?";
+        if ("openrouter".equals(provider)) {
+            String key = openrouterApiKey;
+            if (key == null || key.isBlank()) return "ERROR: OPENROUTER_API_KEY no configurada";
+            String result = callOpenRouter(prompt, model != null && !model.isBlank() ? model : openrouterModel);
+            return result != null ? result : "ERROR: respuesta nula";
         }
+        // gemini (default)
+        if (geminiApiKey == null || geminiApiKey.isBlank()) return "ERROR: GEMINI_API_KEY no configurada";
         try {
-            String url = GEMINI_BASE + geminiModel + ":generateContent?key=" + geminiApiKey;
-
+            String m = (model != null && !model.isBlank()) ? model : geminiModel;
+            String url = GEMINI_BASE + m + ":generateContent?key=" + geminiApiKey;
             Map<String, Object> body = Map.of(
-                    "contents", List.of(Map.of("parts", List.of(Map.of("text",
-                            "En una sola oración corta, ¿qué clima hace hoy en Córdoba, Argentina?")))),
+                    "contents", List.of(Map.of("parts", List.of(Map.of("text", prompt)))),
                     "generationConfig", Map.of("maxOutputTokens", 100, "temperature", 0.7)
             );
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-
-            ResponseEntity<String> response = restTemplate.postForEntity(
-                    url, new HttpEntity<>(body, headers), String.class);
-
+            ResponseEntity<String> response = restTemplate.postForEntity(url, new HttpEntity<>(body, headers), String.class);
             JsonNode root = objectMapper.readTree(response.getBody());
-            JsonNode text = root.path("candidates").get(0)
-                    .path("content").path("parts").get(0).path("text");
-
-            return text.isMissingNode() ? "WARN: respuesta inesperada: " + response.getBody() : text.asText().trim();
-
+            JsonNode text = root.path("candidates").get(0).path("content").path("parts").get(0).path("text");
+            return text.isMissingNode() ? "WARN: " + response.getBody() : text.asText().trim();
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             return "HTTP " + e.getStatusCode() + ": " + e.getResponseBodyAsString();
         } catch (Exception e) {
             return "ERROR: " + e.getMessage();
+        }
+    }
+
+    // ── OpenRouter REST API ────────────────────────────────────────────────────
+
+    private String callOpenRouter(String prompt, String model) {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + openrouterApiKey);
+            headers.set("HTTP-Referer", "https://mercato.jafpsoft.com");
+
+            Map<String, Object> body = Map.of(
+                    "model", model,
+                    "max_tokens", 512,
+                    "messages", List.of(Map.of("role", "user", "content", prompt))
+            );
+
+            ResponseEntity<String> response = restTemplate.postForEntity(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    new HttpEntity<>(body, headers), String.class);
+
+            JsonNode root = objectMapper.readTree(response.getBody());
+            return root.path("choices").get(0).path("message").path("content").asText().trim();
+
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            log.error("OpenRouter HTTP {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            return null;
+        } catch (Exception e) {
+            log.error("Error llamando a OpenRouter: {}", e.getMessage(), e);
+            return null;
         }
     }
 

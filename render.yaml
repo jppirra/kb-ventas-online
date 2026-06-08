@@ -41,5 +41,7 @@ services:
         value: catalog-images
       - key: GEMINI_API_KEY
         sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
       - key: ANTHROPIC_API_KEY
         sync: false

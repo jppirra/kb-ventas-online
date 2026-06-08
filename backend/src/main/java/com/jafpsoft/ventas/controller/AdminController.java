@@ -81,8 +81,10 @@ public class AdminController {
 
     // ── AI test ───────────────────────────────────────────────────────────────
     @GetMapping("/ai/test")
-    public ResponseEntity<Map<String, String>> testAi() {
-        String result = aiService.testConnection();
+    public ResponseEntity<Map<String, String>> testAi(
+            @RequestParam(defaultValue = "gemini") String provider,
+            @RequestParam(defaultValue = "") String model) {
+        String result = aiService.testConnection(provider, model);
         return ResponseEntity.ok(Map.of("result", result));
     }
 
