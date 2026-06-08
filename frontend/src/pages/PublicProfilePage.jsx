@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
-import Footer from '../components/Footer'
 
 const PLATFORM_ICONS = {
   WHATSAPP: { label: 'WhatsApp', color: '#25D366', icon: (
@@ -210,6 +209,15 @@ export default function PublicProfilePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950">
+      {/* Mercato brand bar */}
+      <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between">
+        <div className="flex items-center gap-1.5">
+          <img src="/logo-icon.png" alt="" className="h-6 w-6 object-contain mix-blend-multiply dark:mix-blend-screen" />
+          <img src="/logo-text.png" alt="Mercato" className="h-4 object-contain mix-blend-multiply dark:mix-blend-screen" />
+        </div>
+        <p className="text-xs text-gray-400 dark:text-slate-500">Catálogos digitales</p>
+      </div>
+
       {/* Banner de catálogo no encontrado */}
       {catalogNotFound && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 text-center">
@@ -222,6 +230,7 @@ export default function PublicProfilePage() {
           </p>
         </div>
       )}
+
       {/* Banner */}
       <div className="relative w-full h-36 sm:h-48 overflow-hidden">
         {profile.bannerImageUrl ? (
@@ -234,15 +243,17 @@ export default function PublicProfilePage() {
       {/* Profile header */}
       <div className="max-w-4xl mx-auto w-full px-4">
         <div className="flex items-end gap-4 -mt-10 sm:-mt-12 mb-4">
-          {profile.profileImageUrl ? (
-            <img src={profile.profileImageUrl} alt={profile.name}
-              className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-950 object-cover shadow-md shrink-0" />
-          ) : (
-            <div className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-950 shadow-md shrink-0 flex items-center justify-center text-2xl font-bold text-white"
-              style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }}>
-              {profile.name?.charAt(0).toUpperCase()}
-            </div>
-          )}
+          <div className="relative z-10 shrink-0">
+            {profile.profileImageUrl ? (
+              <img src={profile.profileImageUrl} alt={profile.name}
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white dark:border-slate-950 object-cover shadow-md" />
+            ) : (
+              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white dark:border-slate-950 shadow-md flex items-center justify-center text-2xl font-bold text-white"
+                style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }}>
+                {profile.name?.charAt(0).toUpperCase()}
+              </div>
+            )}
+          </div>
           <div className="pb-1">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{profile.name}</h1>
           </div>
@@ -287,7 +298,20 @@ export default function PublicProfilePage() {
         )}
       </div>
 
-      <Footer />
+      <footer className="mt-12 py-5 px-4 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col items-center gap-3">
+        <div className="flex items-center gap-1.5">
+          <img src="/logo-icon.png" alt="" className="h-5 w-5 object-contain mix-blend-multiply dark:mix-blend-screen" />
+          <img src="/logo-text.png" alt="Mercato" className="h-3.5 object-contain mix-blend-multiply dark:mix-blend-screen" />
+        </div>
+        <p className="text-xs text-gray-400 dark:text-slate-500 text-center">
+          Catálogos digitales · Desarrollado por{' '}
+          <a href="https://jafpsoft.com" target="_blank" rel="noopener noreferrer"
+            className="hover:text-gray-500 dark:hover:text-slate-400 transition-colors">
+            JAFPSoft
+          </a>
+          {' '}· © {new Date().getFullYear()}
+        </p>
+      </footer>
     </div>
   )
 }
