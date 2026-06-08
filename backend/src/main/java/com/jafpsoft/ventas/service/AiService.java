@@ -10,6 +10,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -55,10 +56,10 @@ public class AiService {
         if (geminiApiKey != null && !geminiApiKey.isBlank()) {
             return callGemini(prompt);
         }
-        if (claudeApiKey != null && !claudeApiKey.isBlank()) {
-            return callClaude(prompt);
-        }
-        log.warn("Sin API key de IA configurada (GEMINI_API_KEY o ANTHROPIC_API_KEY)");
+        // if (claudeApiKey != null && !claudeApiKey.isBlank()) {
+        //     return callClaude(prompt);
+        // }
+        log.warn("Sin API key de IA configurada (GEMINI_API_KEY)");
         return null;
     }
 
@@ -92,19 +93,24 @@ public class AiService {
 
         } catch (org.springframework.web.client.HttpClientErrorException e) {
             log.error("Gemini API HTTP {}: {}", e.getStatusCode(), e.getResponseBodyAsString());
-            if (claudeApiKey != null && !claudeApiKey.isBlank()) {
-                log.info("Reintentando con Claude como fallback...");
-                return callClaude(prompt);
-            }
             return null;
         } catch (Exception e) {
             log.error("Error llamando a Gemini API: {}", e.getMessage(), e);
-            if (claudeApiKey != null && !claudeApiKey.isBlank()) {
-                log.info("Reintentando con Claude como fallback...");
-                return callClaude(prompt);
-            }
             return null;
         }
+    }
+
+    public List<String> listAvailableModels() {
+        List<String> names = new ArrayList<>();
+        try {
+            String url = "https://generativelanguage.googleapis.com/v1beta/models?key=" + geminiApiKey;
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            JsonNode root = objectMapper.readTree(response.getBody());
+            root.path("models").forEach(m -> names.add(m.path("name").asText()));
+        } catch (Exception e) {
+            names.add("ERROR: " + e.getMessage());
+        }
+        return names;
     }
 
     public String testConnection() {

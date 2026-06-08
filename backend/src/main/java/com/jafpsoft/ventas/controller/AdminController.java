@@ -86,6 +86,11 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("result", result));
     }
 
+    @GetMapping("/ai/models")
+    public ResponseEntity<List<String>> listModels() {
+        return ResponseEntity.ok(aiService.listAvailableModels());
+    }
+
     // ── Email ─────────────────────────────────────────────────────────────────
     @PostMapping("/email/send")
     public ResponseEntity<Map<String, String>> sendEmail(@Valid @RequestBody AdminEmailRequest req) {
