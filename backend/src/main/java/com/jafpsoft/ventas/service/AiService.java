@@ -118,8 +118,8 @@ public class AiService {
             return "ERROR: GEMINI_API_KEY no configurada";
         }
         try {
-            String result = callGemini("Respondé solo con la palabra: OK");
-            return result != null ? "OK: " + result.trim() : "ERROR: respuesta nula";
+            String result = callGemini("En una sola oración corta, ¿qué clima hace hoy aproximadamente en Córdoba, Argentina?");
+            return result != null ? result.trim() : "ERROR: respuesta nula";
         } catch (Exception e) {
             return "ERROR: " + e.getMessage();
         }
