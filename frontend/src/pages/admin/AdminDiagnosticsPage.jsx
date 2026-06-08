@@ -2,17 +2,17 @@ import React, { useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import api from '../../api/axios'
 
-const TIMEOUT = 20000
+const TIMEOUT = 30000
 
 const FREE_MODELS = {
   openrouter: [
-    'google/gemini-2.0-flash-exp:free',
-    'google/gemma-3-27b-it:free',
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'deepseek/deepseek-r1:free',
-    'microsoft/phi-4-reasoning:free',
-    'qwen/qwen3-235b-a22b:free',
     'mistralai/mistral-7b-instruct:free',
+    'meta-llama/llama-3.2-3b-instruct:free',
+    'google/gemini-2.0-flash-exp:free',
+    'google/gemma-3-4b-it:free',
+    'qwen/qwen3-8b:free',
+    'microsoft/phi-3-mini-128k-instruct:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
   ],
   gemini: [
     'gemini-2.0-flash',
