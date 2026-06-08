@@ -63,6 +63,9 @@ public class Product {
     @Builder.Default
     private boolean showStockQuantity = false;
 
+    @Column(name = "size_stock", columnDefinition = "TEXT")
+    private String sizeStock;
+
     @Column(name = "show_when_out_of_stock", nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private boolean showWhenOutOfStock = false;

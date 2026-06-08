@@ -73,6 +73,8 @@ public class CatalogService {
         if (req.getBackgroundColor() != null) catalog.setBackgroundColor(req.getBackgroundColor());
         if (req.getBackgroundImageUrl() != null) catalog.setBackgroundImageUrl(req.getBackgroundImageUrl());
         if (req.getBackgroundTemplateId() != null) catalog.setBackgroundTemplateId(req.getBackgroundTemplateId());
+        if (req.getSizesEnabled() != null) catalog.setSizesEnabled(req.getSizesEnabled());
+        if (req.getSizeOptions() != null) catalog.setSizeOptions(req.getSizeOptions());
     }
 
     @Transactional
@@ -154,6 +156,7 @@ public class CatalogService {
         if (req.getStockCount() != null) product.setStockCount(req.getStockCount());
         if (req.getShowStockQuantity() != null) product.setShowStockQuantity(req.getShowStockQuantity());
         if (req.getShowWhenOutOfStock() != null) product.setShowWhenOutOfStock(req.getShowWhenOutOfStock());
+        if (req.getSizeStock() != null) product.setSizeStock(req.getSizeStock());
     }
 
     @Transactional

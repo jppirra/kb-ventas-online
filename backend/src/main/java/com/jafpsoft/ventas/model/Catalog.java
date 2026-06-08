@@ -56,6 +56,13 @@ public class Catalog {
     @Column(name = "background_template_id")
     private Long backgroundTemplateId;
 
+    @Column(name = "sizes_enabled", nullable = false)
+    @Builder.Default
+    private boolean sizesEnabled = false;
+
+    @Column(name = "size_options", columnDefinition = "TEXT")
+    private String sizeOptions;
+
     @Column(name = "public_id", length = 36, unique = true)
     private String publicId;
 

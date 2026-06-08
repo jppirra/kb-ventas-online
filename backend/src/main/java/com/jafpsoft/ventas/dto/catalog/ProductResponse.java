@@ -30,6 +30,7 @@ public class ProductResponse {
     private String extraImagesJson;
     private String videoUrl;
     private String variantsJson;
+    private String sizeStock;
     private LocalDateTime createdAt;
 
     public static ProductResponse from(Product p) {
@@ -56,6 +57,7 @@ public class ProductResponse {
         r.extraImagesJson = p.getExtraImagesJson();
         r.videoUrl = p.getVideoUrl();
         r.variantsJson = p.getVariantsJson();
+        r.sizeStock = p.getSizeStock();
         r.createdAt = p.getCreatedAt();
         return r;
     }

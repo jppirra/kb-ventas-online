@@ -30,9 +30,16 @@ const BG_TYPES = [
   { value: 'CUSTOM', label: 'Imagen propia' },
 ]
 
+const SIZE_PRESETS = [
+  { label: 'Ropa adulto', sizes: ['XS','S','M','L','XL','XXL'] },
+  { label: 'Ropa niño', sizes: ['2','4','6','8','10','12','14','16'] },
+  { label: 'Calzado', sizes: ['34','35','36','37','38','39','40','41','42','43','44','45'] },
+  { label: 'Talle único', sizes: ['Único'] },
+]
+
 import { productsApi } from '../api/products'
 
-const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false }
+const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, sizeStock: null }
 
 export default function CatalogDetailPage() {
   const { id } = useParams()
@@ -65,6 +72,9 @@ export default function CatalogDetailPage() {
   const [uploadingBg, setUploadingBg] = useState(false)
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
+  const [sizesEnabled, setSizesEnabled] = useState(false)
+  const [sizeOptions, setSizeOptions] = useState([])
+  const [sizeInput, setSizeInput] = useState('')
 
   useEffect(() => {
     load()
@@ -80,6 +90,8 @@ export default function CatalogDetailPage() {
       setBgType(data.backgroundType || 'NONE')
       setBgColor(data.backgroundColor || '#f8fafc')
       setBgTemplateId(data.backgroundTemplateId || null)
+      setSizesEnabled(data.sizesEnabled || false)
+      setSizeOptions(data.sizeOptions ? data.sizeOptions.split(',').map(s => s.trim()).filter(Boolean) : [])
       if (data.status === 'GENERATING') startPolling()
     } catch {
       toast.error('Catálogo no encontrado')
@@ -289,6 +301,8 @@ export default function CatalogDetailPage() {
         backgroundColor: bgType === 'COLOR' ? bgColor : null,
         backgroundTemplateId: bgType === 'PREDEFINED' ? bgTemplateId : null,
         backgroundImageUrl: bgType === 'CUSTOM' ? catalog.backgroundImageUrl : null,
+        sizesEnabled,
+        sizeOptions: sizeOptions.join(','),
       }
       const { data } = await catalogsApi.update(id, payload)
       setCatalog(c => ({ ...c, ...data }))
@@ -482,6 +496,66 @@ export default function CatalogDetailPage() {
               <input ref={bgFileRef} type="file" accept="image/*" className="hidden" onChange={handleBgImageUpload} />
             </div>
           )}
+
+          {/* Talles */}
+          <div className="border-t border-gray-100 dark:border-slate-700 pt-4">
+            <div className="flex items-center gap-2 mb-3">
+              <input type="checkbox" id="sizesEnabled" checked={sizesEnabled}
+                onChange={e => setSizesEnabled(e.target.checked)} className="rounded" />
+              <label htmlFor="sizesEnabled" className="text-sm font-medium text-gray-700 dark:text-slate-300">
+                Este catálogo maneja talles
+              </label>
+            </div>
+            {sizesEnabled && (
+              <div className="ml-6 space-y-3">
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Presets</p>
+                  <div className="flex gap-2 flex-wrap">
+                    {SIZE_PRESETS.map(p => (
+                      <button key={p.label} type="button"
+                        onClick={() => setSizeOptions(p.sizes)}
+                        className="px-2.5 py-1 text-xs rounded-xl border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Talles activos</p>
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    {sizeOptions.map(s => (
+                      <span key={s} className="flex items-center gap-1 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-xl font-medium">
+                        {s}
+                        <button type="button" onClick={() => setSizeOptions(prev => prev.filter(x => x !== s))}
+                          className="text-blue-400 hover:text-blue-700 dark:hover:text-blue-200">×</button>
+                      </span>
+                    ))}
+                    {sizeOptions.length === 0 && <p className="text-xs text-gray-400 italic">Sin talles definidos</p>}
+                  </div>
+                  <div className="flex gap-2">
+                    <input type="text" value={sizeInput} onChange={e => setSizeInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ',') {
+                          e.preventDefault()
+                          const s = sizeInput.trim()
+                          if (s && !sizeOptions.includes(s)) setSizeOptions(prev => [...prev, s])
+                          setSizeInput('')
+                        }
+                      }}
+                      placeholder="Agregar talle (Enter para confirmar)"
+                      className="flex-1 px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                    <button type="button" onClick={() => {
+                      const s = sizeInput.trim()
+                      if (s && !sizeOptions.includes(s)) setSizeOptions(prev => [...prev, s])
+                      setSizeInput('')
+                    }} className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
+                      +
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
           <button onClick={handleSaveAppearance} disabled={savingAppearance}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">

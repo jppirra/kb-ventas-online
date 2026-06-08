@@ -25,4 +25,5 @@ public class ProductRequest {
     private String extraImagesJson;
     private String videoUrl;
     private String variantsJson;
+    private String sizeStock;
 }

@@ -140,6 +140,7 @@ const NAV_LINKS = [
   { to: '/stock', label: 'Stock' },
   { to: '/locales', label: 'Locales' },
   { to: '/orders', label: 'Pedidos' },
+  { to: '/tickets', label: 'Tickets' },
   { to: '/profile', label: 'Mi perfil' },
   { to: '/settings', label: 'Configuración' },
 ]

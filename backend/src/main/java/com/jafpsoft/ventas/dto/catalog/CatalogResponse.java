@@ -20,6 +20,8 @@ public class CatalogResponse {
     private String backgroundColor;
     private String backgroundImageUrl;
     private Long backgroundTemplateId;
+    private boolean sizesEnabled;
+    private String sizeOptions;
     private Long storeId;
     private int productCount;
     private Long viewCount;
@@ -40,6 +42,8 @@ public class CatalogResponse {
         r.backgroundColor = c.getBackgroundColor();
         r.backgroundImageUrl = c.getBackgroundImageUrl();
         r.backgroundTemplateId = c.getBackgroundTemplateId();
+        r.sizesEnabled = c.isSizesEnabled();
+        r.sizeOptions = c.getSizeOptions();
         r.storeId = c.getStoreId();
         r.productCount = c.getProductCount();
         r.viewCount = c.getViewCount();
