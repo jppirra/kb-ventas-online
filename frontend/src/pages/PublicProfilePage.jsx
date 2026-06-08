@@ -244,33 +244,32 @@ export default function PublicProfilePage() {
         </div>
       )}
 
-      {/* Banner */}
-      <div className="relative w-full overflow-hidden" style={{ aspectRatio: '16/5', maxHeight: 240 }}>
-        {profile.bannerImageUrl ? (
-          <img src={profile.bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }} />
-        )}
-      </div>
-
-      {/* Profile header */}
-      <div className="max-w-4xl mx-auto w-full px-4">
-        <div className="flex items-end gap-4 -mt-10 sm:-mt-12 mb-4">
-          <div className="relative z-10 shrink-0">
+      {/* Profile header — mismo layout que edición */}
+      <div className="max-w-4xl mx-auto w-full px-4 pt-5">
+        <div className="relative mb-12">
+          {/* Banner con bordes redondeados igual que en edición */}
+          <div className="w-full rounded-2xl overflow-hidden" style={{ aspectRatio: '16/5' }}>
+            {profile.bannerImageUrl ? (
+              <img src={profile.bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }} />
+            )}
+          </div>
+          {/* Avatar sobre el banner */}
+          <div className="absolute -bottom-8 left-6">
             {profile.profileImageUrl ? (
               <img src={profile.profileImageUrl} alt={profile.name}
-                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white dark:border-slate-950 object-cover shadow-md" />
+                className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 object-cover shadow-md" />
             ) : (
-              <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full border-4 border-white dark:border-slate-950 shadow-md flex items-center justify-center text-2xl font-bold text-white"
+              <div className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 shadow-md flex items-center justify-center text-xl font-bold text-white"
                 style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }}>
                 {profile.name?.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
-          <div className="pb-1">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{profile.name}</h1>
-          </div>
         </div>
+
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight mb-1">{profile.name}</h1>
 
         {profile.bio && (
           <p className="text-gray-600 dark:text-slate-400 text-sm leading-relaxed mb-4 max-w-xl">{profile.bio}</p>
