@@ -69,7 +69,7 @@ public class ProfileController {
         ProfileResponse profile = profileService.getProfile(id(user));
         String bio = aiService.generateBio(profile.getName(), req.getRubro(), req.getProductTypes(), req.getTone());
         if (bio == null) {
-            return ResponseEntity.status(503).body(Map.of("error", "ANTHROPIC_API_KEY no configurada"));
+            return ResponseEntity.status(503).body(Map.of("error", "Servicio de IA no disponible. Configurá el proveedor en Admin → Configuración."));
         }
         return ResponseEntity.ok(Map.of("bio", bio));
     }

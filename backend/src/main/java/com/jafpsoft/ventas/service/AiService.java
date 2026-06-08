@@ -61,7 +61,8 @@ public class AiService {
     // ── Dispatcher con proveedor y modelo configurables ───────────────────────
 
     private String callAi(String prompt) {
-        String defaultProvider = (geminiApiKey != null && !geminiApiKey.isBlank()) ? "gemini" : "openrouter";
+        String defaultProvider = (openrouterApiKey != null && !openrouterApiKey.isBlank()) ? "openrouter"
+                : (geminiApiKey != null && !geminiApiKey.isBlank()) ? "gemini" : "openrouter";
         String activeProvider = appSettingService.get("ai.provider", defaultProvider);
 
         if ("gemini".equals(activeProvider)) {
