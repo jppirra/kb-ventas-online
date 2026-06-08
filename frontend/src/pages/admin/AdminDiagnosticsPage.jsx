@@ -6,13 +6,13 @@ const TIMEOUT = 30000
 
 const FREE_MODELS = {
   openrouter: [
-    'mistralai/mistral-7b-instruct:free',
+    'liquid/lfm-2.5-1.2b-instruct:free',
     'meta-llama/llama-3.2-3b-instruct:free',
-    'google/gemini-2.0-flash-exp:free',
-    'google/gemma-3-4b-it:free',
-    'qwen/qwen3-8b:free',
-    'microsoft/phi-3-mini-128k-instruct:free',
+    'google/gemma-4-26b-a4b-it:free',
+    'openai/gpt-oss-20b:free',
+    'qwen/qwen3-coder:free',
     'meta-llama/llama-3.3-70b-instruct:free',
+    'nousresearch/hermes-3-llama-3.1-405b:free',
   ],
   gemini: [
     'gemini-2.0-flash',
