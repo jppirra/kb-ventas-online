@@ -271,7 +271,7 @@ export default function PublicProfilePage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight mb-1">{profile.name}</h1>
 
         {profile.bio && (
-          <p className="text-gray-600 dark:text-slate-400 text-sm leading-relaxed mb-4 max-w-xl">{profile.bio}</p>
+          <p className="text-gray-600 dark:text-slate-400 text-sm leading-relaxed mb-4">{profile.bio}</p>
         )}
 
         {/* Social links */}
