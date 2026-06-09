@@ -212,7 +212,7 @@ export default function PublicProfilePage() {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950">
       {/* Mercato brand bar */}
-      <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3">
+      <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3">
         <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
           <img src="/logo-icon.png" alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
           <span className="font-bold text-gray-900 dark:text-white text-base tracking-tight">Mercato</span>
@@ -309,7 +309,7 @@ export default function PublicProfilePage() {
         )}
       </div>
 
-      <footer className="mt-12 py-5 px-4 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col items-center gap-2">
+      <footer className="sticky bottom-0 z-20 mt-12 py-4 px-4 border-t border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm flex flex-col items-center gap-1.5">
         <a href="/mercato/" title="Conocer más sobre Mercato"
           className="font-bold text-gray-800 dark:text-white text-base tracking-tight hover:opacity-80 transition-opacity">
           Mercato
