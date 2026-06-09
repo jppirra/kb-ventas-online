@@ -1027,7 +1027,7 @@ export default function PublicCatalogPage() {
           </div>
         </div>
 
-        <footer className="sticky bottom-0 z-20 py-4 text-center text-xs text-gray-400 border-t border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm print:hidden space-y-1">
+        <footer className="py-4 text-center text-xs text-gray-400 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 print:hidden space-y-1">
           <p>
             Catálogo digital de{' '}
             {vendorSlug
