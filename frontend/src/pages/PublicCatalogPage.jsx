@@ -574,9 +574,9 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 z-40 print:hidden">
-        <div className="max-w-5xl mx-auto px-4 pb-4">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-600 shadow-2xl p-4">
+      <div className="bg-white dark:bg-slate-800 border-t border-gray-200 dark:border-slate-600 shadow-2xl print:hidden">
+        <div className="max-w-5xl mx-auto px-4 py-4">
+          <div className="bg-white dark:bg-slate-800 p-0">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
                 <span className="w-5 h-5 bg-blue-600 text-white text-xs font-bold rounded-full flex items-center justify-center">{items.length}</span>
@@ -835,7 +835,7 @@ export default function PublicCatalogPage() {
         }
       `}</style>
 
-      <div className={`min-h-screen flex flex-col bg-gray-50 ${cartCount > 0 ? 'pb-48' : ''}`}>
+      <div className="min-h-screen flex flex-col bg-gray-50">
         {/* Mercato brand bar */}
         <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3 print:hidden">
           <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
@@ -1054,7 +1054,23 @@ export default function PublicCatalogPage() {
           </div>
         </div>
 
-        {cartCount === 0 && <footer className="py-4 text-center text-xs text-gray-400 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 print:hidden space-y-1">
+        {/* Cart panel — sticky encima del footer, no tapa productos */}
+        {cartCount > 0 && (
+          <div className="sticky bottom-0 z-40">
+            <CartPanel
+              cart={cart}
+              catalog={catalog}
+              vendorWhatsapp={vendorWhatsapp}
+              catalogId={catalogId}
+              onUpdateQty={updateQty}
+              onRemove={removeFromCart}
+              onClear={clearCart}
+            />
+          </div>
+        )}
+
+        {/* Footer siempre visible debajo del carrito */}
+        <footer className="py-4 text-center text-xs text-gray-400 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 print:hidden space-y-1">
           <p>
             Catálogo digital de{' '}
             {vendorSlug
@@ -1069,20 +1085,8 @@ export default function PublicCatalogPage() {
           >
             Denunciar este catálogo
           </button>
-        </footer>}
+        </footer>
       </div>
-
-      {cartCount > 0 && (
-        <CartPanel
-          cart={cart}
-          catalog={catalog}
-          vendorWhatsapp={vendorWhatsapp}
-          catalogId={catalogId}
-          onUpdateQty={updateQty}
-          onRemove={removeFromCart}
-          onClear={clearCart}
-        />
-      )}
 
       {showQR && <QRModal url={pageUrl} catalogName={catalog.name} onClose={() => setShowQR(false)} />}
 
