@@ -789,9 +789,8 @@ export default function PublicCatalogPage() {
         {/* Mercato brand bar */}
         <div className="bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3 print:hidden">
           <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
-            <img src="/logo-icon.png" alt="" className="h-8 w-8 rounded-lg object-cover shrink-0" />
-            <img src="/logo-text.png" alt="Mercato" className="h-5 object-contain mix-blend-multiply dark:hidden shrink-0" />
-            <span className="hidden dark:inline text-sm font-bold text-white tracking-tight">Mercato</span>
+            <img src="/logo-icon.png" alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+            <span className="font-bold text-gray-900 dark:text-white text-base tracking-tight">Mercato</span>
           </a>
           {!isAuthenticated && (
             <div className="flex items-center gap-2 ml-auto">
