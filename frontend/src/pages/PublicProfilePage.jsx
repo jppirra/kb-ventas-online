@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
 import Footer from '../components/Footer'
+import { useAuth } from '../context/AuthContext'
 
 const PLATFORM_ICONS = {
   WHATSAPP: { label: 'WhatsApp', color: '#25D366', icon: (
@@ -168,6 +169,7 @@ function CatalogSection({ catalog, vendorWhatsapp, onWhatsappClick, onView }) {
 }
 
 export default function PublicProfilePage() {
+  const { isAuthenticated } = useAuth()
   const { slug } = useParams()
   const location = useLocation()
   const catalogNotFound = location.state?.catalogNotFound
@@ -210,6 +212,32 @@ export default function PublicProfilePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950">
+      {/* Mercato brand bar */}
+      <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3">
+        <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
+          <img src="/logo-icon.png" alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
+          <span className="font-bold text-gray-900 dark:text-white text-base tracking-tight">Mercato</span>
+        </a>
+        {isAuthenticated ? (
+          <Link to="/dashboard" className="ml-auto flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+            </svg>
+            Volver a la app
+          </Link>
+        ) : (
+          <div className="flex items-center gap-2 ml-auto">
+            <span className="text-xs text-gray-500 dark:text-slate-400 hidden sm:inline">¿Querés hacer crecer tu negocio?</span>
+            <Link to="/login" className="text-xs font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              Iniciar sesión
+            </Link>
+            <Link to="/register" className="text-xs font-semibold px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">
+              Registrarse
+            </Link>
+          </div>
+        )}
+      </div>
+
       {/* Banner de catálogo no encontrado */}
       {catalogNotFound && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-3 text-center">
