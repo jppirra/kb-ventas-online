@@ -109,6 +109,11 @@ public class CatalogController {
         return ResponseEntity.ok(Map.of("imported", products.size(), "products", products));
     }
 
+    @PostMapping("/{id}/publish")
+    public CatalogResponse publish(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails user) {
+        return catalogService.publish(id, getUserId(user));
+    }
+
     @PostMapping("/{id}/generate")
     public ResponseEntity<Map<String, String>> generate(@PathVariable Long id,
                                                         @AuthenticationPrincipal CustomUserDetails user) {

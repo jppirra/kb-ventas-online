@@ -39,4 +39,5 @@ export const catalogsApi = {
   },
 
   generate: (catalogId) => api.post(`/catalogs/${catalogId}/generate`),
+  publish: (catalogId) => api.post(`/catalogs/${catalogId}/publish`),
 }

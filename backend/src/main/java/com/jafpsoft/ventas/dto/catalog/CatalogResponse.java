@@ -24,6 +24,8 @@ public class CatalogResponse {
     private int productCount;
     private Long viewCount;
     private List<ProductResponse> products;
+    private LocalDateTime publishedAt;
+    private boolean hasDraftChanges;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
@@ -43,6 +45,8 @@ public class CatalogResponse {
         r.storeId = c.getStoreId();
         r.productCount = c.getProductCount();
         r.viewCount = c.getViewCount();
+        r.publishedAt = c.getPublishedAt();
+        r.hasDraftChanges = c.isHasDraftChanges();
         r.createdAt = c.getCreatedAt();
         r.updatedAt = c.getUpdatedAt();
         if (includeProducts) {

@@ -1,8 +1,12 @@
 package com.jafpsoft.ventas.dto.profile;
 
 import com.jafpsoft.ventas.model.Catalog;
+import com.jafpsoft.ventas.model.SocialLink;
 import com.jafpsoft.ventas.model.User;
 import lombok.Data;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Data
 public class PublicCatalogPageResponse {
@@ -16,11 +20,12 @@ public class PublicCatalogPageResponse {
     private String vendorBio;
     private String vendorBrandColorPrimary;
     private String vendorBrandColorSecondary;
+    private List<SocialLinkDto> vendorSocialLinks;
+    private LocalDateTime publishedAt;
 
-    public static PublicCatalogPageResponse from(Catalog c, User owner) {
+    private static PublicCatalogPageResponse vendorInfo(Catalog c, User owner, List<SocialLink> socialLinks) {
         PublicCatalogPageResponse r = new PublicCatalogPageResponse();
         r.available = true;
-        r.catalog = PublicCatalogResponse.from(c);
         r.vendorName = owner.getName();
         r.vendorSlug = owner.getSlug();
         r.vendorWhatsapp = owner.getWhatsappNumber();
@@ -29,6 +34,20 @@ public class PublicCatalogPageResponse {
         r.vendorBio = owner.getBio();
         r.vendorBrandColorPrimary = owner.getBrandColorPrimary();
         r.vendorBrandColorSecondary = owner.getBrandColorSecondary();
+        r.vendorSocialLinks = socialLinks.stream().map(SocialLinkDto::from).toList();
+        r.publishedAt = c.getPublishedAt();
+        return r;
+    }
+
+    public static PublicCatalogPageResponse fromSnapshot(Catalog c, User owner, List<SocialLink> socialLinks, CatalogSnapshotData snapshot) {
+        PublicCatalogPageResponse r = vendorInfo(c, owner, socialLinks);
+        r.catalog = PublicCatalogResponse.fromSnapshot(c, snapshot);
+        return r;
+    }
+
+    public static PublicCatalogPageResponse from(Catalog c, User owner, List<SocialLink> socialLinks) {
+        PublicCatalogPageResponse r = vendorInfo(c, owner, socialLinks);
+        r.catalog = PublicCatalogResponse.from(c);
         return r;
     }
 

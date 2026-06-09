@@ -77,6 +77,16 @@ public class Catalog {
     @Builder.Default
     private List<Product> products = new ArrayList<>();
 
+    @Column(name = "published_at")
+    private LocalDateTime publishedAt;
+
+    @Column(name = "published_snapshot_json", columnDefinition = "TEXT")
+    private String publishedSnapshotJson;
+
+    @Column(name = "has_draft_changes", nullable = false, columnDefinition = "boolean default true")
+    @Builder.Default
+    private boolean hasDraftChanges = true;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

@@ -55,6 +55,7 @@ export default function CatalogDetailPage() {
   const [showRepoModal, setShowRepoModal] = useState(false)
   const [repoProducts, setRepoProducts] = useState([])
   const [loadingRepo, setLoadingRepo] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   // Appearance state (synced on load, saved separately)
   const [viewMode, setViewMode] = useState('GRID')
@@ -116,6 +117,25 @@ export default function CatalogDetailPage() {
     } catch {
       toast.error('Error al iniciar generación IA')
     }
+  }
+
+  async function handlePublish() {
+    setPublishing(true)
+    try {
+      const { data } = await catalogsApi.publish(id)
+      setCatalog(c => ({ ...c, publishedAt: data.publishedAt, hasDraftChanges: false }))
+      toast.success('Catálogo publicado')
+    } catch {
+      toast.error('Error al publicar')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  function publishStatus() {
+    if (!catalog.publishedAt) return { label: 'Sin publicar', color: 'gray' }
+    if (catalog.hasDraftChanges) return { label: 'Cambios sin publicar', color: 'amber' }
+    return { label: 'Publicado', color: 'green' }
   }
 
   async function handleExcel(e) {
@@ -337,25 +357,59 @@ export default function CatalogDetailPage() {
               <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{catalog.description}</p>
             )}
           </div>
-          <button onClick={handleGenerate} disabled={generating || catalog.products?.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
-            {generating ? (
-              <>
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Generando IA...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Generar con IA
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {(() => {
+              const ps = publishStatus()
+              const colors = {
+                gray: 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400',
+                amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+                green: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+              }
+              return (
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${colors[ps.color]}`}>
+                  {ps.label}
+                </span>
+              )
+            })()}
+            <button onClick={handlePublish} disabled={publishing || catalog.products?.length === 0 || (!catalog.hasDraftChanges && catalog.publishedAt)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
+              {publishing ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Publicando...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {catalog.publishedAt ? 'Republicar' : 'Publicar'}
+                </>
+              )}
+            </button>
+            <button onClick={handleGenerate} disabled={generating || catalog.products?.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+              {generating ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Generando IA...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Generar con IA
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Share link */}
@@ -373,7 +427,13 @@ export default function CatalogDetailPage() {
               )}
             </button>
           </div>
-          <p className="text-xs text-blue-400 dark:text-blue-500 mt-1.5">Este link es publico. Quien lo tenga puede ver el catalogo y exportarlo a PDF.</p>
+          {catalog.hasDraftChanges && catalog.publishedAt ? (
+            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Hay cambios sin publicar. El enlace publico muestra la ultima version publicada hasta que vuelvas a publicar.</p>
+          ) : !catalog.publishedAt ? (
+            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Este catalogo aun no fue publicado. Publica para confirmar que el contenido es el correcto.</p>
+          ) : (
+            <p className="text-xs text-blue-400 dark:text-blue-500 mt-1.5">Este link es publico. Quien lo tenga puede ver el catalogo y exportarlo a PDF.</p>
+          )}
         </div>
 
         {/* AI Content */}

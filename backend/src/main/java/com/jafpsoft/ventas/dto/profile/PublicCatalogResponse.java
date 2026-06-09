@@ -22,6 +22,23 @@ public class PublicCatalogResponse {
     private Long viewCount;
     private List<PublicProductResponse> products;
 
+    public static PublicCatalogResponse fromSnapshot(Catalog c, CatalogSnapshotData snap) {
+        PublicCatalogResponse r = new PublicCatalogResponse();
+        r.id = c.getId();
+        r.publicId = c.getPublicId();
+        r.name = snap.getName();
+        r.description = snap.getDescription();
+        r.aiContent = snap.getAiContent();
+        r.coverImageUrl = snap.getCoverImageUrl();
+        r.viewMode = snap.getViewMode();
+        r.backgroundType = snap.getBackgroundType();
+        r.backgroundColor = snap.getBackgroundColor();
+        r.backgroundImageUrl = snap.getBackgroundImageUrl();
+        r.viewCount = c.getViewCount();
+        r.products = snap.getProducts();
+        return r;
+    }
+
     public static PublicCatalogResponse from(Catalog c) {
         PublicCatalogResponse r = new PublicCatalogResponse();
         r.id = c.getId();
