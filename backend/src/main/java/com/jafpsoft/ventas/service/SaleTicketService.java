@@ -4,6 +4,7 @@ import com.jafpsoft.ventas.dto.ticket.*;
 import com.jafpsoft.ventas.model.SaleTicket;
 import com.jafpsoft.ventas.model.SaleTicketItem;
 import com.jafpsoft.ventas.model.TicketConfig;
+import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.SaleTicketRepository;
 import com.jafpsoft.ventas.repository.TicketConfigRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -21,6 +22,7 @@ public class SaleTicketService {
 
     private final SaleTicketRepository ticketRepository;
     private final TicketConfigRepository configRepository;
+    private final ProductRepository productRepository;
 
     // ── Tickets ───────────────────────────────────────────────────────────────
 
@@ -86,19 +88,32 @@ public class SaleTicketService {
         ticket.setSubtotal(subtotal);
         ticket.setTotal(subtotal.subtract(discount).max(BigDecimal.ZERO));
 
-        return TicketResponse.from(ticketRepository.save(ticket));
+        SaleTicket saved = ticketRepository.save(ticket);
+        adjustStock(saved.getItems(), -1, userId);
+        return TicketResponse.from(saved);
     }
 
     @Transactional
     public TicketResponse updateStatus(Long id, Long userId, String status) {
         SaleTicket ticket = findOwned(id, userId);
+        String oldStatus = ticket.getStatus();
         ticket.setStatus(status);
-        return TicketResponse.from(ticketRepository.save(ticket));
+        SaleTicket saved = ticketRepository.save(ticket);
+        if ("CANCELLED".equals(status) && !"CANCELLED".equals(oldStatus)) {
+            adjustStock(saved.getItems(), 1, userId);
+        } else if (!"CANCELLED".equals(status) && "CANCELLED".equals(oldStatus)) {
+            adjustStock(saved.getItems(), -1, userId);
+        }
+        return TicketResponse.from(saved);
     }
 
     @Transactional
     public void delete(Long id, Long userId) {
-        ticketRepository.delete(findOwned(id, userId));
+        SaleTicket ticket = findOwned(id, userId);
+        if (!"CANCELLED".equals(ticket.getStatus())) {
+            adjustStock(ticket.getItems(), 1, userId);
+        }
+        ticketRepository.delete(ticket);
     }
 
     // ── TicketConfig ──────────────────────────────────────────────────────────
@@ -125,6 +140,20 @@ public class SaleTicketService {
         if (req.getFooter() != null) config.setFooter(req.getFooter());
         if (req.getShowCatalogQr() != null) config.setShowCatalogQr(req.getShowCatalogQr());
         return TicketConfigResponse.from(configRepository.save(config));
+    }
+
+    // ── Stock ─────────────────────────────────────────────────────────────────
+
+    private void adjustStock(List<SaleTicketItem> items, int delta, Long userId) {
+        for (SaleTicketItem item : items) {
+            if (item.getProductId() == null) continue;
+            productRepository.findByIdAndUserId(item.getProductId(), userId).ifPresent(product -> {
+                if (product.isShowStockQuantity() && product.getStockCount() != null) {
+                    product.setStockCount(product.getStockCount() + delta * item.getQuantity());
+                    productRepository.save(product);
+                }
+            });
+        }
     }
 
     private SaleTicket findOwned(Long id, Long userId) {

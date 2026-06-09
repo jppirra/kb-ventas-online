@@ -148,7 +148,14 @@ function NewTicketModal({ onClose, onCreated }) {
                         if (p) selectProduct(i, p); else setItem(i, 'productName', e.target.value)
                       }} className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
                         <option value="">Seleccionar...</option>
-                        {selectedCatalog.products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        {selectedCatalog.products.map(p => {
+                          const stockLabel = p.showStockQuantity && p.stockCount != null
+                            ? ` — ${p.stockCount} en stock`
+                            : p.showStock && p.stockStatus === 'ON_DEMAND'
+                              ? ' — a pedido'
+                              : ''
+                          return <option key={p.id} value={p.id}>{p.name}{stockLabel}</option>
+                        })}
                       </select>
                     ) : (
                       <input type="text" placeholder="Producto *" value={item.productName}
