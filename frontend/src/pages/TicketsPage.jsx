@@ -20,7 +20,7 @@ const SIZE_PRESETS = [
   { label: 'Talle único', sizes: ['Único'] },
 ]
 
-const emptyItem = { productId: null, productName: '', productSku: '', size: '', color: '', quantity: 1, unitPrice: '' }
+const emptyItem = { productId: null, productName: '', productSku: '', variant: '', quantity: 1, unitPrice: '' }
 
 function NewTicketModal({ onClose, onCreated }) {
   const [catalogs, setCatalogs] = useState([])
@@ -34,11 +34,17 @@ function NewTicketModal({ onClose, onCreated }) {
   }, [])
 
   const availableSizes = selectedCatalog?.sizesEnabled
-    ? (selectedCatalog.sizeOptions ? selectedCatalog.sizeOptions.split(',').map(s => s.trim()) : [])
+    ? (selectedCatalog.sizeOptions ? selectedCatalog.sizeOptions.split(',').map(s => s.trim()).filter(Boolean) : [])
     : []
   const availableColors = selectedCatalog?.colorsEnabled
-    ? (selectedCatalog.colorOptions ? selectedCatalog.colorOptions.split(',').map(s => s.trim()) : [])
+    ? (selectedCatalog.colorOptions ? selectedCatalog.colorOptions.split(',').map(s => s.trim()).filter(Boolean) : [])
     : []
+  const availableVariants =
+    availableSizes.length > 0 && availableColors.length > 0
+      ? availableSizes.flatMap(s => availableColors.map(c => `${s} / ${c}`))
+      : availableSizes.length > 0
+        ? availableSizes
+        : availableColors
 
   function addItem() { setItems(prev => [...prev, { ...emptyItem }]) }
   function removeItem(i) { setItems(prev => prev.filter((_, idx) => idx !== i)) }
@@ -69,16 +75,30 @@ function NewTicketModal({ onClose, onCreated }) {
       const payload = {
         ...form,
         discount: discount || null,
-        items: items.map((it, idx) => ({
-          productId: it.productId || null,
-          productName: it.productName,
-          productSku: it.productSku || null,
-          size: it.size || null,
-          color: it.color || null,
-          quantity: parseInt(it.quantity) || 1,
-          unitPrice: parseFloat(it.unitPrice) || 0,
-          sortOrder: idx,
-        }))
+        items: items.map((it, idx) => {
+          let size = null, color = null
+          if (it.variant) {
+            if (availableSizes.length > 0 && availableColors.length > 0) {
+              const sep = it.variant.indexOf(' / ')
+              size = sep >= 0 ? it.variant.slice(0, sep) : it.variant
+              color = sep >= 0 ? it.variant.slice(sep + 3) : null
+            } else if (availableColors.length > 0) {
+              color = it.variant
+            } else {
+              size = it.variant
+            }
+          }
+          return {
+            productId: it.productId || null,
+            productName: it.productName,
+            productSku: it.productSku || null,
+            size,
+            color,
+            quantity: parseInt(it.quantity) || 1,
+            unitPrice: parseFloat(it.unitPrice) || 0,
+            sortOrder: idx,
+          }
+        })
       }
       const { data } = await ticketsApi.create(payload)
       toast.success(`Ticket ${data.ticketNumber} creado`)
@@ -136,38 +156,20 @@ function NewTicketModal({ onClose, onCreated }) {
                         className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     )}
                   </div>
-                  {/* Talle */}
-                  {availableSizes.length > 0 ? (
-                    <div className="col-span-3 sm:col-span-2">
-                      <select value={item.size} onChange={e => setItem(i, 'size', e.target.value)}
+                  {/* Variante (talle / color) */}
+                  <div className="col-span-4 sm:col-span-3">
+                    {availableVariants.length > 0 ? (
+                      <select value={item.variant} onChange={e => setItem(i, 'variant', e.target.value)}
                         className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="">Talle</option>
-                        {availableSizes.map(s => <option key={s} value={s}>{s}</option>)}
+                        <option value="">Variante</option>
+                        {availableVariants.map(v => <option key={v} value={v}>{v}</option>)}
                       </select>
-                    </div>
-                  ) : (
-                    <div className="col-span-3 sm:col-span-2">
-                      <input type="text" placeholder="Talle" value={item.size}
-                        onChange={e => setItem(i, 'size', e.target.value)}
+                    ) : (
+                      <input type="text" placeholder="Talle / Color" value={item.variant}
+                        onChange={e => setItem(i, 'variant', e.target.value)}
                         className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                    </div>
-                  )}
-                  {/* Color */}
-                  {availableColors.length > 0 ? (
-                    <div className="col-span-3 sm:col-span-2">
-                      <select value={item.color} onChange={e => setItem(i, 'color', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="">Color</option>
-                        {availableColors.map(c => <option key={c} value={c}>{c}</option>)}
-                      </select>
-                    </div>
-                  ) : (
-                    <div className="col-span-3 sm:col-span-2">
-                      <input type="text" placeholder="Color" value={item.color}
-                        onChange={e => setItem(i, 'color', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                    </div>
-                  )}
+                    )}
+                  </div>
                   {/* Cantidad */}
                   <div className="col-span-2 sm:col-span-2">
                     <input type="number" min="1" placeholder="Cant." value={item.quantity}
@@ -175,13 +177,13 @@ function NewTicketModal({ onClose, onCreated }) {
                       className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   {/* Precio */}
-                  <div className="col-span-4 sm:col-span-3">
+                  <div className="col-span-4 sm:col-span-2">
                     <input type="number" step="0.01" placeholder="Precio unit." value={item.unitPrice}
                       onChange={e => setItem(i, 'unitPrice', e.target.value)}
                       className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                   </div>
                   {/* Subtotal + eliminar */}
-                  <div className="col-span-3 sm:col-span-1 flex items-center justify-between gap-1">
+                  <div className="col-span-2 sm:col-span-1 flex items-center justify-between gap-1">
                     <span className="text-xs text-gray-400 whitespace-nowrap">
                       ${((parseFloat(item.unitPrice) || 0) * (parseInt(item.quantity) || 1)).toLocaleString('es-AR')}
                     </span>
