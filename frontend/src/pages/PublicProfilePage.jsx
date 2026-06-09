@@ -250,31 +250,30 @@ export default function PublicProfilePage() {
           </p>
         </div>
       )}
-      {/* Banner */}
-      <div className="relative w-full" style={{ aspectRatio: '16/5', maxHeight: 280 }}>
-        {profile.bannerImageUrl ? (
-          <img src={profile.bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
-        ) : (
-          <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }} />
-        )}
-      </div>
-
-      {/* Profile header */}
-      <div className="max-w-4xl mx-auto w-full px-4">
-        <div className="flex items-end gap-4 -mt-10 mb-4">
-          {profile.profileImageUrl ? (
-            <img src={profile.profileImageUrl} alt={profile.name}
-              className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-950 object-cover shadow-md shrink-0" />
-          ) : (
-            <div className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-950 shadow-md shrink-0 flex items-center justify-center text-2xl font-bold text-white"
-              style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }}>
-              {profile.name?.charAt(0).toUpperCase()}
-            </div>
-          )}
-          <div className="pb-1">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{profile.name}</h1>
+      {/* Profile header — banner con bordes redondeados igual que edición */}
+      <div className="max-w-4xl mx-auto w-full px-4 pt-5">
+        <div className="relative mb-12">
+          <div className="w-full rounded-2xl overflow-hidden" style={{ aspectRatio: '16/5' }}>
+            {profile.bannerImageUrl ? (
+              <img src={profile.bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }} />
+            )}
+          </div>
+          <div className="absolute -bottom-8 left-6">
+            {profile.profileImageUrl ? (
+              <img src={profile.profileImageUrl} alt={profile.name}
+                className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 object-cover shadow-md" />
+            ) : (
+              <div className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 shadow-md flex items-center justify-center text-xl font-bold text-white"
+                style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }}>
+                {profile.name?.charAt(0).toUpperCase()}
+              </div>
+            )}
           </div>
         </div>
+
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight mb-1">{profile.name}</h1>
 
         {profile.bio && (
           <p className="text-gray-600 dark:text-slate-400 text-sm leading-relaxed mb-4 max-w-xl">{profile.bio}</p>
