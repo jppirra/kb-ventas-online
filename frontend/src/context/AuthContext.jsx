@@ -55,8 +55,13 @@ export function AuthProvider({ children }) {
 
   const isAuthenticated = Boolean(user?.token)
 
+  const updateTermsAccepted = () => {
+    localStorage.setItem('termsAccepted', 'true')
+    setUser(u => u ? { ...u, termsAccepted: true } : u)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, storeUser, isAuthenticated, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, storeUser, isAuthenticated, loading, updateTermsAccepted }}>
       {children}
     </AuthContext.Provider>
   )

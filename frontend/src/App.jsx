@@ -5,6 +5,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import TermsModal from './components/TermsModal'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import ForgotPassword from './pages/ForgotPassword'
@@ -35,6 +36,13 @@ function RootRedirect() {
   return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
 }
 
+function TermsGate({ children }) {
+  const { isAuthenticated, user, loading } = useAuth()
+  if (loading || !isAuthenticated) return children
+  if (user && !user.termsAccepted) return <>{children}<TermsModal /></>
+  return children
+}
+
 export default function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
@@ -42,6 +50,7 @@ export default function App() {
         <AuthProvider>
           <BrowserRouter>
             <Toaster richColors position="top-right" />
+            <TermsGate>
             <Routes>
               <Route path="/" element={<RootRedirect />} />
               <Route path="/login" element={<Login />} />
@@ -80,6 +89,7 @@ export default function App() {
               <Route path="/admin/backgrounds" element={<AdminProtectedRoute><AdminBackgroundsPage /></AdminProtectedRoute>} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
+            </TermsGate>
           </BrowserRouter>
         </AuthProvider>
       </ThemeProvider>
