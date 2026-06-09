@@ -4,10 +4,12 @@ import com.jafpsoft.ventas.dto.admin.*;
 import com.jafpsoft.ventas.model.Catalog;
 import com.jafpsoft.ventas.model.CatalogReport;
 import com.jafpsoft.ventas.model.CatalogStatus;
+import com.jafpsoft.ventas.model.EmailVerificationToken;
 import com.jafpsoft.ventas.model.OrderRequest;
 import com.jafpsoft.ventas.model.User;
 import com.jafpsoft.ventas.repository.CatalogRepository;
 import com.jafpsoft.ventas.repository.CatalogReportRepository;
+import com.jafpsoft.ventas.repository.EmailVerificationTokenRepository;
 import com.jafpsoft.ventas.repository.OrderRequestRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
@@ -18,8 +20,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +35,7 @@ public class AdminService {
     private final ProductRepository productRepository;
     private final OrderRequestRepository orderRequestRepository;
     private final CatalogReportRepository catalogReportRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
@@ -194,6 +199,27 @@ public class AdminService {
 
     public void sendTestEmail(AdminEmailRequest req) {
         emailService.sendAdminEmail(req.getTo(), req.getSubject(), req.getBody());
+    }
+
+    @Transactional
+    public void resendVerificationEmail(Long userId) {
+        User user = findUser(userId);
+        String token = UUID.randomUUID().toString();
+        EmailVerificationToken evt = EmailVerificationToken.builder()
+                .user(user)
+                .token(token)
+                .expiresAt(LocalDateTime.now().plusDays(1))
+                .build();
+        emailVerificationTokenRepository.save(evt);
+        emailService.sendVerificationEmail(user.getEmail(), user.getName(), token);
+    }
+
+    @Transactional
+    public AdminUserResponse verifyEmailDirectly(Long userId) {
+        User user = findUser(userId);
+        user.setEmailVerified(true);
+        user.setEnabled(true);
+        return AdminUserResponse.from(userRepository.save(user), 0);
     }
 
     private User findUser(Long userId) {

@@ -150,6 +150,43 @@ export default function AdminUsersPage() {
     })
   }
 
+  function confirmResendVerification(u) {
+    setConfirmModal({
+      title: `Reenviar verificación a ${u.name}`,
+      description: `Se enviará un nuevo email de verificación a ${u.email}. El link tendrá validez de 24 horas.`,
+      confirmLabel: 'Reenviar email',
+      danger: false,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          await adminApi.resendVerification(u.id)
+          toast.success('Email de verificación enviado')
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error al enviar email')
+        }
+      },
+    })
+  }
+
+  function confirmVerifyEmailDirectly(u) {
+    setConfirmModal({
+      title: `Verificar email de ${u.name}`,
+      description: 'Se marcará el email como verificado sin enviar ningún correo. La cuenta quedará activa inmediatamente.',
+      confirmLabel: 'Verificar ahora',
+      danger: false,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          const { data } = await adminApi.verifyEmail(u.id)
+          setUsers(prev => prev.map(x => x.id === u.id ? { ...x, emailVerified: data.emailVerified, enabled: data.enabled } : x))
+          toast.success('Email verificado')
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error al verificar email')
+        }
+      },
+    })
+  }
+
   function openEditEmail(u) {
     setEditModal({ id: u.id, name: u.name })
     setEditEmailValue(u.email)
@@ -274,6 +311,30 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
+                      {/* Reenviar verificación */}
+                      {!u.emailVerified && (
+                        <button
+                          onClick={() => confirmResendVerification(u)}
+                          title="Reenviar email de verificación"
+                          className="p-1.5 text-gray-400 hover:text-teal-500 dark:text-slate-500 dark:hover:text-teal-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                      )}
+                      {/* Verificar directamente */}
+                      {!u.emailVerified && (
+                        <button
+                          onClick={() => confirmVerifyEmailDirectly(u)}
+                          title="Verificar email directamente"
+                          className="p-1.5 text-gray-400 hover:text-green-500 dark:text-slate-500 dark:hover:text-green-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      )}
                       {/* Editar email */}
                       <button
                         onClick={() => openEditEmail(u)}

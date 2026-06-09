@@ -75,6 +75,17 @@ public class AdminController {
         return ResponseEntity.ok(Map.of("tempPassword", tempPassword));
     }
 
+    @PostMapping("/users/{id}/resend-verification")
+    public ResponseEntity<Map<String, String>> resendVerification(@PathVariable Long id) {
+        adminService.resendVerificationEmail(id);
+        return ResponseEntity.ok(Map.of("message", "Email de verificación enviado"));
+    }
+
+    @PostMapping("/users/{id}/verify-email")
+    public AdminUserResponse verifyEmail(@PathVariable Long id) {
+        return adminService.verifyEmailDirectly(id);
+    }
+
     @DeleteMapping("/users/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUser(@PathVariable Long id) {
