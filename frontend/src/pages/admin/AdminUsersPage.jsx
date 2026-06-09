@@ -202,12 +202,14 @@ export default function AdminUsersPage() {
       ) : (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[480px]">
+          <table className="w-full text-sm min-w-[540px]">
             <thead className="bg-gray-50 dark:bg-slate-700/50 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">
               <tr>
                 <th className="px-4 py-3 text-left">Usuario</th>
                 <th className="px-4 py-3 text-left hidden sm:table-cell">Slug</th>
                 <th className="px-4 py-3 text-center hidden md:table-cell">Catálogos</th>
+                <th className="px-4 py-3 text-center hidden lg:table-cell">Vistas perfil</th>
+                <th className="px-4 py-3 text-left hidden lg:table-cell">Último acceso</th>
                 <th className="px-4 py-3 text-center">Estado</th>
                 <th className="px-4 py-3 text-center">Admin</th>
                 <th className="px-4 py-3 text-center">Acciones</th>
@@ -234,6 +236,15 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3 text-center hidden md:table-cell text-gray-600 dark:text-slate-400">
                     {u.catalogCount}
+                  </td>
+                  <td className="px-4 py-3 text-center hidden lg:table-cell text-gray-600 dark:text-slate-400">
+                    {u.profileViewCount ?? 0}
+                  </td>
+                  <td className="px-4 py-3 hidden lg:table-cell">
+                    {u.lastAccessAt
+                      ? <span className="text-xs text-gray-500 dark:text-slate-400">{new Date(u.lastAccessAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                      : <span className="text-xs text-gray-300 dark:text-slate-600">Nunca</span>
+                    }
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button

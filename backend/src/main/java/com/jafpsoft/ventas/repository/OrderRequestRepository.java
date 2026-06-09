@@ -9,4 +9,5 @@ public interface OrderRequestRepository extends JpaRepository<OrderRequest, Long
     List<OrderRequest> findByVendorUserIdOrderByCreatedAtDesc(Long vendorUserId);
     long countByVendorUserId(Long vendorUserId);
     long countByVendorUserIdAndStatus(Long vendorUserId, String status);
+    long countByStatusNot(String status);
 }

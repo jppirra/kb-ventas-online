@@ -53,6 +53,12 @@ public class PublicController {
         return ResponseEntity.ok(Map.of("ok", "true"));
     }
 
+    @PostMapping("/analytics/profile/{slug}/view")
+    public ResponseEntity<Map<String, String>> profileView(@PathVariable String slug) {
+        publicProfileService.registerProfileView(slug);
+        return ResponseEntity.ok(Map.of("ok", "true"));
+    }
+
     @PostMapping("/analytics/product/{productId}/whatsapp")
     public ResponseEntity<Map<String, String>> whatsappClick(@PathVariable Long productId) {
         publicProfileService.registerWhatsappClick(productId);

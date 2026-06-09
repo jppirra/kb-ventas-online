@@ -178,9 +178,18 @@ export default function PublicProfilePage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
+  const viewedRef = useRef(false)
+
   useEffect(() => {
+    viewedRef.current = false
     publicApi.getProfile(slug)
-      .then(({ data }) => setProfile(data))
+      .then(({ data }) => {
+        setProfile(data)
+        if (!viewedRef.current) {
+          viewedRef.current = true
+          publicApi.trackProfileView(slug)
+        }
+      })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
   }, [slug])

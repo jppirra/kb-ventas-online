@@ -42,8 +42,11 @@ public class AdminService {
         long totalWaClicks = productRepository.findAll().stream()
                 .mapToLong(p -> p.getWhatsappClicks() != null ? p.getWhatsappClicks() : 0L)
                 .sum();
-        long totalViews = catalogs.stream()
+        long totalCatalogViews = catalogs.stream()
                 .mapToLong(c -> c.getViewCount() != null ? c.getViewCount() : 0L)
+                .sum();
+        long totalProfileViews = users.stream()
+                .mapToLong(u -> u.getProfileViewCount() != null ? u.getProfileViewCount() : 0L)
                 .sum();
 
         return AdminStatsResponse.builder()
@@ -54,8 +57,11 @@ public class AdminService {
                 .activeCatalogs(catalogs.stream().filter(Catalog::isActive).count())
                 .generatedCatalogs(catalogs.stream().filter(c -> c.getStatus() == CatalogStatus.GENERATED).count())
                 .totalProducts(productRepository.count())
-                .totalCatalogViews(totalViews)
+                .totalCatalogViews(totalCatalogViews)
+                .totalProfileViews(totalProfileViews)
                 .totalWhatsappClicks(totalWaClicks)
+                .totalOrders(orderRequestRepository.count())
+                .respondedOrders(orderRequestRepository.countByStatusNot("PENDING"))
                 .build();
     }
 

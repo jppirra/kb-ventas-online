@@ -9,6 +9,7 @@ function StatCard({ label, value, sub, color }) {
     violet: 'bg-violet-50 dark:bg-violet-900/20 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300',
     orange: 'bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300',
     gray: 'bg-gray-50 dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-700 dark:text-slate-300',
+    teal: 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300',
   }
   return (
     <div className={`rounded-2xl border p-5 ${colors[color] || colors.gray}`}>
@@ -54,7 +55,32 @@ export default function AdminDashboardPage() {
               <StatCard label="Con IA generada" value={stats.generatedCatalogs} color="violet" />
               <StatCard label="Productos" value={stats.totalProducts} color="orange" />
               <StatCard label="Vistas de catálogo" value={stats.totalCatalogViews} color="gray" />
+              <StatCard label="Vistas de perfil" value={stats.totalProfileViews} color="teal" />
               <StatCard label="Clics WhatsApp" value={stats.totalWhatsappClicks} color="green" />
+            </div>
+          </section>
+
+          <section className="mb-8">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-400 dark:text-slate-500 mb-3">Pedidos</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+              <StatCard
+                label="Pedidos generados"
+                value={stats.totalOrders}
+                sub="Total recibidos vía catálogos"
+                color="blue"
+              />
+              <StatCard
+                label="Respondidos en la app"
+                value={stats.respondedOrders}
+                sub={stats.totalOrders > 0 ? `${Math.round(stats.respondedOrders / stats.totalOrders * 100)}% de respuesta` : 'Sin pedidos aún'}
+                color="green"
+              />
+              <StatCard
+                label="Pendientes"
+                value={stats.totalOrders - stats.respondedOrders}
+                sub="Sin respuesta del vendedor"
+                color="orange"
+              />
             </div>
           </section>
         </>

@@ -15,6 +15,8 @@ public class AdminUserResponse {
     private boolean emailVerified;
     private boolean enabled;
     private int catalogCount;
+    private long profileViewCount;
+    private LocalDateTime lastAccessAt;
     private LocalDateTime createdAt;
 
     public static AdminUserResponse from(User u, int catalogCount) {
@@ -27,6 +29,8 @@ public class AdminUserResponse {
         r.emailVerified = u.isEmailVerified();
         r.enabled = u.isEnabled();
         r.catalogCount = catalogCount;
+        r.profileViewCount = u.getProfileViewCount() == null ? 0L : u.getProfileViewCount();
+        r.lastAccessAt = u.getLastAccessAt();
         r.createdAt = u.getCreatedAt();
         return r;
     }

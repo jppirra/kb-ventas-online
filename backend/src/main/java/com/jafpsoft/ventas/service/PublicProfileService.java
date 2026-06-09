@@ -69,6 +69,14 @@ public class PublicProfileService {
     }
 
     @Transactional
+    public void registerProfileView(String slug) {
+        userRepository.findBySlug(slug).ifPresent(u -> {
+            u.setProfileViewCount((u.getProfileViewCount() == null ? 0L : u.getProfileViewCount()) + 1);
+            userRepository.save(u);
+        });
+    }
+
+    @Transactional
     public PublicCatalogPageResponse getCatalogByPublicId(String publicId) {
         Catalog catalog = catalogRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));

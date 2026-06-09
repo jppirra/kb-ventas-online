@@ -1,6 +1,7 @@
 package com.jafpsoft.ventas.config;
 
 import com.jafpsoft.ventas.security.JwtAuthenticationFilter;
+import com.jafpsoft.ventas.security.LastAccessFilter;
 import com.jafpsoft.ventas.security.UserDetailsServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final LastAccessFilter lastAccessFilter;
     private final UserDetailsServiceImpl userDetailsService;
 
     @Value("${spring.web.cors.allowed-origins:http://localhost:5173}")
@@ -58,7 +60,8 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
                 )
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(lastAccessFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }

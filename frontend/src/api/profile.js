@@ -25,6 +25,7 @@ export const publicApi = {
   getCatalog: (catalogId) => axios.get(`${BASE_URL}/public/catalog/${catalogId}`),
   getBackgrounds: () => axios.get(`${BASE_URL}/public/backgrounds`),
   trackCatalogView: (catalogId) => axios.post(`${BASE_URL}/public/analytics/catalog/${catalogId}/view`).catch(() => {}),
+  trackProfileView: (slug) => axios.post(`${BASE_URL}/public/analytics/profile/${slug}/view`).catch(() => {}),
   trackWhatsappClick: (productId) => axios.post(`${BASE_URL}/public/analytics/product/${productId}/whatsapp`).catch(() => {}),
   submitOrderRequest: (catalogId, payload) => axios.post(`${BASE_URL}/public/catalog/${catalogId}/order-request`, payload),
 }

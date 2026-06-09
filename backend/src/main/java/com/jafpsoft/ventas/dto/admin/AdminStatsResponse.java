@@ -13,5 +13,8 @@ public class AdminStatsResponse {
     private long generatedCatalogs;
     private long totalProducts;
     private long totalCatalogViews;
+    private long totalProfileViews;
     private long totalWhatsappClicks;
+    private long totalOrders;
+    private long respondedOrders;
 }

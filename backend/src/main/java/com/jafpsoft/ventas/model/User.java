@@ -72,5 +72,12 @@ public class User {
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
+
+    @Column(name = "profile_view_count", nullable = false, columnDefinition = "bigint default 0")
+    @Builder.Default
+    private Long profileViewCount = 0L;
+
+    @Column(name = "last_access_at")
+    private LocalDateTime lastAccessAt;
 }
 
