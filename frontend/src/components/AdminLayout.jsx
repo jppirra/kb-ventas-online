@@ -102,15 +102,15 @@ export default function AdminLayout({ children }) {
   }
 
   const Sidebar = () => (
-    <aside className="flex flex-col w-56 bg-gray-900 dark:bg-slate-950 min-h-screen border-r border-gray-800 dark:border-slate-800">
-      <div className="flex items-center justify-between px-4 h-14 border-b border-gray-800 dark:border-slate-800">
+    <aside className="flex flex-col w-56 bg-gray-900 dark:bg-slate-950 h-[100dvh] border-r border-gray-800 dark:border-slate-800">
+      <div className="flex items-center justify-between px-4 h-14 shrink-0 border-b border-gray-800 dark:border-slate-800">
         <div>
           <span className="text-white font-bold text-sm">Admin Panel</span>
           <p className="text-gray-500 text-xs">Mercato</p>
         </div>
       </div>
 
-      <nav className="flex-1 px-2 py-4 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto px-2 py-4 space-y-0.5">
         {NAV.map((item) => (
           <Link
             key={item.to}
@@ -128,7 +128,7 @@ export default function AdminLayout({ children }) {
         ))}
       </nav>
 
-      <div className="px-2 pb-4 space-y-1 border-t border-gray-800 dark:border-slate-800 pt-3">
+      <div className="shrink-0 px-2 pb-4 space-y-1 border-t border-gray-800 dark:border-slate-800 pt-3">
         <Link
           to="/dashboard"
           className="flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
@@ -163,7 +163,7 @@ export default function AdminLayout({ children }) {
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 flex md:hidden">
           <div className="fixed inset-0 bg-black/50" onClick={() => setSidebarOpen(false)} />
-          <div className="relative z-50">
+          <div className="relative z-50 flex flex-col h-full">
             <Sidebar />
           </div>
         </div>

@@ -239,7 +239,7 @@ export default function Navbar({ collapsed, onToggle }) {
 
       {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <aside className={`
-        fixed left-0 top-0 h-screen z-40
+        fixed left-0 top-0 h-[100dvh] z-40
         bg-white dark:bg-slate-900
         border-r border-gray-200 dark:border-slate-700
         transition-all duration-300 overflow-hidden
