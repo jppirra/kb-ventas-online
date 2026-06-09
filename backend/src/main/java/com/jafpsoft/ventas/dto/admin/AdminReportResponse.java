@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 public class AdminReportResponse {
     private Long id;
     private Long catalogId;
+    private String catalogPublicId;
     private String catalogName;
     private String vendorName;
     private String vendorEmail;
@@ -17,10 +18,11 @@ public class AdminReportResponse {
     private long totalReportsForCatalog;
     private LocalDateTime createdAt;
 
-    public static AdminReportResponse from(CatalogReport r, String catalogName, String vendorName, String vendorEmail, long total) {
+    public static AdminReportResponse from(CatalogReport r, String catalogPublicId, String catalogName, String vendorName, String vendorEmail, long total) {
         AdminReportResponse resp = new AdminReportResponse();
         resp.id = r.getId();
         resp.catalogId = r.getCatalogId();
+        resp.catalogPublicId = catalogPublicId;
         resp.catalogName = catalogName;
         resp.vendorName = vendorName;
         resp.vendorEmail = vendorEmail;

@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Toaster } from 'sonner'
 import { GoogleOAuthProvider } from '@react-oauth/google'
 import { AuthProvider, useAuth } from './context/AuthContext'
@@ -45,9 +45,13 @@ function RootRedirect() {
   return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
 }
 
+const PUBLIC_PATHS = ['/c/', '/p/', '/s/']
+
 function TermsGate({ children }) {
   const { isAuthenticated, user, loading } = useAuth()
-  if (loading || !isAuthenticated) return children
+  const { pathname } = useLocation()
+  const isPublicPage = PUBLIC_PATHS.some(p => pathname.startsWith(p))
+  if (loading || !isAuthenticated || isPublicPage) return children
   if (user && !user.termsAccepted) return <>{children}<TermsModal /></>
   return children
 }

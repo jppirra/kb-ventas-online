@@ -7,6 +7,10 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -127,12 +131,7 @@ public class MigrationRunner implements ApplicationRunner {
             "catalogs.public_id column"
         );
 
-        try {
-            jdbc.update("UPDATE catalogs SET public_id = gen_random_uuid()::text WHERE public_id IS NULL OR public_id = ''");
-            log.info("Migration applied: backfill catalogs.public_id UUIDs");
-        } catch (Exception e) {
-            log.warn("Migration skipped for backfill catalogs.public_id: {}", e.getMessage());
-        }
+        backfillCatalogPublicIds();
 
         try {
             jdbc.execute(
@@ -210,6 +209,20 @@ public class MigrationRunner implements ApplicationRunner {
             );
         } catch (Exception e) {
             log.warn("Backfill user_id skipped: {}", e.getMessage());
+        }
+    }
+
+    private void backfillCatalogPublicIds() {
+        try {
+            List<Map<String, Object>> rows = jdbc.queryForList(
+                "SELECT id FROM catalogs WHERE public_id IS NULL OR public_id = ''");
+            for (Map<String, Object> row : rows) {
+                Long id = ((Number) row.get("id")).longValue();
+                jdbc.update("UPDATE catalogs SET public_id = ? WHERE id = ?", UUID.randomUUID().toString(), id);
+            }
+            if (!rows.isEmpty()) log.info("Backfilled public_id for {} catalogs", rows.size());
+        } catch (Exception e) {
+            log.warn("Backfill catalogs.public_id skipped: {}", e.getMessage());
         }
     }
 }

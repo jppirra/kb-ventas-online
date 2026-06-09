@@ -188,11 +188,12 @@ public class AdminService {
                 .map(r -> {
                     Catalog cat = catalogMap.get(r.getCatalogId());
                     String catalogName = cat != null ? cat.getName() : "Desconocido";
+                    String catalogPublicId = cat != null ? cat.getPublicId() : null;
                     User owner = cat != null ? userMap.get(cat.getUserId()) : null;
                     String vendorName = owner != null ? owner.getName() : "Desconocido";
                     String vendorEmail = owner != null ? owner.getEmail() : "";
                     long total = catalogReportRepository.countByCatalogId(r.getCatalogId());
-                    return AdminReportResponse.from(r, catalogName, vendorName, vendorEmail, total);
+                    return AdminReportResponse.from(r, catalogPublicId, catalogName, vendorName, vendorEmail, total);
                 })
                 .toList();
     }

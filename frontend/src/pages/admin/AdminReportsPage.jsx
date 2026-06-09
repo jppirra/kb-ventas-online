@@ -91,7 +91,7 @@ export default function AdminReportsPage() {
                   <td className="px-4 py-3">
                     <p className="font-medium text-gray-900 dark:text-white">{r.catalogName}</p>
                     <a
-                      href={`/c/${r.catalogId}`}
+                      href={r.catalogPublicId ? `/c/${r.catalogPublicId}` : '#'}
                       target="_blank"
                       rel="noreferrer"
                       className="text-xs text-blue-500 hover:underline"
