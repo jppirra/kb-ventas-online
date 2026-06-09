@@ -973,7 +973,7 @@ export default function PublicCatalogPage() {
               : <span className="font-medium text-gray-600">{vendorName}</span>
             }
           </p>
-          <p>Desarrollado por <span className="font-medium text-gray-500">JAFPSoft</span> · © {new Date().getFullYear()} Todos los derechos reservados</p>
+          <p>Desarrollado por <a href="https://jafpsoft.com" target="_blank" rel="noopener noreferrer" className="font-medium text-gray-500 hover:text-gray-700 transition-colors">JAFPSoft</a> · © {new Date().getFullYear()} Todos los derechos reservados</p>
           <button
             onClick={() => setShowReportModal(true)}
             className="mt-2 text-xs text-gray-400 hover:text-red-500 underline transition-colors"
