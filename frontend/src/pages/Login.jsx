@@ -23,6 +23,7 @@ export default function Login() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -38,12 +39,15 @@ export default function Login() {
   }
 
   const handleGoogle = async (credentialResponse) => {
+    setGoogleLoading(true)
     try {
       const res = await api.post('/auth/google', { credential: credentialResponse.credential })
       storeUser(res.data)
       navigate('/')
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al iniciar sesión con Google.')
+    } finally {
+      setGoogleLoading(false)
     }
   }
 
@@ -85,7 +89,17 @@ export default function Login() {
 
         {GOOGLE_CLIENT_ID ? (
           <div className="flex justify-center">
-            <GoogleLogin onSuccess={handleGoogle} onError={handleGoogleError} />
+            {googleLoading ? (
+              <div className="flex items-center gap-2 py-2 px-4 text-sm text-gray-500 dark:text-slate-400">
+                <svg className="animate-spin h-4 w-4 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                </svg>
+                Conectando con Google...
+              </div>
+            ) : (
+              <GoogleLogin onSuccess={handleGoogle} onError={handleGoogleError} />
+            )}
           </div>
         ) : (
           <p className="text-center text-xs text-gray-400 dark:text-slate-500">

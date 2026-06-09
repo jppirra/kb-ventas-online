@@ -1,9 +1,13 @@
 package com.jafpsoft.ventas.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jafpsoft.ventas.dto.catalog.CatalogRequest;
 import com.jafpsoft.ventas.dto.catalog.CatalogResponse;
 import com.jafpsoft.ventas.dto.catalog.ProductRequest;
 import com.jafpsoft.ventas.dto.catalog.ProductResponse;
+import com.jafpsoft.ventas.dto.profile.CatalogSnapshotData;
+import com.jafpsoft.ventas.dto.profile.PublicProductResponse;
 import com.jafpsoft.ventas.model.Catalog;
 import com.jafpsoft.ventas.model.CatalogStatus;
 import com.jafpsoft.ventas.model.Product;
@@ -17,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -30,6 +35,7 @@ public class CatalogService {
     private final ExcelService excelService;
     private final AiService aiService;
     private final StorageService storageService;
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public List<CatalogResponse> listByUser(Long userId) {
@@ -64,6 +70,7 @@ public class CatalogService {
         catalog.setName(req.getName());
         catalog.setDescription(req.getDescription());
         applyAppearance(catalog, req);
+        if (catalog.getPublishedSnapshotJson() != null) catalog.setHasDraftChanges(true);
         return CatalogResponse.from(catalogRepository.save(catalog), false);
     }
 
@@ -97,16 +104,20 @@ public class CatalogService {
                 .sku(req.getSku())
                 .category(req.getCategory())
                 .imageUrl(req.getImageUrl())
+                .extraImagesJson(req.getExtraImagesJson())
+                .videoUrl(req.getVideoUrl())
                 .sortOrder(req.getSortOrder())
                 .active(req.getActive() == null || req.getActive())
                 .build();
         applyStockFields(product, req);
-        return ProductResponse.from(productRepository.save(product));
+        ProductResponse result = ProductResponse.from(productRepository.save(product));
+        markDraftChanged(catalog);
+        return result;
     }
 
     @Transactional
     public ProductResponse updateProduct(Long catalogId, Long productId, ProductRequest req, Long userId) {
-        findOwned(catalogId, userId);
+        Catalog catalog = findOwned(catalogId, userId);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setName(req.getName());
@@ -115,29 +126,37 @@ public class CatalogService {
         product.setSku(req.getSku());
         product.setCategory(req.getCategory());
         product.setImageUrl(req.getImageUrl());
+        if (req.getExtraImagesJson() != null) product.setExtraImagesJson(req.getExtraImagesJson());
+        if (req.getVideoUrl() != null) product.setVideoUrl(req.getVideoUrl());
         product.setSortOrder(req.getSortOrder());
         if (req.getActive() != null) product.setActive(req.getActive());
         applyStockFields(product, req);
-        return ProductResponse.from(productRepository.save(product));
+        ProductResponse result = ProductResponse.from(productRepository.save(product));
+        markDraftChanged(catalog);
+        return result;
     }
 
     @Transactional
     public ProductResponse toggleProductActive(Long catalogId, Long productId, Long userId) {
-        findOwned(catalogId, userId);
+        Catalog catalog = findOwned(catalogId, userId);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setActive(!product.isActive());
-        return ProductResponse.from(productRepository.save(product));
+        ProductResponse result = ProductResponse.from(productRepository.save(product));
+        markDraftChanged(catalog);
+        return result;
     }
 
     @Transactional
     public ProductResponse unlinkProduct(Long catalogId, Long productId, Long userId) {
-        findOwned(catalogId, userId);
+        Catalog catalog = findOwned(catalogId, userId);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setCatalog(null);
         product.setActive(true);
-        return ProductResponse.from(productRepository.save(product));
+        ProductResponse result = ProductResponse.from(productRepository.save(product));
+        markDraftChanged(catalog);
+        return result;
     }
 
     @Transactional
@@ -147,7 +166,9 @@ public class CatalogService {
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setCatalog(catalog);
         product.setActive(true);
-        return ProductResponse.from(productRepository.save(product));
+        ProductResponse result = ProductResponse.from(productRepository.save(product));
+        markDraftChanged(catalog);
+        return result;
     }
 
     private void applyStockFields(Product product, ProductRequest req) {
@@ -161,10 +182,11 @@ public class CatalogService {
 
     @Transactional
     public void deleteProduct(Long catalogId, Long productId, Long userId) {
-        findOwned(catalogId, userId);
+        Catalog catalog = findOwned(catalogId, userId);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         productRepository.delete(product);
+        markDraftChanged(catalog);
     }
 
     @Transactional
@@ -186,6 +208,7 @@ public class CatalogService {
         ).toList();
 
         productRepository.saveAll(products);
+        markDraftChanged(catalog);
         return products.stream().map(ProductResponse::from).toList();
     }
 
@@ -210,6 +233,7 @@ public class CatalogService {
             String intro = aiService.generateCatalogIntro(catalog.getName(), products);
             catalog.setAiContent(intro);
             catalog.setStatus(CatalogStatus.GENERATED);
+            if (catalog.getPublishedSnapshotJson() != null) catalog.setHasDraftChanges(true);
             catalogRepository.save(catalog);
         } catch (Exception e) {
             catalog.setStatus(CatalogStatus.DRAFT);
@@ -219,13 +243,21 @@ public class CatalogService {
     }
 
     @Transactional
-    public Map<String, String> uploadProductImage(Long catalogId, Long productId, MultipartFile file, Long userId) throws IOException {
+    public Map<String, String> uploadTempProductImage(Long catalogId, MultipartFile file, Long userId) throws IOException {
         findOwned(catalogId, userId);
+        String url = storageService.uploadImage(file, "products");
+        return Map.of("imageUrl", url);
+    }
+
+    @Transactional
+    public Map<String, String> uploadProductImage(Long catalogId, Long productId, MultipartFile file, Long userId) throws IOException {
+        Catalog catalog = findOwned(catalogId, userId);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         String url = storageService.uploadImage(file, "products");
         product.setImageUrl(url);
         productRepository.save(product);
+        markDraftChanged(catalog);
         return Map.of("imageUrl", url);
     }
 
@@ -235,8 +267,49 @@ public class CatalogService {
         String url = storageService.uploadImage(file, "catalog-backgrounds");
         catalog.setBackgroundImageUrl(url);
         catalog.setBackgroundType("CUSTOM");
+        if (catalog.getPublishedSnapshotJson() != null) catalog.setHasDraftChanges(true);
         catalogRepository.save(catalog);
         return Map.of("backgroundImageUrl", url);
+    }
+
+    @Transactional
+    public CatalogResponse publish(Long id, Long userId) {
+        Catalog catalog = findOwned(id, userId);
+        List<Product> activeProducts = productRepository
+                .findByCatalogIdOrderBySortOrderAscCreatedAtAsc(id)
+                .stream()
+                .filter(Product::isActive)
+                .filter(p -> !(p.isShowStock() && "IN_STOCK".equals(p.getStockStatus())
+                        && p.getStockCount() != null && p.getStockCount() <= 0
+                        && !p.isShowWhenOutOfStock()))
+                .toList();
+
+        CatalogSnapshotData snapshot = new CatalogSnapshotData();
+        snapshot.setName(catalog.getName());
+        snapshot.setDescription(catalog.getDescription());
+        snapshot.setAiContent(catalog.getAiContent());
+        snapshot.setCoverImageUrl(catalog.getCoverImageUrl());
+        snapshot.setViewMode(catalog.getViewMode());
+        snapshot.setBackgroundType(catalog.getBackgroundType());
+        snapshot.setBackgroundColor(catalog.getBackgroundColor());
+        snapshot.setBackgroundImageUrl(catalog.getBackgroundImageUrl());
+        snapshot.setProducts(activeProducts.stream().map(PublicProductResponse::from).toList());
+
+        try {
+            catalog.setPublishedSnapshotJson(objectMapper.writeValueAsString(snapshot));
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error al serializar snapshot", e);
+        }
+        catalog.setPublishedAt(LocalDateTime.now());
+        catalog.setHasDraftChanges(false);
+        return CatalogResponse.from(catalogRepository.save(catalog), false);
+    }
+
+    private void markDraftChanged(Catalog catalog) {
+        if (catalog.getPublishedSnapshotJson() != null && !catalog.isHasDraftChanges()) {
+            catalog.setHasDraftChanges(true);
+            catalogRepository.save(catalog);
+        }
     }
 
     private Catalog findOwned(Long id, Long userId) {

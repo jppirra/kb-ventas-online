@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
+import Footer from '../components/Footer'
 import { useAuth } from '../context/AuthContext'
 
 const PLATFORM_ICONS = {
@@ -217,7 +218,14 @@ export default function PublicProfilePage() {
           <img src="/logo-icon.png" alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />
           <span className="font-bold text-gray-900 dark:text-white text-base tracking-tight">Mercato</span>
         </a>
-        {!isAuthenticated && (
+        {isAuthenticated ? (
+          <Link to="/dashboard" className="ml-auto flex items-center gap-1.5 text-xs font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
+            </svg>
+            Volver a la app
+          </Link>
+        ) : (
           <div className="flex items-center gap-2 ml-auto">
             <span className="text-xs text-gray-500 dark:text-slate-400 hidden sm:inline">¿Querés hacer crecer tu negocio?</span>
             <Link to="/login" className="text-xs font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
@@ -242,36 +250,34 @@ export default function PublicProfilePage() {
           </p>
         </div>
       )}
+      {/* Banner */}
+      <div className="relative w-full" style={{ aspectRatio: '16/5', maxHeight: 280 }}>
+        {profile.bannerImageUrl ? (
+          <img src={profile.bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
+        ) : (
+          <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }} />
+        )}
+      </div>
 
-      {/* Profile header — mismo layout que edición */}
-      <div className="max-w-4xl mx-auto w-full px-4 pt-5">
-        <div className="relative mb-12">
-          {/* Banner con bordes redondeados igual que en edición */}
-          <div className="w-full rounded-2xl overflow-hidden" style={{ aspectRatio: '16/5' }}>
-            {profile.bannerImageUrl ? (
-              <img src={profile.bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full" style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }} />
-            )}
-          </div>
-          {/* Avatar sobre el banner */}
-          <div className="absolute -bottom-8 left-6">
-            {profile.profileImageUrl ? (
-              <img src={profile.profileImageUrl} alt={profile.name}
-                className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 object-cover shadow-md" />
-            ) : (
-              <div className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 shadow-md flex items-center justify-center text-xl font-bold text-white"
-                style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }}>
-                {profile.name?.charAt(0).toUpperCase()}
-              </div>
-            )}
+      {/* Profile header */}
+      <div className="max-w-4xl mx-auto w-full px-4">
+        <div className="flex items-end gap-4 -mt-10 mb-4">
+          {profile.profileImageUrl ? (
+            <img src={profile.profileImageUrl} alt={profile.name}
+              className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-950 object-cover shadow-md shrink-0" />
+          ) : (
+            <div className="w-20 h-20 rounded-full border-4 border-white dark:border-slate-950 shadow-md shrink-0 flex items-center justify-center text-2xl font-bold text-white"
+              style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }}>
+              {profile.name?.charAt(0).toUpperCase()}
+            </div>
+          )}
+          <div className="pb-1">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight">{profile.name}</h1>
           </div>
         </div>
 
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight mb-1">{profile.name}</h1>
-
         {profile.bio && (
-          <p className="text-gray-600 dark:text-slate-400 text-sm leading-relaxed mb-4">{profile.bio}</p>
+          <p className="text-gray-600 dark:text-slate-400 text-sm leading-relaxed mb-4 max-w-xl">{profile.bio}</p>
         )}
 
         {/* Social links */}
@@ -309,20 +315,7 @@ export default function PublicProfilePage() {
         )}
       </div>
 
-      <footer className="sticky bottom-0 z-20 mt-12 py-4 px-4 border-t border-gray-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm flex flex-col items-center gap-1.5">
-        <a href="/mercato/" title="Conocer más sobre Mercato"
-          className="font-bold text-gray-800 dark:text-white text-base tracking-tight hover:opacity-80 transition-opacity">
-          Mercato
-        </a>
-        <p className="text-xs text-gray-400 dark:text-slate-500 text-center">
-          Herramientas de gestión digital · Desarrollado por{' '}
-          <a href="https://jafpsoft.com" target="_blank" rel="noopener noreferrer"
-            className="hover:text-gray-500 dark:hover:text-slate-400 transition-colors">
-            JAFPSoft
-          </a>
-          {' '}· © {new Date().getFullYear()}
-        </p>
-      </footer>
+      <Footer />
     </div>
   )
 }

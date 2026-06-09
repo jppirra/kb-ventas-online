@@ -168,11 +168,14 @@ public class AuthService {
     }
 
     @Transactional
-    public void acceptTerms(Long userId) {
+    public AuthResponse acceptTerms(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado."));
-        user.setTermsAcceptedAt(LocalDateTime.now());
-        userRepository.save(user);
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+        if (user.getTermsAcceptedAt() == null) {
+            user.setTermsAcceptedAt(LocalDateTime.now());
+            userRepository.save(user);
+        }
+        return buildAuthResponse(user);
     }
 
     private AuthResponse buildAuthResponse(User user) {

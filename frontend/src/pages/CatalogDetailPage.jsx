@@ -30,16 +30,9 @@ const BG_TYPES = [
   { value: 'CUSTOM', label: 'Imagen propia' },
 ]
 
-const SIZE_PRESETS = [
-  { label: 'Ropa adulto', sizes: ['XS','S','M','L','XL','XXL'] },
-  { label: 'Ropa niño', sizes: ['2','4','6','8','10','12','14','16'] },
-  { label: 'Calzado', sizes: ['34','35','36','37','38','39','40','41','42','43','44','45'] },
-  { label: 'Talle único', sizes: ['Único'] },
-]
-
 import { productsApi } from '../api/products'
 
-const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, sizeStock: null }
+const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false }
 
 export default function CatalogDetailPage() {
   const { id } = useParams()
@@ -47,6 +40,7 @@ export default function CatalogDetailPage() {
   const fileRef = useRef()
   const bgFileRef = useRef()
   const productImgRef = useRef()
+  const extraImgRef = useRef()
 
   const [catalog, setCatalog] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -57,11 +51,13 @@ export default function CatalogDetailPage() {
   const [productForm, setProductForm] = useState(emptyProduct)
   const [editingProductId, setEditingProductId] = useState(null)
   const [uploadingProductImg, setUploadingProductImg] = useState(false)
+  const [uploadingExtraImg, setUploadingExtraImg] = useState(false)
   const [pendingProductImgId, setPendingProductImgId] = useState(null)
   const [pollTimer, setPollTimer] = useState(null)
   const [showRepoModal, setShowRepoModal] = useState(false)
   const [repoProducts, setRepoProducts] = useState([])
   const [loadingRepo, setLoadingRepo] = useState(false)
+  const [publishing, setPublishing] = useState(false)
 
   // Appearance state (synced on load, saved separately)
   const [viewMode, setViewMode] = useState('GRID')
@@ -72,9 +68,6 @@ export default function CatalogDetailPage() {
   const [uploadingBg, setUploadingBg] = useState(false)
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
-  const [sizesEnabled, setSizesEnabled] = useState(false)
-  const [sizeOptions, setSizeOptions] = useState([])
-  const [sizeInput, setSizeInput] = useState('')
 
   useEffect(() => {
     load()
@@ -90,8 +83,6 @@ export default function CatalogDetailPage() {
       setBgType(data.backgroundType || 'NONE')
       setBgColor(data.backgroundColor || '#f8fafc')
       setBgTemplateId(data.backgroundTemplateId || null)
-      setSizesEnabled(data.sizesEnabled || false)
-      setSizeOptions(data.sizeOptions ? data.sizeOptions.split(',').map(s => s.trim()).filter(Boolean) : [])
       if (data.status === 'GENERATING') startPolling()
     } catch {
       toast.error('Catálogo no encontrado')
@@ -130,6 +121,25 @@ export default function CatalogDetailPage() {
     }
   }
 
+  async function handlePublish() {
+    setPublishing(true)
+    try {
+      const { data } = await catalogsApi.publish(id)
+      setCatalog(c => ({ ...c, publishedAt: data.publishedAt, hasDraftChanges: false }))
+      toast.success('Catálogo publicado')
+    } catch {
+      toast.error('Error al publicar')
+    } finally {
+      setPublishing(false)
+    }
+  }
+
+  function publishStatus() {
+    if (!catalog.publishedAt) return { label: 'Sin publicar', color: 'gray' }
+    if (catalog.hasDraftChanges) return { label: 'Cambios sin publicar', color: 'amber' }
+    return { label: 'Publicado', color: 'green' }
+  }
+
   async function handleExcel(e) {
     const file = e.target.files[0]
     if (!file) return
@@ -149,6 +159,8 @@ export default function CatalogDetailPage() {
   function openProductForm(product = null) {
     if (product) {
       setEditingProductId(product.id)
+      let extraImages = []
+      try { extraImages = product.extraImagesJson ? JSON.parse(product.extraImagesJson) : [] } catch {}
       setProductForm({
         name: product.name || '',
         description: product.description || '',
@@ -156,6 +168,8 @@ export default function CatalogDetailPage() {
         sku: product.sku || '',
         category: product.category || '',
         imageUrl: product.imageUrl || '',
+        extraImages,
+        videoUrl: product.videoUrl || '',
         showStock: product.showStock || false,
         stockStatus: product.stockStatus || 'IN_STOCK',
         stockCount: product.stockCount ?? '',
@@ -176,6 +190,8 @@ export default function CatalogDetailPage() {
       ...productForm,
       price: productForm.price !== '' ? parseFloat(productForm.price) : null,
       stockCount: productForm.stockCount !== '' ? parseInt(productForm.stockCount) : null,
+      extraImagesJson: productForm.extraImages.length > 0 ? JSON.stringify(productForm.extraImages) : null,
+      videoUrl: productForm.videoUrl || null,
     }
     try {
       if (editingProductId) {
@@ -252,24 +268,37 @@ export default function CatalogDetailPage() {
 
   async function handleProductImageUpload(e) {
     const file = e.target.files[0]
-    if (!file || !pendingProductImgId) return
+    if (!file) return
     setUploadingProductImg(true)
     try {
-      const { data } = await catalogsApi.uploadProductImage(id, pendingProductImgId, file)
+      const { data } = await catalogsApi.uploadTempProductImage(id, file)
       setProductForm(f => ({ ...f, imageUrl: data.imageUrl }))
       toast.success('Imagen subida')
-      load()
     } catch {
       toast.error('Error al subir imagen')
     } finally {
       setUploadingProductImg(false)
-      setPendingProductImgId(null)
       e.target.value = ''
     }
   }
 
-  function triggerProductImageUpload(productId) {
-    setPendingProductImgId(productId)
+  async function handleExtraImageUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingExtraImg(true)
+    try {
+      const { data } = await catalogsApi.uploadTempProductImage(id, file)
+      setProductForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
+      toast.success('Imagen agregada')
+    } catch {
+      toast.error('Error al subir imagen')
+    } finally {
+      setUploadingExtraImg(false)
+      e.target.value = ''
+    }
+  }
+
+  function triggerProductImageUpload() {
     productImgRef.current.click()
   }
 
@@ -301,8 +330,6 @@ export default function CatalogDetailPage() {
         backgroundColor: bgType === 'COLOR' ? bgColor : null,
         backgroundTemplateId: bgType === 'PREDEFINED' ? bgTemplateId : null,
         backgroundImageUrl: bgType === 'CUSTOM' ? catalog.backgroundImageUrl : null,
-        sizesEnabled,
-        sizeOptions: sizeOptions.join(','),
       }
       const { data } = await catalogsApi.update(id, payload)
       setCatalog(c => ({ ...c, ...data }))
@@ -315,7 +342,7 @@ export default function CatalogDetailPage() {
   }
 
   function handleCopyLink() {
-    const link = `${window.location.origin}/c/${catalog.publicId}`
+    const link = `${window.location.origin}/c/${id}`
     navigator.clipboard.writeText(link).then(() => {
       setCopiedLink(true)
       setTimeout(() => setCopiedLink(false), 2000)
@@ -330,7 +357,7 @@ export default function CatalogDetailPage() {
     )
   }
 
-  const publicLink = `${window.location.origin}/c/${catalog.publicId}`
+  const publicLink = `${window.location.origin}/c/${id}`
 
   return (
     <Layout>
@@ -351,25 +378,59 @@ export default function CatalogDetailPage() {
               <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{catalog.description}</p>
             )}
           </div>
-          <button onClick={handleGenerate} disabled={generating || catalog.products?.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
-            {generating ? (
-              <>
-                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                Generando IA...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-                Generar con IA
-              </>
-            )}
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {(() => {
+              const ps = publishStatus()
+              const colors = {
+                gray: 'bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400',
+                amber: 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+                green: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+              }
+              return (
+                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${colors[ps.color]}`}>
+                  {ps.label}
+                </span>
+              )
+            })()}
+            <button onClick={handlePublish} disabled={publishing || catalog.products?.length === 0 || (!catalog.hasDraftChanges && catalog.publishedAt)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
+              {publishing ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Publicando...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  {catalog.publishedAt ? 'Republicar' : 'Publicar'}
+                </>
+              )}
+            </button>
+            <button onClick={handleGenerate} disabled={generating || catalog.products?.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+              {generating ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                  Generando IA...
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Generar con IA
+                </>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Share link */}
@@ -387,7 +448,13 @@ export default function CatalogDetailPage() {
               )}
             </button>
           </div>
-          <p className="text-xs text-blue-400 dark:text-blue-500 mt-1.5">Este link es publico. Quien lo tenga puede ver el catalogo y exportarlo a PDF.</p>
+          {catalog.hasDraftChanges && catalog.publishedAt ? (
+            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Hay cambios sin publicar. El enlace publico muestra la ultima version publicada hasta que vuelvas a publicar.</p>
+          ) : !catalog.publishedAt ? (
+            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Este catalogo aun no fue publicado. Publica para confirmar que el contenido es el correcto.</p>
+          ) : (
+            <p className="text-xs text-blue-400 dark:text-blue-500 mt-1.5">Este link es publico. Quien lo tenga puede ver el catalogo y exportarlo a PDF.</p>
+          )}
         </div>
 
         {/* AI Content */}
@@ -497,66 +564,6 @@ export default function CatalogDetailPage() {
             </div>
           )}
 
-          {/* Talles */}
-          <div className="border-t border-gray-100 dark:border-slate-700 pt-4">
-            <div className="flex items-center gap-2 mb-3">
-              <input type="checkbox" id="sizesEnabled" checked={sizesEnabled}
-                onChange={e => setSizesEnabled(e.target.checked)} className="rounded" />
-              <label htmlFor="sizesEnabled" className="text-sm font-medium text-gray-700 dark:text-slate-300">
-                Este catálogo maneja talles
-              </label>
-            </div>
-            {sizesEnabled && (
-              <div className="ml-6 space-y-3">
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Presets</p>
-                  <div className="flex gap-2 flex-wrap">
-                    {SIZE_PRESETS.map(p => (
-                      <button key={p.label} type="button"
-                        onClick={() => setSizeOptions(p.sizes)}
-                        className="px-2.5 py-1 text-xs rounded-xl border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                        {p.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Talles activos</p>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {sizeOptions.map(s => (
-                      <span key={s} className="flex items-center gap-1 px-2.5 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-xl font-medium">
-                        {s}
-                        <button type="button" onClick={() => setSizeOptions(prev => prev.filter(x => x !== s))}
-                          className="text-blue-400 hover:text-blue-700 dark:hover:text-blue-200">×</button>
-                      </span>
-                    ))}
-                    {sizeOptions.length === 0 && <p className="text-xs text-gray-400 italic">Sin talles definidos</p>}
-                  </div>
-                  <div className="flex gap-2">
-                    <input type="text" value={sizeInput} onChange={e => setSizeInput(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === 'Enter' || e.key === ',') {
-                          e.preventDefault()
-                          const s = sizeInput.trim()
-                          if (s && !sizeOptions.includes(s)) setSizeOptions(prev => [...prev, s])
-                          setSizeInput('')
-                        }
-                      }}
-                      placeholder="Agregar talle (Enter para confirmar)"
-                      className="flex-1 px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                    <button type="button" onClick={() => {
-                      const s = sizeInput.trim()
-                      if (s && !sizeOptions.includes(s)) setSizeOptions(prev => [...prev, s])
-                      setSizeInput('')
-                    }} className="px-3 py-1.5 text-sm bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-xl hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors">
-                      +
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
           <button onClick={handleSaveAppearance} disabled={savingAppearance}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
             {savingAppearance ? 'Guardando...' : 'Guardar apariencia'}
@@ -582,6 +589,7 @@ export default function CatalogDetailPage() {
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcel} />
           <input ref={productImgRef} type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
+          <input ref={extraImgRef} type="file" accept="image/*" className="hidden" onChange={handleExtraImageUpload} />
           <span className="text-sm text-gray-400 dark:text-slate-500 ml-auto">
             {catalog.products?.length ?? 0} productos ({catalog.products?.filter(p => p.active).length ?? 0} visibles)
           </span>
@@ -594,36 +602,76 @@ export default function CatalogDetailPage() {
               {editingProductId ? 'Editar producto' : 'Nuevo producto'}
             </h3>
 
-            {/* Image upload (only for existing products) */}
-            {editingProductId && (
-              <div className="flex items-center gap-3">
-                {productForm.imageUrl ? (
-                  <img src={productForm.imageUrl} alt="img" className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600 shrink-0" />
-                ) : (
-                  <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                )}
-                <div className="flex flex-col gap-1">
-                  <button type="button" disabled={uploadingProductImg}
-                    onClick={() => triggerProductImageUpload(editingProductId)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    {uploadingProductImg ? 'Subiendo...' : 'Subir imagen'}
-                  </button>
-                  {productForm.imageUrl && (
-                    <button type="button" onClick={() => setProductForm(f => ({ ...f, imageUrl: '' }))}
-                      className="text-xs text-red-400 hover:text-red-600 text-left">
-                      Quitar imagen
-                    </button>
+            {/* Images & video */}
+            <div className="space-y-3">
+              {/* Main image */}
+              <div>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Imagen principal</p>
+                <div className="flex items-center gap-3">
+                  {productForm.imageUrl ? (
+                    <img src={productForm.imageUrl} alt="img" className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600 shrink-0" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
                   )}
+                  <div className="flex flex-col gap-1">
+                    <button type="button" disabled={uploadingProductImg} onClick={triggerProductImageUpload}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      {uploadingProductImg ? 'Subiendo...' : 'Subir imagen'}
+                    </button>
+                    {productForm.imageUrl && (
+                      <button type="button" onClick={() => setProductForm(f => ({ ...f, imageUrl: '' }))}
+                        className="text-xs text-red-400 hover:text-red-600 text-left">
+                        Quitar
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Extra images */}
+              <div>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Imágenes adicionales</p>
+                <div className="flex flex-wrap gap-2">
+                  {productForm.extraImages.map((url, i) => (
+                    <div key={i} className="relative group">
+                      <img src={url} alt="" className="w-14 h-14 rounded-xl object-cover border border-gray-200 dark:border-slate-600" />
+                      <button type="button" onClick={() => setProductForm(f => ({ ...f, extraImages: f.extraImages.filter((_, j) => j !== i) }))}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" disabled={uploadingExtraImg} onClick={() => extraImgRef.current.click()}
+                    className="w-14 h-14 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-600 flex items-center justify-center text-gray-400 dark:text-slate-500 hover:border-blue-400 hover:text-blue-400 transition-colors disabled:opacity-50">
+                    {uploadingExtraImg ? (
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Video URL */}
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Video (URL de YouTube, Vimeo, etc.)</label>
+                <input type="url" value={productForm.videoUrl} onChange={e => setProductForm(f => ({ ...f, videoUrl: e.target.value }))}
+                  placeholder="https://youtube.com/..."
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">

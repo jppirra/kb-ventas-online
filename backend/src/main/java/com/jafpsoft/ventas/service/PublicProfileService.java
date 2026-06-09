@@ -1,5 +1,7 @@
 package com.jafpsoft.ventas.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jafpsoft.ventas.dto.profile.CatalogSnapshotData;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogResponse;
 import com.jafpsoft.ventas.dto.profile.PublicProfileResponse;
@@ -31,6 +33,7 @@ public class PublicProfileService {
     private final SocialLinkRepository socialLinkRepository;
     private final BackgroundTemplateRepository backgroundTemplateRepository;
     private final StoreRepository storeRepository;
+    private final ObjectMapper objectMapper;
 
     @Transactional
     public PublicProfileResponse getPublicProfile(String slug) {
@@ -78,6 +81,22 @@ public class PublicProfileService {
         }
 
         List<SocialLink> socialLinks = socialLinkRepository.findByUserIdOrderBySortOrderAsc(owner.getId());
+
+        if (catalog.getPublishedSnapshotJson() != null) {
+            try {
+                CatalogSnapshotData snapshot = objectMapper.readValue(catalog.getPublishedSnapshotJson(), CatalogSnapshotData.class);
+                PublicCatalogPageResponse response = PublicCatalogPageResponse.fromSnapshot(catalog, owner, socialLinks, snapshot);
+                if ("PREDEFINED".equals(snapshot.getBackgroundType()) && catalog.getBackgroundTemplateId() != null) {
+                    backgroundTemplateRepository.findById(catalog.getBackgroundTemplateId()).ifPresent(t ->
+                            response.getCatalog().setBackgroundImageUrl(t.getImageUrl())
+                    );
+                }
+                return response;
+            } catch (Exception e) {
+                // fall through to live data
+            }
+        }
+
         PublicCatalogPageResponse response = PublicCatalogPageResponse.from(catalog, owner, socialLinks);
         if ("PREDEFINED".equals(catalog.getBackgroundType()) && catalog.getBackgroundTemplateId() != null) {
             backgroundTemplateRepository.findById(catalog.getBackgroundTemplateId()).ifPresent(t ->
