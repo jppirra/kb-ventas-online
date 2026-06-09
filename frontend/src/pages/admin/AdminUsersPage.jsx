@@ -10,6 +10,13 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
+  const [editModal, setEditModal] = useState(null) // { id, name, email }
+  const [editEmailValue, setEditEmailValue] = useState('')
+  const [savingEmail, setSavingEmail] = useState(false)
+
+  const [tempPwdModal, setTempPwdModal] = useState(null) // { name, password }
+  const [pwdCopied, setPwdCopied] = useState(false)
+
   useEffect(() => { load() }, [])
 
   async function load() {
@@ -50,6 +57,44 @@ export default function AdminUsersPage() {
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al eliminar')
     }
+  }
+
+  function openEditEmail(u) {
+    setEditModal({ id: u.id, name: u.name })
+    setEditEmailValue(u.email)
+  }
+
+  async function handleUpdateEmail(e) {
+    e.preventDefault()
+    setSavingEmail(true)
+    try {
+      const { data } = await adminApi.updateEmail(editModal.id, editEmailValue.trim())
+      setUsers(u => u.map(x => x.id === editModal.id ? { ...x, email: data.email, emailVerified: data.emailVerified } : x))
+      toast.success('Email actualizado')
+      setEditModal(null)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al actualizar email')
+    } finally {
+      setSavingEmail(false)
+    }
+  }
+
+  async function handleResetPassword(id, name) {
+    if (!confirm(`¿Blanquear la contraseña de "${name}"? Se generará una clave temporal.`)) return
+    try {
+      const { data } = await adminApi.resetPassword(id)
+      setTempPwdModal({ name, password: data.tempPassword })
+      setPwdCopied(false)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al blanquear contraseña')
+    }
+  }
+
+  function copyTempPassword() {
+    if (!tempPwdModal) return
+    navigator.clipboard.writeText(tempPwdModal.password)
+    setPwdCopied(true)
+    setTimeout(() => setPwdCopied(false), 2000)
   }
 
   const filtered = users.filter(u =>
@@ -136,15 +181,39 @@ export default function AdminUsersPage() {
                     </button>
                   </td>
                   <td className="px-4 py-3 text-center">
-                    <button
-                      onClick={() => handleDelete(u.id, u.name)}
-                      disabled={u.appAdmin || u.id === currentUser?.userId}
-                      className="p-1.5 text-gray-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    </button>
+                    <div className="flex items-center justify-center gap-1">
+                      {/* Editar email */}
+                      <button
+                        onClick={() => openEditEmail(u)}
+                        title="Editar email"
+                        className="p-1.5 text-gray-400 hover:text-blue-500 dark:text-slate-500 dark:hover:text-blue-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      {/* Blanquear contraseña */}
+                      <button
+                        onClick={() => handleResetPassword(u.id, u.name)}
+                        title="Blanquear contraseña"
+                        className="p-1.5 text-gray-400 hover:text-amber-500 dark:text-slate-500 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                        </svg>
+                      </button>
+                      {/* Eliminar */}
+                      <button
+                        onClick={() => handleDelete(u.id, u.name)}
+                        disabled={u.appAdmin || u.id === currentUser?.userId}
+                        title="Eliminar usuario"
+                        className="p-1.5 text-gray-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -153,6 +222,71 @@ export default function AdminUsersPage() {
           {filtered.length === 0 && (
             <p className="text-center py-8 text-gray-400 dark:text-slate-500 text-sm">No hay resultados.</p>
           )}
+        </div>
+      )}
+
+      {/* Modal editar email */}
+      {editModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setEditModal(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Editar email</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">{editModal.name}</p>
+            <form onSubmit={handleUpdateEmail} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Nuevo email</label>
+                <input
+                  type="email"
+                  required
+                  value={editEmailValue}
+                  onChange={e => setEditEmailValue(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                  autoFocus
+                />
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">El email quedará como no verificado.</p>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" disabled={savingEmail}
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-colors">
+                  {savingEmail ? 'Guardando...' : 'Guardar'}
+                </button>
+                <button type="button" onClick={() => setEditModal(null)}
+                  className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-semibold rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal mostrar contraseña temporal */}
+      {tempPwdModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setTempPwdModal(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center gap-2 mb-1">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Contraseña temporal</h3>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-4">{tempPwdModal.name}</p>
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-900 border border-gray-200 dark:border-slate-700 rounded-xl px-4 py-3 mb-3">
+              <span className="flex-1 font-mono text-base font-semibold text-gray-900 dark:text-white tracking-widest select-all">
+                {tempPwdModal.password}
+            </span>
+              <button onClick={copyTempPassword}
+                className="text-xs text-blue-600 dark:text-blue-400 hover:underline shrink-0">
+                {pwdCopied ? 'Copiado!' : 'Copiar'}
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mb-4">
+              Compartí esta clave con el usuario. Pedile que la cambie desde su perfil.
+            </p>
+            <button onClick={() => setTempPwdModal(null)}
+              className="w-full py-2 bg-gray-900 dark:bg-slate-700 hover:bg-gray-700 dark:hover:bg-slate-600 text-white font-semibold rounded-xl text-sm transition-colors">
+              Cerrar
+            </button>
+          </div>
         </div>
       )}
     </AdminLayout>

@@ -13,9 +13,11 @@ import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -30,6 +32,7 @@ public class AdminService {
     private final OrderRequestRepository orderRequestRepository;
     private final CatalogReportRepository catalogReportRepository;
     private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public AdminStatsResponse getStats() {
@@ -87,6 +90,38 @@ public class AdminService {
         User user = findUser(userId);
         if (user.isAppAdmin()) throw new IllegalStateException("No se puede eliminar un administrador");
         userRepository.delete(user);
+    }
+
+    @Transactional
+    public AdminUserResponse updateUserEmail(Long userId, String newEmail) {
+        if (newEmail == null || newEmail.isBlank()) throw new IllegalArgumentException("Email inválido");
+        String email = newEmail.trim().toLowerCase();
+        if (userRepository.findByEmail(email).filter(u -> !u.getId().equals(userId)).isPresent()) {
+            throw new IllegalStateException("El email ya está en uso por otro usuario");
+        }
+        User user = findUser(userId);
+        user.setEmail(email);
+        user.setEmailVerified(false);
+        return AdminUserResponse.from(userRepository.save(user), 0);
+    }
+
+    @Transactional
+    public String resetUserPassword(Long userId) {
+        User user = findUser(userId);
+        String tempPassword = generateTempPassword();
+        user.setPasswordHash(passwordEncoder.encode(tempPassword));
+        userRepository.save(user);
+        return tempPassword;
+    }
+
+    private String generateTempPassword() {
+        String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(10);
+        for (int i = 0; i < 10; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 
     @Transactional(readOnly = true)

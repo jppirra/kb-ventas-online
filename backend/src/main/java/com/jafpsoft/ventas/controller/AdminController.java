@@ -64,6 +64,17 @@ public class AdminController {
         return adminService.toggleUserAdmin(id);
     }
 
+    @PatchMapping("/users/{id}/email")
+    public AdminUserResponse updateUserEmail(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        return adminService.updateUserEmail(id, body.get("email"));
+    }
+
+    @PostMapping("/users/{id}/reset-password")
+    public ResponseEntity<Map<String, String>> resetUserPassword(@PathVariable Long id) {
+        String tempPassword = adminService.resetUserPassword(id);
+        return ResponseEntity.ok(Map.of("tempPassword", tempPassword));
+    }
+
     @DeleteMapping("/users/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteUser(@PathVariable Long id) {

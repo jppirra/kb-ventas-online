@@ -8,6 +8,8 @@ export const adminApi = {
   users: () => api.get('/admin/users'),
   toggleEnabled: (id) => api.patch(`/admin/users/${id}/toggle-enabled`),
   toggleAdmin: (id) => api.patch(`/admin/users/${id}/toggle-admin`),
+  updateEmail: (id, email) => api.patch(`/admin/users/${id}/email`, { email }),
+  resetPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
 
   // Orders
