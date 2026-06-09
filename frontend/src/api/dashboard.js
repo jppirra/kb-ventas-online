@@ -1,5 +1,5 @@
 import api from './axios'
 
 export const dashboardApi = {
-  getStats: () => api.get('/dashboard/stats'),
+  getStats: (month) => api.get('/dashboard/stats', month ? { params: { month } } : {}),
 }
