@@ -121,7 +121,8 @@ export default function AdminUsersPage() {
         <div className="text-gray-400 dark:text-slate-500">Cargando...</div>
       ) : (
         <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[480px]">
             <thead className="bg-gray-50 dark:bg-slate-700/50 text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide">
               <tr>
                 <th className="px-4 py-3 text-left">Usuario</th>
@@ -219,6 +220,7 @@ export default function AdminUsersPage() {
               ))}
             </tbody>
           </table>
+          </div>
           {filtered.length === 0 && (
             <p className="text-center py-8 text-gray-400 dark:text-slate-500 text-sm">No hay resultados.</p>
           )}
