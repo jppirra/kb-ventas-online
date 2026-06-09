@@ -39,7 +39,7 @@ function timeAgo(dateStr) {
   return `${Math.floor(diff / 86400)}d`
 }
 
-function NotificationBell({ upward = false }) {
+function NotificationBell() {
   const [unread, setUnread] = useState(0)
   const [notifications, setNotifications] = useState([])
   const [open, setOpen] = useState(false)
@@ -93,7 +93,7 @@ function NotificationBell({ upward = false }) {
   return (
     <div className="relative" ref={panelRef}>
       <button onClick={handleOpen} title="Notificaciones"
-        className="relative w-full flex items-center justify-center p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+        className="relative flex items-center justify-center p-2 text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
         {IC.bell}
         {unread > 0 && (
           <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center leading-none">
@@ -103,7 +103,7 @@ function NotificationBell({ upward = false }) {
       </button>
 
       {open && (
-        <div className={`absolute left-full ml-2 w-80 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 overflow-hidden ${upward ? 'bottom-0' : 'top-0'}`}>
+        <div className="absolute right-0 top-full mt-2 w-80 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-xl z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 dark:border-slate-700">
             <span className="text-sm font-semibold text-gray-900 dark:text-white">Notificaciones</span>
             {unread > 0 && (
@@ -166,7 +166,7 @@ export default function Navbar({ collapsed, onToggle }) {
     } ${collapsed ? 'justify-center' : ''}`
 
   const sidebarContent = (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col">
       {/* Logo + toggle */}
       <div className={`flex items-center border-b border-gray-100 dark:border-slate-800 h-16 px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
         <SidebarLogo collapsed={collapsed} />
@@ -195,12 +195,8 @@ export default function Navbar({ collapsed, onToggle }) {
         )}
       </nav>
 
-      {/* Bottom: notifications, theme, logout */}
-      <div className="border-t border-gray-100 dark:border-slate-800 py-2 px-2 space-y-0.5">
-        <div className={`flex items-center ${collapsed ? 'flex-col gap-0.5' : 'gap-1'}`}>
-          <NotificationBell upward />
-          <ThemeToggle />
-        </div>
+      {/* Bottom: logout */}
+      <div className="border-t border-gray-100 dark:border-slate-800 py-2 px-2">
         <button onClick={logout} title={collapsed ? 'Cerrar sesión' : undefined}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-colors ${collapsed ? 'justify-center' : ''}`}>
           {IC.logout}
@@ -212,17 +208,21 @@ export default function Navbar({ collapsed, onToggle }) {
 
   return (
     <>
-      {/* ── Mobile top bar ────────────────────────────────────────────────── */}
-      <div className="md:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 flex items-center px-3 gap-2">
+      {/* ── Top header bar (all screen sizes) ─────────────────────────── */}
+      <div className={`fixed top-0 right-0 z-30 h-14 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 flex items-center px-3 gap-2 transition-all duration-300 left-0 ${collapsed ? 'md:left-16' : 'md:left-56'}`}>
+        {/* Mobile only: hamburger + logo */}
         <button onClick={() => setMobileOpen(v => !v)}
-          className="p-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+          className="md:hidden p-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
           {IC.menu}
         </button>
-        <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2">
+        <a href="/mercato/" title="Conocer más sobre Mercato" className="md:hidden flex items-center gap-2">
           <img src="/logo-icon.png" alt="" className="h-9 w-9 rounded-lg object-cover" />
           <span className="font-bold text-gray-900 dark:text-white text-base tracking-tight">Mercato</span>
         </a>
-        <div className="ml-auto flex items-center">
+
+        {/* Right side: notification bell + theme toggle */}
+        <div className="ml-auto flex items-center gap-1">
+          <NotificationBell />
           <ThemeToggle />
         </div>
       </div>
@@ -237,7 +237,7 @@ export default function Navbar({ collapsed, onToggle }) {
         fixed left-0 top-0 h-[100dvh] z-40
         bg-white dark:bg-slate-900
         border-r border-gray-200 dark:border-slate-700
-        transition-all duration-300 overflow-hidden
+        transition-all duration-300
         w-64 md:w-auto
         ${collapsed ? 'md:w-16' : 'md:w-56'}
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
