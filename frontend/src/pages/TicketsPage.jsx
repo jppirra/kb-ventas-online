@@ -258,8 +258,8 @@ export default function TicketsPage() {
             <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse" />
             Beta
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Tickets de venta</h1>
-          <p className="text-gray-500 dark:text-slate-400 mb-2">Esta función está en desarrollo. Próximamente podrás generar comprobantes de venta con talles, enviarlos por WhatsApp y llevar el registro de tus clientes.</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">Facturación</h1>
+          <p className="text-gray-500 dark:text-slate-400 mb-2">Esta función está en desarrollo. Próximamente podrás generar comprobantes de venta, enviarlos por WhatsApp y llevar el registro de tus clientes.</p>
           <p className="text-sm text-gray-400 dark:text-slate-500">Disponible pronto para todos los vendedores.</p>
         </div>
       </Layout>
@@ -285,7 +285,7 @@ export default function TicketsPage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tickets de venta</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Facturación</h1>
               <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-xs font-semibold rounded-full">Beta</span>
             </div>
             <p className="text-sm text-gray-500 dark:text-slate-400">{tickets.length} tickets · Total ${total.toLocaleString('es-AR')}</p>

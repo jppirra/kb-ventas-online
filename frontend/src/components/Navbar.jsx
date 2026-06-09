@@ -26,7 +26,7 @@ const NAV_LINKS = [
   { to: '/stock',    label: 'Stock',          icon: IC.stock    },
   { to: '/locales',  label: 'Locales',        icon: IC.locales  },
   { to: '/orders',   label: 'Pedidos',        icon: IC.orders   },
-  { to: '/tickets',  label: 'Tickets',        icon: IC.tickets  },
+  { to: '/tickets',  label: 'Facturación',    icon: IC.tickets  },
   { to: '/profile',  label: 'Mi perfil',      icon: IC.profile  },
   { to: '/settings', label: 'Configuración',  icon: IC.settings },
 ]
