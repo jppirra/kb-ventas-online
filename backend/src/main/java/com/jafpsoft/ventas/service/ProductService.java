@@ -91,6 +91,11 @@ public class ProductService {
         return Map.of("imageUrl", url);
     }
 
+    public Map<String, String> uploadTempImage(MultipartFile file, Long userId) throws IOException {
+        String url = storageService.uploadImage(file, "products");
+        return Map.of("imageUrl", url);
+    }
+
     private void applyStockFields(Product product, ProductRequest req) {
         if (req.getShowStock() != null) product.setShowStock(req.getShowStock());
         if (req.getStockStatus() != null) product.setStockStatus(req.getStockStatus());

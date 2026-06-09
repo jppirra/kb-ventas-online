@@ -49,6 +49,13 @@ public class ProductController {
         productService.delete(id, userId(user));
     }
 
+    @PostMapping("/upload-temp-image")
+    public ResponseEntity<Map<String, String>> uploadTempImage(
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails user) throws IOException {
+        return ResponseEntity.ok(productService.uploadTempImage(file, userId(user)));
+    }
+
     @PostMapping("/{id}/upload-image")
     public ResponseEntity<Map<String, String>> uploadImage(
             @PathVariable Long id,
