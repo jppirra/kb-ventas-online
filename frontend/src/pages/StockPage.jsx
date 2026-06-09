@@ -119,7 +119,8 @@ export default function StockPage() {
   const [saving, setSaving] = useState(false)
   const [uploadingImg, setUploadingImg] = useState(false)
   const [uploadingGallery, setUploadingGallery] = useState(false)
-  const [pendingImgId, setPendingImgId] = useState(null)
+  const [pendingImageFile, setPendingImageFile] = useState(null)
+  const [pendingGalleryFiles, setPendingGalleryFiles] = useState([])
 
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [assigningProduct, setAssigningProduct] = useState(null)
@@ -152,6 +153,8 @@ export default function StockPage() {
   }
 
   function openForm(product = null) {
+    setPendingImageFile(null)
+    setPendingGalleryFiles([])
     if (product) {
       setEditingId(product.id)
       setForm({
@@ -182,12 +185,16 @@ export default function StockPage() {
     e.preventDefault()
     if (!form.name.trim()) return
     setSaving(true)
+    const isCreating = !editingId
+    // For new products, blob URLs are local previews — exclude from payload
+    const payloadExtraImages = isCreating ? [] : form.extraImages
     const payload = {
       ...form,
+      imageUrl: isCreating ? null : form.imageUrl,
       price: form.price !== '' ? parseFloat(form.price) : null,
       offerPrice: form.offerPrice !== '' ? parseFloat(form.offerPrice) : null,
       stockCount: form.stockCount !== '' ? parseInt(form.stockCount) : null,
-      extraImagesJson: form.extraImages.length > 0 ? JSON.stringify(form.extraImages) : null,
+      extraImagesJson: payloadExtraImages.length > 0 ? JSON.stringify(payloadExtraImages) : null,
       videoUrl: form.videoUrl.trim() || null,
       variantsJson: form.variants.length > 0 ? JSON.stringify(form.variants) : null,
     }
@@ -197,10 +204,40 @@ export default function StockPage() {
         setProducts(ps => ps.map(p => p.id === editingId ? data : p))
         toast.success('Producto actualizado')
       } else {
-        const { data } = await productsApi.create(payload)
-        setProducts(ps => [data, ...ps])
+        const { data: newProduct } = await productsApi.create(payload)
+        let finalProduct = { ...newProduct }
+
+        if (pendingImageFile) {
+          try {
+            const { data: imgData } = await productsApi.uploadImage(newProduct.id, pendingImageFile)
+            finalProduct = { ...finalProduct, imageUrl: imgData.imageUrl }
+          } catch { /* product saved without image */ }
+        }
+
+        if (pendingGalleryFiles.length > 0) {
+          const galleryUrls = []
+          for (const f of pendingGalleryFiles) {
+            try {
+              const { data: gData } = await productsApi.uploadGalleryImage(newProduct.id, f)
+              galleryUrls.push(gData.imageUrl)
+            } catch { /* skip failed gallery upload */ }
+          }
+          if (galleryUrls.length > 0) {
+            try {
+              const { data: upd } = await productsApi.update(newProduct.id, {
+                ...payload, imageUrl: finalProduct.imageUrl,
+                extraImagesJson: JSON.stringify(galleryUrls),
+              })
+              finalProduct = upd
+            } catch { /* gallery not persisted */ }
+          }
+        }
+
+        setProducts(ps => [finalProduct, ...ps])
         toast.success('Producto creado en el repositorio')
       }
+      setPendingImageFile(null)
+      setPendingGalleryFiles([])
       setShowForm(false)
     } catch {
       toast.error('Error al guardar producto')
@@ -223,52 +260,56 @@ export default function StockPage() {
   async function handleImageUpload(e) {
     const file = e.target.files[0]
     if (!file) return
-    setUploadingImg(true)
-    try {
-      let url
-      if (pendingImgId) {
-        const { data } = await productsApi.uploadImage(pendingImgId, file)
-        url = data.imageUrl
-        setProducts(ps => ps.map(p => p.id === pendingImgId ? { ...p, imageUrl: url } : p))
-      } else {
-        const { data } = await productsApi.uploadTempImage(file)
-        url = data.imageUrl
+    e.target.value = ''
+
+    if (editingId) {
+      setUploadingImg(true)
+      try {
+        const { data } = await productsApi.uploadImage(editingId, file)
+        const url = data.imageUrl
+        setProducts(ps => ps.map(p => p.id === editingId ? { ...p, imageUrl: url } : p))
+        setForm(f => ({ ...f, imageUrl: url }))
+        toast.success('Imagen subida')
+      } catch {
+        toast.error('Error al subir imagen')
+      } finally {
+        setUploadingImg(false)
       }
-      setForm(f => ({ ...f, imageUrl: url }))
-      toast.success('Imagen subida')
-    } catch {
-      toast.error('Error al subir imagen')
-    } finally {
-      setUploadingImg(false)
-      setPendingImgId(null)
-      e.target.value = ''
+    } else {
+      setPendingImageFile(file)
+      setForm(f => ({ ...f, imageUrl: URL.createObjectURL(file) }))
     }
   }
 
   async function handleGalleryImageUpload(e) {
     const file = e.target.files[0]
     if (!file) return
-    setUploadingGallery(true)
-    try {
-      let url
-      if (editingId) {
+    e.target.value = ''
+
+    if (editingId) {
+      setUploadingGallery(true)
+      try {
         const { data } = await productsApi.uploadGalleryImage(editingId, file)
-        url = data.imageUrl
-      } else {
-        const { data } = await productsApi.uploadTempImage(file)
-        url = data.imageUrl
+        setForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
+        toast.success('Imagen agregada a la galería')
+      } catch {
+        toast.error('Error al subir imagen')
+      } finally {
+        setUploadingGallery(false)
       }
-      setForm(f => ({ ...f, extraImages: [...f.extraImages, url] }))
-      toast.success('Imagen agregada a la galería')
-    } catch {
-      toast.error('Error al subir imagen')
-    } finally {
-      setUploadingGallery(false)
-      e.target.value = ''
+    } else {
+      setPendingGalleryFiles(prev => [...prev, file])
+      setForm(f => ({ ...f, extraImages: [...f.extraImages, URL.createObjectURL(file)] }))
     }
   }
 
   function removeGalleryImage(idx) {
+    const url = form.extraImages[idx]
+    if (url && url.startsWith('blob:')) {
+      const blobUrls = form.extraImages.filter(u => u.startsWith('blob:'))
+      const blobIdx = blobUrls.indexOf(url)
+      if (blobIdx !== -1) setPendingGalleryFiles(prev => prev.filter((_, i) => i !== blobIdx))
+    }
     setForm(f => ({ ...f, extraImages: f.extraImages.filter((_, i) => i !== idx) }))
   }
 
@@ -382,7 +423,7 @@ export default function StockPage() {
                 </div>
               )}
               <button type="button" disabled={uploadingImg}
-                onClick={() => { setPendingImgId(editingId); imgRef.current.click() }}
+                onClick={() => imgRef.current.click()}
                 className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
