@@ -4,11 +4,49 @@ import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
 import { useAuth } from '../../context/AuthContext'
 
+function ConfirmModal({ modal, onConfirm, onClose }) {
+  if (!modal) return null
+  const { title, description, confirmLabel, danger } = modal
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start gap-3 mb-4">
+          <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${danger ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${danger ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{title}</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 leading-relaxed">{description}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={onConfirm}
+            className={`flex-1 py-2 text-white font-semibold rounded-xl text-sm transition-colors ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}
+          >
+            {confirmLabel}
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-semibold rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminUsersPage() {
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+
+  const [confirmModal, setConfirmModal] = useState(null) // { title, description, confirmLabel, danger, onConfirm }
 
   const [editModal, setEditModal] = useState(null) // { id, name, email }
   const [editEmailValue, setEditEmailValue] = useState('')
@@ -30,33 +68,86 @@ export default function AdminUsersPage() {
     }
   }
 
-  async function handleToggleEnabled(id) {
-    try {
-      const { data } = await adminApi.toggleEnabled(id)
-      setUsers(u => u.map(x => x.id === id ? { ...x, enabled: data.enabled } : x))
-    } catch {
-      toast.error('Error')
-    }
+  function confirmToggleEnabled(u) {
+    const blocking = u.enabled
+    setConfirmModal({
+      title: blocking ? `Bloquear a ${u.name}` : `Desbloquear a ${u.name}`,
+      description: blocking
+        ? 'El usuario no podrá iniciar sesión ni acceder a la plataforma hasta que lo reactives.'
+        : 'El usuario podrá volver a iniciar sesión y usar la plataforma.',
+      confirmLabel: blocking ? 'Bloquear cuenta' : 'Desbloquear cuenta',
+      danger: blocking,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          const { data } = await adminApi.toggleEnabled(u.id)
+          setUsers(prev => prev.map(x => x.id === u.id ? { ...x, enabled: data.enabled } : x))
+          toast.success(data.enabled ? 'Cuenta desbloqueada' : 'Cuenta bloqueada')
+        } catch {
+          toast.error('Error')
+        }
+      },
+    })
   }
 
-  async function handleToggleAdmin(id) {
-    try {
-      const { data } = await adminApi.toggleAdmin(id)
-      setUsers(u => u.map(x => x.id === id ? { ...x, appAdmin: data.appAdmin } : x))
-    } catch {
-      toast.error('Error')
-    }
+  function confirmToggleAdmin(u) {
+    const removing = u.appAdmin
+    setConfirmModal({
+      title: removing ? `Quitar admin a ${u.name}` : `Dar acceso admin a ${u.name}`,
+      description: removing
+        ? 'El usuario perderá acceso al panel de administración y todas sus funciones.'
+        : 'El usuario tendrá acceso completo al panel de administración. Solo hacé esto con personas de confianza.',
+      confirmLabel: removing ? 'Quitar admin' : 'Dar admin',
+      danger: !removing,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          const { data } = await adminApi.toggleAdmin(u.id)
+          setUsers(prev => prev.map(x => x.id === u.id ? { ...x, appAdmin: data.appAdmin } : x))
+          toast.success(data.appAdmin ? 'Admin asignado' : 'Admin removido')
+        } catch {
+          toast.error('Error')
+        }
+      },
+    })
   }
 
-  async function handleDelete(id, name) {
-    if (!confirm(`¿Eliminar al usuario "${name}"? Esta acción no se puede deshacer.`)) return
-    try {
-      await adminApi.deleteUser(id)
-      setUsers(u => u.filter(x => x.id !== id))
-      toast.success('Usuario eliminado')
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al eliminar')
-    }
+  function confirmDelete(u) {
+    setConfirmModal({
+      title: `Eliminar a ${u.name}`,
+      description: 'Se eliminarán permanentemente su cuenta, catálogos y todos sus datos. Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar usuario',
+      danger: true,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          await adminApi.deleteUser(u.id)
+          setUsers(prev => prev.filter(x => x.id !== u.id))
+          toast.success('Usuario eliminado')
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error al eliminar')
+        }
+      },
+    })
+  }
+
+  function confirmResetPassword(u) {
+    setConfirmModal({
+      title: `Blanquear contraseña de ${u.name}`,
+      description: 'Se generará una contraseña temporal. El usuario deberá cambiarla al ingresar.',
+      confirmLabel: 'Blanquear contraseña',
+      danger: false,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          const { data } = await adminApi.resetPassword(u.id)
+          setTempPwdModal({ name: u.name, password: data.tempPassword })
+          setPwdCopied(false)
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error al blanquear contraseña')
+        }
+      },
+    })
   }
 
   function openEditEmail(u) {
@@ -76,17 +167,6 @@ export default function AdminUsersPage() {
       toast.error(err.response?.data?.message || 'Error al actualizar email')
     } finally {
       setSavingEmail(false)
-    }
-  }
-
-  async function handleResetPassword(id, name) {
-    if (!confirm(`¿Blanquear la contraseña de "${name}"? Se generará una clave temporal.`)) return
-    try {
-      const { data } = await adminApi.resetPassword(id)
-      setTempPwdModal({ name, password: data.tempPassword })
-      setPwdCopied(false)
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'Error al blanquear contraseña')
     }
   }
 
@@ -157,7 +237,7 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
-                      onClick={() => handleToggleEnabled(u.id)}
+                      onClick={() => confirmToggleEnabled(u)}
                       disabled={u.id === currentUser?.userId}
                       className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
                         u.enabled
@@ -170,7 +250,7 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
-                      onClick={() => handleToggleAdmin(u.id)}
+                      onClick={() => confirmToggleAdmin(u)}
                       disabled={u.id === currentUser?.userId}
                       className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
                         u.appAdmin
@@ -195,7 +275,7 @@ export default function AdminUsersPage() {
                       </button>
                       {/* Blanquear contraseña */}
                       <button
-                        onClick={() => handleResetPassword(u.id, u.name)}
+                        onClick={() => confirmResetPassword(u)}
                         title="Blanquear contraseña"
                         className="p-1.5 text-gray-400 hover:text-amber-500 dark:text-slate-500 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                       >
@@ -205,7 +285,7 @@ export default function AdminUsersPage() {
                       </button>
                       {/* Eliminar */}
                       <button
-                        onClick={() => handleDelete(u.id, u.name)}
+                        onClick={() => confirmDelete(u)}
                         disabled={u.appAdmin || u.id === currentUser?.userId}
                         title="Eliminar usuario"
                         className="p-1.5 text-gray-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
@@ -291,6 +371,12 @@ export default function AdminUsersPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        modal={confirmModal}
+        onConfirm={() => confirmModal?.onConfirm()}
+        onClose={() => setConfirmModal(null)}
+      />
     </AdminLayout>
   )
 }
