@@ -30,6 +30,9 @@ public class SaleTicketItem {
     @Column(length = 30)
     private String size;
 
+    @Column(length = 50)
+    private String color;
+
     @Column(nullable = false)
     @Builder.Default
     private Integer quantity = 1;

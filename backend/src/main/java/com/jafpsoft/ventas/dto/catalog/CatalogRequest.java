@@ -15,4 +15,6 @@ public class CatalogRequest {
     private Long backgroundTemplateId;
     private Boolean sizesEnabled;
     private String sizeOptions;
+    private Boolean colorsEnabled;
+    private String colorOptions;
 }

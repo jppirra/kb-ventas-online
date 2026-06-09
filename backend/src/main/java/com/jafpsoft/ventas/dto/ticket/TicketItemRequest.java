@@ -13,6 +13,7 @@ public class TicketItemRequest {
     private String productName;
     private String productSku;
     private String size;
+    private String color;
     @Min(1)
     private Integer quantity = 1;
     private BigDecimal unitPrice;

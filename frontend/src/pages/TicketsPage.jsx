@@ -20,7 +20,7 @@ const SIZE_PRESETS = [
   { label: 'Talle único', sizes: ['Único'] },
 ]
 
-const emptyItem = { productId: null, productName: '', productSku: '', size: '', quantity: 1, unitPrice: '' }
+const emptyItem = { productId: null, productName: '', productSku: '', size: '', color: '', quantity: 1, unitPrice: '' }
 
 function NewTicketModal({ onClose, onCreated }) {
   const [catalogs, setCatalogs] = useState([])
@@ -35,6 +35,9 @@ function NewTicketModal({ onClose, onCreated }) {
 
   const availableSizes = selectedCatalog?.sizesEnabled
     ? (selectedCatalog.sizeOptions ? selectedCatalog.sizeOptions.split(',').map(s => s.trim()) : [])
+    : []
+  const availableColors = selectedCatalog?.colorsEnabled
+    ? (selectedCatalog.colorOptions ? selectedCatalog.colorOptions.split(',').map(s => s.trim()) : [])
     : []
 
   function addItem() { setItems(prev => [...prev, { ...emptyItem }]) }
@@ -71,6 +74,7 @@ function NewTicketModal({ onClose, onCreated }) {
           productName: it.productName,
           productSku: it.productSku || null,
           size: it.size || null,
+          color: it.color || null,
           quantity: parseInt(it.quantity) || 1,
           unitPrice: parseFloat(it.unitPrice) || 0,
           sortOrder: idx,
@@ -145,6 +149,22 @@ function NewTicketModal({ onClose, onCreated }) {
                     <div className="col-span-3 sm:col-span-2">
                       <input type="text" placeholder="Talle" value={item.size}
                         onChange={e => setItem(i, 'size', e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    </div>
+                  )}
+                  {/* Color */}
+                  {availableColors.length > 0 ? (
+                    <div className="col-span-3 sm:col-span-2">
+                      <select value={item.color} onChange={e => setItem(i, 'color', e.target.value)}
+                        className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <option value="">Color</option>
+                        {availableColors.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <div className="col-span-3 sm:col-span-2">
+                      <input type="text" placeholder="Color" value={item.color}
+                        onChange={e => setItem(i, 'color', e.target.value)}
                         className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </div>
                   )}

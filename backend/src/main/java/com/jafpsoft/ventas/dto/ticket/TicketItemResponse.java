@@ -12,6 +12,7 @@ public class TicketItemResponse {
     private String productName;
     private String productSku;
     private String size;
+    private String color;
     private Integer quantity;
     private BigDecimal unitPrice;
     private BigDecimal subtotal;
@@ -24,6 +25,7 @@ public class TicketItemResponse {
         r.productName = i.getProductName();
         r.productSku = i.getProductSku();
         r.size = i.getSize();
+        r.color = i.getColor();
         r.quantity = i.getQuantity();
         r.unitPrice = i.getUnitPrice();
         r.subtotal = i.getSubtotal();

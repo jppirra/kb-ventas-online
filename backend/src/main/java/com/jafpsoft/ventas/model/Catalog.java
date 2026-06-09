@@ -63,6 +63,13 @@ public class Catalog {
     @Column(name = "size_options", columnDefinition = "TEXT")
     private String sizeOptions;
 
+    @Column(name = "colors_enabled", nullable = false, columnDefinition = "boolean default false")
+    @Builder.Default
+    private boolean colorsEnabled = false;
+
+    @Column(name = "color_options", columnDefinition = "TEXT")
+    private String colorOptions;
+
     @Column(name = "public_id", length = 36, unique = true)
     private String publicId;
 

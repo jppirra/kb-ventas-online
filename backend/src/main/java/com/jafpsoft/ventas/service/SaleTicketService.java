@@ -69,6 +69,7 @@ public class SaleTicketService {
                     .productName(r.getProductName())
                     .productSku(r.getProductSku())
                     .size(r.getSize())
+                    .color(r.getColor())
                     .quantity(r.getQuantity())
                     .unitPrice(unit)
                     .subtotal(sub)

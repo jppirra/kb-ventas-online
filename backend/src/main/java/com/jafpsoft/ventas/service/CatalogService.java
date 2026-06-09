@@ -82,6 +82,8 @@ public class CatalogService {
         if (req.getBackgroundTemplateId() != null) catalog.setBackgroundTemplateId(req.getBackgroundTemplateId());
         if (req.getSizesEnabled() != null) catalog.setSizesEnabled(req.getSizesEnabled());
         if (req.getSizeOptions() != null) catalog.setSizeOptions(req.getSizeOptions());
+        if (req.getColorsEnabled() != null) catalog.setColorsEnabled(req.getColorsEnabled());
+        if (req.getColorOptions() != null) catalog.setColorOptions(req.getColorOptions());
     }
 
     @Transactional
