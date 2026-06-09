@@ -15,7 +15,7 @@ import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
-const VERSION = 'v1.000.08'
+const VERSION = __APP_VERSION__
 const YEAR = new Date().getFullYear()
 
 export default function Login() {

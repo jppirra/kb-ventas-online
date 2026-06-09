@@ -1,11 +1,12 @@
 {
   "name": "my-app-frontend",
-  "version": "1.000.05",
+  "version": "1.000.08",
   "private": true,
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "sync-version": "node ../scripts/sync-version.js"
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
