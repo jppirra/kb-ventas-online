@@ -1,8 +1,11 @@
 package com.jafpsoft.ventas.dto.profile;
 
 import com.jafpsoft.ventas.model.Catalog;
+import com.jafpsoft.ventas.model.SocialLink;
 import com.jafpsoft.ventas.model.User;
 import lombok.Data;
+
+import java.util.List;
 
 @Data
 public class PublicCatalogPageResponse {
@@ -16,8 +19,9 @@ public class PublicCatalogPageResponse {
     private String vendorBio;
     private String vendorBrandColorPrimary;
     private String vendorBrandColorSecondary;
+    private List<SocialLinkDto> vendorSocialLinks;
 
-    public static PublicCatalogPageResponse from(Catalog c, User owner) {
+    public static PublicCatalogPageResponse from(Catalog c, User owner, List<SocialLink> socialLinks) {
         PublicCatalogPageResponse r = new PublicCatalogPageResponse();
         r.available = true;
         r.catalog = PublicCatalogResponse.from(c);
@@ -29,6 +33,7 @@ public class PublicCatalogPageResponse {
         r.vendorBio = owner.getBio();
         r.vendorBrandColorPrimary = owner.getBrandColorPrimary();
         r.vendorBrandColorSecondary = owner.getBrandColorSecondary();
+        r.vendorSocialLinks = socialLinks.stream().map(SocialLinkDto::from).toList();
         return r;
     }
 

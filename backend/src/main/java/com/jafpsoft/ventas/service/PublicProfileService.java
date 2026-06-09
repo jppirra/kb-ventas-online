@@ -77,7 +77,8 @@ public class PublicProfileService {
             return PublicCatalogPageResponse.unavailable(catalog, owner);
         }
 
-        PublicCatalogPageResponse response = PublicCatalogPageResponse.from(catalog, owner);
+        List<SocialLink> socialLinks = socialLinkRepository.findByUserIdOrderBySortOrderAsc(owner.getId());
+        PublicCatalogPageResponse response = PublicCatalogPageResponse.from(catalog, owner, socialLinks);
         if ("PREDEFINED".equals(catalog.getBackgroundType()) && catalog.getBackgroundTemplateId() != null) {
             backgroundTemplateRepository.findById(catalog.getBackgroundTemplateId()).ifPresent(t ->
                     response.getCatalog().setBackgroundImageUrl(t.getImageUrl())

@@ -315,7 +315,7 @@ export default function PublicProfilePage() {
           Mercato
         </a>
         <p className="text-xs text-gray-400 dark:text-slate-500 text-center">
-          Catálogos digitales · Desarrollado por{' '}
+          Herramientas de gestión digital · Desarrollado por{' '}
           <a href="https://jafpsoft.com" target="_blank" rel="noopener noreferrer"
             className="hover:text-gray-500 dark:hover:text-slate-400 transition-colors">
             JAFPSoft
