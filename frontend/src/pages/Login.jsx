@@ -2,11 +2,10 @@ import React, { useState } from 'react'
 
 function LoginLogo() {
   return (
-    <a href="/mercato/" title="Conocer más sobre Mercato" className="flex flex-col items-center gap-2 mb-6">
-      <img src="/logo-icon.png" alt="" className="h-20 w-20 rounded-2xl object-cover shadow-lg" />
-      <img src="/logo-text.png" alt="Mercato" className="h-9 object-contain mix-blend-multiply dark:hidden" />
-      <span className="hidden dark:block font-bold text-white text-2xl tracking-tight">Mercato</span>
-    </a>
+    <div className="flex flex-col items-center gap-2 mb-6">
+      <img src="/logo-icon.png" alt="" className="h-24 w-24 rounded-2xl object-cover shadow-lg" />
+      <span className="font-bold text-gray-900 dark:text-white text-3xl tracking-tight">Mercato</span>
+    </div>
   )
 }
 import { Link, useNavigate } from 'react-router-dom'

@@ -140,13 +140,9 @@ function SidebarLogo({ collapsed }) {
   return (
     <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2.5 min-w-0">
       <img src="/logo-icon.png" alt="Mercato"
-        className={`rounded-xl object-cover shrink-0 transition-all duration-300 ${collapsed ? 'h-9 w-9' : 'h-11 w-11'}`} />
+        className={`rounded-xl object-cover shrink-0 transition-all duration-300 ${collapsed ? 'h-10 w-10' : 'h-14 w-14'}`} />
       {!collapsed && (
-        <>
-          <img src="/logo-text.png" alt="Mercato"
-            className="h-7 object-contain mix-blend-multiply dark:hidden shrink-0" />
-          <span className="hidden dark:block font-bold text-white text-lg tracking-tight shrink-0">Mercato</span>
-        </>
+        <span className="font-bold text-gray-900 dark:text-white text-xl tracking-tight shrink-0">Mercato</span>
       )}
     </a>
   )
@@ -223,9 +219,8 @@ export default function Navbar({ collapsed, onToggle }) {
           {IC.menu}
         </button>
         <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2">
-          <img src="/logo-icon.png" alt="" className="h-8 w-8 rounded-lg object-cover" />
-          <img src="/logo-text.png" alt="Mercato" className="h-5 object-contain mix-blend-multiply dark:hidden" />
-          <span className="hidden dark:inline font-bold text-white text-base tracking-tight">Mercato</span>
+          <img src="/logo-icon.png" alt="" className="h-9 w-9 rounded-lg object-cover" />
+          <span className="font-bold text-gray-900 dark:text-white text-base tracking-tight">Mercato</span>
         </a>
         <div className="ml-auto flex items-center">
           <ThemeToggle />
