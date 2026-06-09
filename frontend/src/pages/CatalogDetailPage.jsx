@@ -32,7 +32,7 @@ const BG_TYPES = [
 
 import { productsApi } from '../api/products'
 
-const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false }
+const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false }
 
 export default function CatalogDetailPage() {
   const { id } = useParams()
@@ -40,6 +40,7 @@ export default function CatalogDetailPage() {
   const fileRef = useRef()
   const bgFileRef = useRef()
   const productImgRef = useRef()
+  const extraImgRef = useRef()
 
   const [catalog, setCatalog] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -50,6 +51,7 @@ export default function CatalogDetailPage() {
   const [productForm, setProductForm] = useState(emptyProduct)
   const [editingProductId, setEditingProductId] = useState(null)
   const [uploadingProductImg, setUploadingProductImg] = useState(false)
+  const [uploadingExtraImg, setUploadingExtraImg] = useState(false)
   const [pendingProductImgId, setPendingProductImgId] = useState(null)
   const [pollTimer, setPollTimer] = useState(null)
   const [showRepoModal, setShowRepoModal] = useState(false)
@@ -157,6 +159,8 @@ export default function CatalogDetailPage() {
   function openProductForm(product = null) {
     if (product) {
       setEditingProductId(product.id)
+      let extraImages = []
+      try { extraImages = product.extraImagesJson ? JSON.parse(product.extraImagesJson) : [] } catch {}
       setProductForm({
         name: product.name || '',
         description: product.description || '',
@@ -164,6 +168,8 @@ export default function CatalogDetailPage() {
         sku: product.sku || '',
         category: product.category || '',
         imageUrl: product.imageUrl || '',
+        extraImages,
+        videoUrl: product.videoUrl || '',
         showStock: product.showStock || false,
         stockStatus: product.stockStatus || 'IN_STOCK',
         stockCount: product.stockCount ?? '',
@@ -184,6 +190,8 @@ export default function CatalogDetailPage() {
       ...productForm,
       price: productForm.price !== '' ? parseFloat(productForm.price) : null,
       stockCount: productForm.stockCount !== '' ? parseInt(productForm.stockCount) : null,
+      extraImagesJson: productForm.extraImages.length > 0 ? JSON.stringify(productForm.extraImages) : null,
+      videoUrl: productForm.videoUrl || null,
     }
     try {
       if (editingProductId) {
@@ -260,24 +268,37 @@ export default function CatalogDetailPage() {
 
   async function handleProductImageUpload(e) {
     const file = e.target.files[0]
-    if (!file || !pendingProductImgId) return
+    if (!file) return
     setUploadingProductImg(true)
     try {
-      const { data } = await catalogsApi.uploadProductImage(id, pendingProductImgId, file)
+      const { data } = await catalogsApi.uploadTempProductImage(id, file)
       setProductForm(f => ({ ...f, imageUrl: data.imageUrl }))
       toast.success('Imagen subida')
-      load()
     } catch {
       toast.error('Error al subir imagen')
     } finally {
       setUploadingProductImg(false)
-      setPendingProductImgId(null)
       e.target.value = ''
     }
   }
 
-  function triggerProductImageUpload(productId) {
-    setPendingProductImgId(productId)
+  async function handleExtraImageUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingExtraImg(true)
+    try {
+      const { data } = await catalogsApi.uploadTempProductImage(id, file)
+      setProductForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
+      toast.success('Imagen agregada')
+    } catch {
+      toast.error('Error al subir imagen')
+    } finally {
+      setUploadingExtraImg(false)
+      e.target.value = ''
+    }
+  }
+
+  function triggerProductImageUpload() {
     productImgRef.current.click()
   }
 
@@ -568,6 +589,7 @@ export default function CatalogDetailPage() {
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcel} />
           <input ref={productImgRef} type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
+          <input ref={extraImgRef} type="file" accept="image/*" className="hidden" onChange={handleExtraImageUpload} />
           <span className="text-sm text-gray-400 dark:text-slate-500 ml-auto">
             {catalog.products?.length ?? 0} productos ({catalog.products?.filter(p => p.active).length ?? 0} visibles)
           </span>
@@ -580,36 +602,76 @@ export default function CatalogDetailPage() {
               {editingProductId ? 'Editar producto' : 'Nuevo producto'}
             </h3>
 
-            {/* Image upload (only for existing products) */}
-            {editingProductId && (
-              <div className="flex items-center gap-3">
-                {productForm.imageUrl ? (
-                  <img src={productForm.imageUrl} alt="img" className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600 shrink-0" />
-                ) : (
-                  <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                )}
-                <div className="flex flex-col gap-1">
-                  <button type="button" disabled={uploadingProductImg}
-                    onClick={() => triggerProductImageUpload(editingProductId)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                    </svg>
-                    {uploadingProductImg ? 'Subiendo...' : 'Subir imagen'}
-                  </button>
-                  {productForm.imageUrl && (
-                    <button type="button" onClick={() => setProductForm(f => ({ ...f, imageUrl: '' }))}
-                      className="text-xs text-red-400 hover:text-red-600 text-left">
-                      Quitar imagen
-                    </button>
+            {/* Images & video */}
+            <div className="space-y-3">
+              {/* Main image */}
+              <div>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Imagen principal</p>
+                <div className="flex items-center gap-3">
+                  {productForm.imageUrl ? (
+                    <img src={productForm.imageUrl} alt="img" className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600 shrink-0" />
+                  ) : (
+                    <div className="w-16 h-16 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
                   )}
+                  <div className="flex flex-col gap-1">
+                    <button type="button" disabled={uploadingProductImg} onClick={triggerProductImageUpload}
+                      className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-xs font-medium rounded-xl transition-colors disabled:opacity-50">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
+                      {uploadingProductImg ? 'Subiendo...' : 'Subir imagen'}
+                    </button>
+                    {productForm.imageUrl && (
+                      <button type="button" onClick={() => setProductForm(f => ({ ...f, imageUrl: '' }))}
+                        className="text-xs text-red-400 hover:text-red-600 text-left">
+                        Quitar
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
+
+              {/* Extra images */}
+              <div>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Imágenes adicionales</p>
+                <div className="flex flex-wrap gap-2">
+                  {productForm.extraImages.map((url, i) => (
+                    <div key={i} className="relative group">
+                      <img src={url} alt="" className="w-14 h-14 rounded-xl object-cover border border-gray-200 dark:border-slate-600" />
+                      <button type="button" onClick={() => setProductForm(f => ({ ...f, extraImages: f.extraImages.filter((_, j) => j !== i) }))}
+                        className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" disabled={uploadingExtraImg} onClick={() => extraImgRef.current.click()}
+                    className="w-14 h-14 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-600 flex items-center justify-center text-gray-400 dark:text-slate-500 hover:border-blue-400 hover:text-blue-400 transition-colors disabled:opacity-50">
+                    {uploadingExtraImg ? (
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Video URL */}
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Video (URL de YouTube, Vimeo, etc.)</label>
+                <input type="url" value={productForm.videoUrl} onChange={e => setProductForm(f => ({ ...f, videoUrl: e.target.value }))}
+                  placeholder="https://youtube.com/..."
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="sm:col-span-2">

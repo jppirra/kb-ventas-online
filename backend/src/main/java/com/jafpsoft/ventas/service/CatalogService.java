@@ -102,6 +102,8 @@ public class CatalogService {
                 .sku(req.getSku())
                 .category(req.getCategory())
                 .imageUrl(req.getImageUrl())
+                .extraImagesJson(req.getExtraImagesJson())
+                .videoUrl(req.getVideoUrl())
                 .sortOrder(req.getSortOrder())
                 .active(req.getActive() == null || req.getActive())
                 .build();
@@ -122,6 +124,8 @@ public class CatalogService {
         product.setSku(req.getSku());
         product.setCategory(req.getCategory());
         product.setImageUrl(req.getImageUrl());
+        if (req.getExtraImagesJson() != null) product.setExtraImagesJson(req.getExtraImagesJson());
+        if (req.getVideoUrl() != null) product.setVideoUrl(req.getVideoUrl());
         product.setSortOrder(req.getSortOrder());
         if (req.getActive() != null) product.setActive(req.getActive());
         applyStockFields(product, req);
@@ -233,6 +237,13 @@ public class CatalogService {
             catalogRepository.save(catalog);
             throw e;
         }
+    }
+
+    @Transactional
+    public Map<String, String> uploadTempProductImage(Long catalogId, MultipartFile file, Long userId) throws IOException {
+        findOwned(catalogId, userId);
+        String url = storageService.uploadImage(file, "products");
+        return Map.of("imageUrl", url);
     }
 
     @Transactional

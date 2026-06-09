@@ -14,6 +14,14 @@ export const catalogsApi = {
   unlinkProduct: (catalogId, productId) => api.put(`/catalogs/${catalogId}/products/${productId}/unlink`),
   assignProduct: (catalogId, productId) => api.put(`/catalogs/${catalogId}/assign/${productId}`),
 
+  uploadTempProductImage: (catalogId, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/catalogs/${catalogId}/upload-product-image`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
   uploadProductImage: (catalogId, productId, file) => {
     const form = new FormData()
     form.append('file', file)
