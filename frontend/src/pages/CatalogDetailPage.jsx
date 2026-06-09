@@ -342,7 +342,7 @@ export default function CatalogDetailPage() {
   }
 
   function handleCopyLink() {
-    const link = `${window.location.origin}/c/${id}`
+    const link = `${window.location.origin}/c/${catalog.publicId}`
     navigator.clipboard.writeText(link).then(() => {
       setCopiedLink(true)
       setTimeout(() => setCopiedLink(false), 2000)
@@ -357,7 +357,7 @@ export default function CatalogDetailPage() {
     )
   }
 
-  const publicLink = `${window.location.origin}/c/${id}`
+  const publicLink = `${window.location.origin}/c/${catalog.publicId}`
 
   return (
     <Layout>

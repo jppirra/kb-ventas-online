@@ -69,6 +69,6 @@ Template por [JAFPSoft.com](https://jafpsoft.com)
 
 ## Versión
 
-**v1.000.08**
+**v1.000.09**
 
 > Fuente de versión: editar este archivo y correr `cd frontend && npm run sync-version` para propagar al build.

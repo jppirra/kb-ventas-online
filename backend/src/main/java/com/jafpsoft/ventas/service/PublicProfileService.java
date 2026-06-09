@@ -46,6 +46,7 @@ public class PublicProfileService {
         List<Catalog> catalogs = catalogRepository.findByUserIdOrderByCreatedAtDesc(user.getId())
                 .stream()
                 .filter(Catalog::isActive)
+                .filter(c -> c.getPublishedSnapshotJson() != null)
                 .toList();
 
         List<PublicCatalogResponse> catalogResponses = catalogs.stream().map(c -> {

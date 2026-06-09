@@ -1,6 +1,6 @@
 {
   "name": "my-app-frontend",
-  "version": "1.000.08",
+  "version": "1.000.09",
   "private": true,
   "scripts": {
     "dev": "vite",
