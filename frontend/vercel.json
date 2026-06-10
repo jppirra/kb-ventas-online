@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://catalogia-backend.onrender.com/api/:path*" },
+    { "source": "/api/:path*", "destination": "https://catalogia-backend-staging.onrender.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
