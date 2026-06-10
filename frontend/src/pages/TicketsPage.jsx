@@ -13,14 +13,31 @@ const STATUS_COLORS = {
   CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
 
-const SIZE_PRESETS = [
-  { label: 'Ropa adulto', sizes: ['XS','S','M','L','XL','XXL'] },
-  { label: 'Ropa niño', sizes: ['2','4','6','8','10','12','14','16'] },
-  { label: 'Calzado', sizes: ['34','35','36','37','38','39','40','41','42','43','44','45'] },
-  { label: 'Talle único', sizes: ['Único'] },
-]
 
-const emptyItem = { productId: null, productName: '', productSku: '', variant: '', quantity: 1, unitPrice: '' }
+const emptyItem = { productId: null, productName: '', productSku: '', variant: '', quantity: 1, unitPrice: '', _sizes: [], _colors: [], _combos: [] }
+
+function parseProductVariants(json) {
+  try {
+    if (!json) return { sizes: [], colors: [], combos: [] }
+    const p = JSON.parse(json)
+    if (Array.isArray(p)) {
+      const sz = p.find(v => ['talle','talles','size','sizes'].includes((v.name||'').toLowerCase()))
+      const cl = p.find(v => ['color','colores'].includes((v.name||'').toLowerCase()))
+      return { sizes: sz?.options || [], colors: cl?.options || [], combos: [] }
+    }
+    return { sizes: p.sizes || [], colors: p.colors || [], combos: p.combos || [] }
+  } catch { return { sizes: [], colors: [], combos: [] } }
+}
+
+function buildVariantOptions(sizes, colors, combos) {
+  if (sizes.length > 0 && colors.length > 0) {
+    const pairs = combos.length > 0 ? combos : colors.flatMap(c => sizes.map(s => [c, s]))
+    return pairs.map(([c, s]) => `${s} / ${c}`)
+  }
+  if (sizes.length > 0) return sizes
+  if (colors.length > 0) return colors
+  return []
+}
 
 function NewTicketModal({ onClose, onCreated }) {
   const [catalogs, setCatalogs] = useState([])
@@ -33,28 +50,23 @@ function NewTicketModal({ onClose, onCreated }) {
     catalogsApi.list().then(r => setCatalogs(r.data)).catch(() => {})
   }, [])
 
-  const availableSizes = selectedCatalog?.sizesEnabled
-    ? (selectedCatalog.sizeOptions ? selectedCatalog.sizeOptions.split(',').map(s => s.trim()).filter(Boolean) : [])
-    : []
-  const availableColors = selectedCatalog?.colorsEnabled
-    ? (selectedCatalog.colorOptions ? selectedCatalog.colorOptions.split(',').map(s => s.trim()).filter(Boolean) : [])
-    : []
-  const availableVariants =
-    availableSizes.length > 0 && availableColors.length > 0
-      ? availableSizes.flatMap(s => availableColors.map(c => `${s} / ${c}`))
-      : availableSizes.length > 0
-        ? availableSizes
-        : availableColors
-
   function addItem() { setItems(prev => [...prev, { ...emptyItem }]) }
   function removeItem(i) { setItems(prev => prev.filter((_, idx) => idx !== i)) }
   function setItem(i, field, value) { setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it)) }
 
   function selectProduct(i, product) {
-    setItem(i, 'productId', product.id)
-    setItem(i, 'productName', product.name)
-    setItem(i, 'productSku', product.sku || '')
-    setItem(i, 'unitPrice', product.price ?? '')
+    const { sizes, colors, combos } = parseProductVariants(product?.variantsJson)
+    setItems(prev => prev.map((it, idx) => idx !== i ? it : {
+      ...it,
+      productId: product.id,
+      productName: product.name,
+      productSku: product.sku || '',
+      unitPrice: product.price ?? '',
+      variant: '',
+      _sizes: sizes,
+      _colors: colors,
+      _combos: combos,
+    }))
   }
 
   const subtotal = items.reduce((acc, it) => {
@@ -78,11 +90,11 @@ function NewTicketModal({ onClose, onCreated }) {
         items: items.map((it, idx) => {
           let size = null, color = null
           if (it.variant) {
-            if (availableSizes.length > 0 && availableColors.length > 0) {
-              const sep = it.variant.indexOf(' / ')
-              size = sep >= 0 ? it.variant.slice(0, sep) : it.variant
-              color = sep >= 0 ? it.variant.slice(sep + 3) : null
-            } else if (availableColors.length > 0) {
+            const sep = it.variant.indexOf(' / ')
+            if (sep >= 0) {
+              size = it.variant.slice(0, sep)
+              color = it.variant.slice(sep + 3)
+            } else if (it._colors.length > 0 && it._sizes.length === 0) {
               color = it.variant
             } else {
               size = it.variant
@@ -165,17 +177,20 @@ function NewTicketModal({ onClose, onCreated }) {
                   </div>
                   {/* Variante (talle / color) */}
                   <div className="col-span-4 sm:col-span-3">
-                    {availableVariants.length > 0 ? (
-                      <select value={item.variant} onChange={e => setItem(i, 'variant', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="">Variante</option>
-                        {availableVariants.map(v => <option key={v} value={v}>{v}</option>)}
-                      </select>
-                    ) : (
-                      <input type="text" placeholder="Talle / Color" value={item.variant}
-                        onChange={e => setItem(i, 'variant', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                    )}
+                    {(() => {
+                      const opts = buildVariantOptions(item._sizes, item._colors, item._combos)
+                      return opts.length > 0 ? (
+                        <select value={item.variant} onChange={e => setItem(i, 'variant', e.target.value)}
+                          className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+                          <option value="">Variante</option>
+                          {opts.map(v => <option key={v} value={v}>{v}</option>)}
+                        </select>
+                      ) : (
+                        <input type="text" placeholder="Talle / Color" value={item.variant}
+                          onChange={e => setItem(i, 'variant', e.target.value)}
+                          className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                      )
+                    })()}
                   </div>
                   {/* Cantidad */}
                   <div className="col-span-2 sm:col-span-2">

@@ -9,95 +9,174 @@ const emptyForm = {
   name: '', description: '', price: '', offerPrice: '', sku: '', category: '', imageUrl: '',
   showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false,
   showWhenOutOfStock: false,
-  extraImages: [], // array of URL strings
+  extraImages: [],
   videoUrl: '',
-  variants: [], // array of {name, options: string[]}
+  sizes: [],   // string[]
+  colors: [],  // string[]
+  combos: [],  // [color, size][] — empty means all combinations available
 }
+
+const SIZE_PRESETS = [
+  { label: 'Adulto', sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'] },
+  { label: 'Niño', sizes: ['2', '4', '6', '8', '10', '12', '14', '16'] },
+  { label: 'Calzado', sizes: ['34', '35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45'] },
+  { label: 'Único', sizes: ['Único'] },
+]
 
 const FILTER_ALL = 'all'
 const FILTER_IN_CATALOG = 'in_catalog'
 const FILTER_REPO_ONLY = 'repo_only'
 
-// Variant builder component
-function VariantBuilder({ variants, onChange }) {
-  const [newOption, setNewOption] = useState({}) // {[variantIndex]: string}
-
-  function addVariant() {
-    onChange([...variants, { name: '', options: [] }])
+function TagInput({ tags, onAdd, onRemove, placeholder }) {
+  const [input, setInput] = useState('')
+  function add() {
+    const v = input.trim()
+    if (v && !tags.includes(v)) onAdd(v)
+    setInput('')
   }
+  return (
+    <div>
+      <div className="flex flex-wrap gap-1 mb-1.5">
+        {tags.map((t, i) => (
+          <span key={i} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs rounded-lg">
+            {t}
+            <button type="button" onClick={() => onRemove(i)} className="hover:text-red-400 leading-none">×</button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-1">
+        <input
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); add() } }}
+          placeholder={placeholder}
+          className="flex-1 px-2 py-1 text-xs rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
+        <button type="button" onClick={add}
+          className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+          +
+        </button>
+      </div>
+    </div>
+  )
+}
 
-  function removeVariant(idx) {
-    onChange(variants.filter((_, i) => i !== idx))
+function isComboOn(color, size, combos) {
+  if (combos.length === 0) return true
+  return combos.some(([c, s]) => c === color && s === size)
+}
+
+function toggleCombo(color, size, combos, sizes, colors) {
+  if (combos.length === 0) {
+    const all = colors.flatMap(c => sizes.map(s => [c, s]))
+    return all.filter(([c, s]) => !(c === color && s === size))
   }
+  const exists = combos.some(([c, s]) => c === color && s === size)
+  const updated = exists
+    ? combos.filter(([c, s]) => !(c === color && s === size))
+    : [...combos, [color, size]]
+  return updated.length === sizes.length * colors.length ? [] : updated
+}
 
-  function updateVariantName(idx, name) {
-    onChange(variants.map((v, i) => i === idx ? { ...v, name } : v))
-  }
+function SizesColorsBuilder({ sizes, colors, combos, onChange }) {
+  const hasBoth = sizes.length > 0 && colors.length > 0
 
-  function addOption(idx) {
-    const opt = (newOption[idx] || '').trim()
-    if (!opt) return
-    onChange(variants.map((v, i) => i === idx ? { ...v, options: [...v.options, opt] } : v))
-    setNewOption(s => ({ ...s, [idx]: '' }))
-  }
-
-  function removeOption(variantIdx, optIdx) {
-    onChange(variants.map((v, i) => i === variantIdx
-      ? { ...v, options: v.options.filter((_, oi) => oi !== optIdx) }
-      : v))
+  function setSizes(s) { onChange({ sizes: s, colors, combos: [] }) }
+  function setColors(c) { onChange({ sizes, colors: c, combos: [] }) }
+  function setCombo(color, size) {
+    onChange({ sizes, colors, combos: toggleCombo(color, size, combos, sizes, colors) })
   }
 
   return (
-    <div className="space-y-3">
-      {variants.map((v, idx) => (
-        <div key={idx} className="border border-gray-200 dark:border-slate-700 rounded-xl p-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <input
-              type="text"
-              value={v.name}
-              onChange={e => updateVariantName(idx, e.target.value)}
-              placeholder="Ej: Talle, Color, Material..."
-              className="flex-1 px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <button type="button" onClick={() => removeVariant(idx)}
-              className="text-gray-400 hover:text-red-400 transition-colors p-1">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+    <div className="space-y-4">
+      {/* Talles */}
+      <div>
+        <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-1.5">Talles</p>
+        <div className="flex flex-wrap gap-1 mb-1.5">
+          {SIZE_PRESETS.map(p => (
+            <button key={p.label} type="button"
+              onClick={() => setSizes([...new Set([...sizes, ...p.sizes])])}
+              className="px-2 py-0.5 text-xs border border-dashed border-gray-300 dark:border-slate-600 text-gray-500 dark:text-slate-400 rounded-lg hover:border-blue-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+              {p.label}
             </button>
-          </div>
-          {/* Options */}
-          <div className="flex flex-wrap gap-1">
-            {v.options.map((opt, oi) => (
-              <span key={oi} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 text-xs rounded-lg">
-                {opt}
-                <button type="button" onClick={() => removeOption(idx, oi)} className="hover:text-red-400">×</button>
-              </span>
-            ))}
-          </div>
-          <div className="flex gap-1">
-            <input
-              type="text"
-              value={newOption[idx] || ''}
-              onChange={e => setNewOption(s => ({ ...s, [idx]: e.target.value }))}
-              onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addOption(idx))}
-              placeholder="Agregar opción y Enter"
-              className="flex-1 px-2 py-1 text-xs rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-            />
-            <button type="button" onClick={() => addOption(idx)}
-              className="px-2 py-1 text-xs bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
-              +
+          ))}
+          {sizes.length > 0 && (
+            <button type="button" onClick={() => setSizes([])}
+              className="px-2 py-0.5 text-xs text-red-400 hover:text-red-600 transition-colors">
+              Limpiar
             </button>
-          </div>
+          )}
         </div>
-      ))}
-      <button type="button" onClick={addVariant}
-        className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-        </svg>
-        Agregar tipo de variante
-      </button>
+        <TagInput
+          tags={sizes}
+          onAdd={v => setSizes([...sizes, v])}
+          onRemove={i => setSizes(sizes.filter((_, idx) => idx !== i))}
+          placeholder="Ej: S, M, L... y Enter"
+        />
+      </div>
+
+      {/* Colores */}
+      <div>
+        <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-1.5">Colores</p>
+        <TagInput
+          tags={colors}
+          onAdd={v => setColors([...colors, v])}
+          onRemove={i => setColors(colors.filter((_, idx) => idx !== i))}
+          placeholder="Ej: Rojo, Azul... y Enter"
+        />
+      </div>
+
+      {/* Combination matrix */}
+      {hasBoth && (
+        <div>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-xs font-medium text-gray-600 dark:text-slate-400">Disponibilidad por combinación</p>
+            {combos.length > 0 && (
+              <button type="button" onClick={() => onChange({ sizes, colors, combos: [] })}
+                className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300">
+                Habilitar todas
+              </button>
+            )}
+          </div>
+          <div className="overflow-x-auto">
+            <table className="text-xs border-collapse">
+              <thead>
+                <tr>
+                  <th className="w-20 text-left pr-2 pb-1 text-gray-400 dark:text-slate-500 font-normal" />
+                  {sizes.map(s => (
+                    <th key={s} className="px-2 pb-1 text-center text-gray-600 dark:text-slate-300 font-medium min-w-[3rem]">{s}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {colors.map(c => (
+                  <tr key={c}>
+                    <td className="pr-2 py-1 text-gray-600 dark:text-slate-300 font-medium whitespace-nowrap">{c}</td>
+                    {sizes.map(s => (
+                      <td key={s} className="px-2 py-1 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isComboOn(c, s, combos)}
+                          onChange={() => setCombo(c, s)}
+                          className="rounded accent-blue-600 cursor-pointer"
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {combos.length > 0 && (
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">
+              {combos.length} de {sizes.length * colors.length} combinaciones habilitadas
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
     </div>
   )
 }
@@ -148,14 +227,25 @@ export default function StockPage() {
     try { return JSON.parse(json) || [] } catch { return [] }
   }
 
-  function parseVariants(json) {
-    try { return JSON.parse(json) || [] } catch { return [] }
+  function parseProductVariants(json) {
+    try {
+      if (!json) return { sizes: [], colors: [], combos: [] }
+      const p = JSON.parse(json)
+      if (Array.isArray(p)) {
+        // Legacy format [{name, options}]
+        const sz = p.find(v => ['talle','talles','size','sizes'].includes((v.name||'').toLowerCase()))
+        const cl = p.find(v => ['color','colores'].includes((v.name||'').toLowerCase()))
+        return { sizes: sz?.options || [], colors: cl?.options || [], combos: [] }
+      }
+      return { sizes: p.sizes || [], colors: p.colors || [], combos: p.combos || [] }
+    } catch { return { sizes: [], colors: [], combos: [] } }
   }
 
   function openForm(product = null) {
     setPendingImageFile(null)
     setPendingGalleryFiles([])
     if (product) {
+      const { sizes, colors, combos } = parseProductVariants(product.variantsJson)
       setEditingId(product.id)
       setForm({
         name: product.name || '',
@@ -172,7 +262,9 @@ export default function StockPage() {
         showWhenOutOfStock: product.showWhenOutOfStock || false,
         extraImages: parseExtraImages(product.extraImagesJson),
         videoUrl: product.videoUrl || '',
-        variants: parseVariants(product.variantsJson),
+        sizes,
+        colors,
+        combos,
       })
     } else {
       setEditingId(null)
@@ -196,7 +288,9 @@ export default function StockPage() {
       stockCount: form.stockCount !== '' ? parseInt(form.stockCount) : null,
       extraImagesJson: payloadExtraImages.length > 0 ? JSON.stringify(payloadExtraImages) : null,
       videoUrl: form.videoUrl.trim() || null,
-      variantsJson: form.variants.length > 0 ? JSON.stringify(form.variants) : null,
+      variantsJson: (form.sizes.length > 0 || form.colors.length > 0)
+        ? JSON.stringify({ sizes: form.sizes, colors: form.colors, combos: form.combos })
+        : null,
     }
     try {
       if (editingId) {
@@ -510,12 +604,14 @@ export default function StockPage() {
               <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">El video aparecerá como el último ítem en la galería.</p>
             </div>
 
-            {/* Variants */}
+            {/* Sizes & Colors */}
             <div className="border-t border-gray-100 dark:border-slate-700 pt-3">
-              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-2">Variantes</p>
-              <VariantBuilder
-                variants={form.variants}
-                onChange={variants => setForm(f => ({ ...f, variants }))}
+              <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wide mb-3">Talles y colores</p>
+              <SizesColorsBuilder
+                sizes={form.sizes}
+                colors={form.colors}
+                combos={form.combos}
+                onChange={({ sizes, colors, combos }) => setForm(f => ({ ...f, sizes, colors, combos }))}
               />
             </div>
 
@@ -592,7 +688,8 @@ export default function StockPage() {
             {filtered.map(product => {
               const hasGallery = product.extraImagesJson && parseExtraImages(product.extraImagesJson).length > 0
               const hasVideo = !!product.videoUrl
-              const hasVariants = product.variantsJson && parseVariants(product.variantsJson).length > 0
+              const pv = parseProductVariants(product.variantsJson)
+              const hasVariants = pv.sizes.length > 0 || pv.colors.length > 0
               return (
                 <div key={product.id} className={`bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 ${!product.active && product.catalogId ? 'opacity-60' : ''}`}>
                   <div className="flex items-start gap-3">
@@ -635,8 +732,15 @@ export default function StockPage() {
                         {hasVideo && (
                           <span className="text-xs px-1.5 py-0.5 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full">video</span>
                         )}
-                        {hasVariants && (
-                          <span className="text-xs px-1.5 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full">variantes</span>
+                        {pv.sizes.length > 0 && (
+                          <span className="text-xs px-1.5 py-0.5 bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 rounded-full">
+                            {pv.sizes.join(' · ')}
+                          </span>
+                        )}
+                        {pv.colors.length > 0 && (
+                          <span className="text-xs px-1.5 py-0.5 bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-full">
+                            {pv.colors.join(' · ')}
+                          </span>
                         )}
                         {product.showStock && product.stockStatus && (
                           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
