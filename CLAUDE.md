@@ -40,6 +40,10 @@
 - `VITE_API_URL` en producción = `/api` (Vercel proxea).
 - Errores al usuario en español.
 
+## Código
+
+- Todos los comentarios en el código deben estar en castellano.
+
 ## Lo que NO hacer
 
 - No agregar features no solicitadas.
