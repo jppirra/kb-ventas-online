@@ -236,33 +236,103 @@ function LightboxModal({ items, startIndex, productName, onClose }) {
 }
 
 // Variant selector
-function parseVariants(json) {
-  try { return JSON.parse(json) || [] } catch { return [] }
+function parseProductVariants(json) {
+  try {
+    if (!json) return null
+    const p = JSON.parse(json)
+    if (Array.isArray(p)) {
+      const vs = p.filter(v => v.name && v.options?.length > 0)
+      return vs.length > 0 ? { type: 'legacy', variants: vs } : null
+    }
+    if (p.sizes?.length > 0 || p.colors?.length > 0) {
+      return { type: 'new', sizes: p.sizes || [], colors: p.colors || [], combos: p.combos || [] }
+    }
+    return null
+  } catch { return null }
 }
 
+function isVariantFullySelected(parsed, selected) {
+  if (!parsed) return true
+  if (parsed.type === 'legacy') {
+    return parsed.variants.every(v => selected?.[v.name])
+  }
+  const { sizes, colors } = parsed
+  return (!sizes.length || selected?.talle) && (!colors.length || selected?.color)
+}
+
+const VARIANT_BTN = (active) =>
+  `px-2 py-1 text-xs rounded-lg border transition-colors ${
+    active
+      ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium'
+      : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-400'
+  }`
+
 function VariantSelector({ variantsJson, selected, onChange }) {
-  const variants = parseVariants(variantsJson)
-  if (!variants.length) return null
+  const parsed = parseProductVariants(variantsJson)
+  if (!parsed) return null
+
+  if (parsed.type === 'legacy') {
+    return (
+      <div className="space-y-2 mt-1">
+        {parsed.variants.map(v => (
+          <div key={v.name}>
+            <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">{v.name}</p>
+            <div className="flex flex-wrap gap-1">
+              {v.options.map(opt => (
+                <button key={opt} type="button"
+                  onClick={() => onChange({ ...selected, [v.name]: opt })}
+                  className={VARIANT_BTN(selected?.[v.name] === opt)}>
+                  {opt}
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  const { sizes, colors, combos } = parsed
+  const selTalle = selected?.talle
+  const selColor = selected?.color
+
+  const displaySizes = selColor && combos.length > 0
+    ? sizes.filter(s => combos.some(([c, sz]) => c === selColor && sz === s))
+    : sizes
+  const displayColors = selTalle && combos.length > 0
+    ? colors.filter(c => combos.some(([col, s]) => col === c && s === selTalle))
+    : colors
+
   return (
     <div className="space-y-2 mt-1">
-      {variants.map(v => (
-        <div key={v.name}>
-          <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">{v.name}</p>
+      {sizes.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Talle</p>
           <div className="flex flex-wrap gap-1">
-            {v.options.map(opt => (
-              <button key={opt} type="button"
-                onClick={() => onChange({ ...selected, [v.name]: opt })}
-                className={`px-2 py-1 text-xs rounded-lg border transition-colors ${
-                  selected[v.name] === opt
-                    ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium'
-                    : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-400'
-                }`}>
-                {opt}
+            {displaySizes.map(s => (
+              <button key={s} type="button"
+                onClick={() => onChange({ ...selected, talle: selTalle === s ? undefined : s })}
+                className={VARIANT_BTN(selTalle === s)}>
+                {s}
               </button>
             ))}
           </div>
         </div>
-      ))}
+      )}
+      {colors.length > 0 && (
+        <div>
+          <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">Color</p>
+          <div className="flex flex-wrap gap-1">
+            {displayColors.map(c => (
+              <button key={c} type="button"
+                onClick={() => onChange({ ...selected, color: selColor === c ? undefined : c })}
+                className={VARIANT_BTN(selColor === c)}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -299,9 +369,8 @@ function AddToCartButton({ inCart, onAdd, onRemove, hasVariants, variantSelected
 function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery }) {
   const galleryItems = getGalleryItems(product)
   const hasGallery = galleryItems.length > 1
-  const variants = parseVariants(product.variantsJson)
-  const hasVariants = variants.length > 0
-  const variantLabel = Object.entries(selectedVariants || {}).map(([k, v]) => `${k}: ${v}`).join(', ')
+  const parsed = parseProductVariants(product.variantsJson)
+  const hasVariants = parsed != null
 
   function handleWhatsapp() {
     const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
@@ -351,7 +420,7 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
         )}
         <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} hasVariants={hasVariants}
-          variantSelected={!hasVariants || (selectedVariants && Object.keys(selectedVariants).length === variants.length)} />
+          variantSelected={isVariantFullySelected(parsed, selectedVariants)} />
         {vendorWhatsapp && (
           <button onClick={handleWhatsapp}
             className="w-full py-1.5 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium flex items-center justify-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors print:hidden">
@@ -367,8 +436,8 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
 function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery }) {
   const galleryItems = getGalleryItems(product)
   const hasGallery = galleryItems.length > 1
-  const variants = parseVariants(product.variantsJson)
-  const hasVariants = variants.length > 0
+  const parsed = parseProductVariants(product.variantsJson)
+  const hasVariants = parsed != null
 
   function handleWhatsapp() {
     const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
@@ -418,7 +487,7 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
         )}
         <div className="flex items-center gap-2 mt-auto pt-2 flex-wrap print:hidden">
           <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} hasVariants={hasVariants}
-            variantSelected={!hasVariants || (selectedVariants && Object.keys(selectedVariants).length === variants.length)} />
+            variantSelected={isVariantFullySelected(parsed, selectedVariants)} />
           {vendorWhatsapp && (
             <button onClick={handleWhatsapp}
               className="px-3 py-1.5 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium flex items-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">

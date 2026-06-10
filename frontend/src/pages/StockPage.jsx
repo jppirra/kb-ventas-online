@@ -177,8 +177,6 @@ function SizesColorsBuilder({ sizes, colors, combos, onChange }) {
       )}
     </div>
   )
-    </div>
-  )
 }
 
 export default function StockPage() {
