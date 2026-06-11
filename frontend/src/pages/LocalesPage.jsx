@@ -90,7 +90,8 @@ export default function LocalesPage() {
     }
   }
 
-  async function handleAssignCatalog(storeId, catalogId) {
+  async function handleAssignCatalog(storeId, catalogId, catalogName, storeName) {
+    if (!confirm(`¿Asignar "${catalogName}" al local "${storeName}"?`)) return
     try {
       await storesApi.assignCatalog(storeId, catalogId)
       await loadAll()
@@ -100,7 +101,8 @@ export default function LocalesPage() {
     }
   }
 
-  async function handleUnassignCatalog(catalogId) {
+  async function handleUnassignCatalog(catalogId, catalogName) {
+    if (!confirm(`¿Quitar "${catalogName}" del local?`)) return
     try {
       await storesApi.unassignCatalog(catalogId)
       await loadAll()
@@ -228,7 +230,7 @@ export default function LocalesPage() {
                       {storeCatalogs.map(cat => (
                         <div key={cat.id} className="flex items-center justify-between px-3 py-2 bg-gray-50 dark:bg-slate-700 rounded-xl">
                           <span className="text-sm text-gray-900 dark:text-white">{cat.name}</span>
-                          <button onClick={() => handleUnassignCatalog(cat.id)}
+                          <button onClick={() => handleUnassignCatalog(cat.id, cat.name)}
                             className="text-xs text-gray-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors">
                             Quitar
                           </button>
@@ -242,7 +244,13 @@ export default function LocalesPage() {
                       <div className="mt-2">
                         <select
                           defaultValue=""
-                          onChange={e => { if (e.target.value) { handleAssignCatalog(store.id, Number(e.target.value)); e.target.value = '' } }}
+                          onChange={e => {
+                            if (e.target.value) {
+                              const cat = unassignedCatalogs.find(c => c.id === Number(e.target.value))
+                              handleAssignCatalog(store.id, Number(e.target.value), cat?.name || '', store.name)
+                              e.target.value = ''
+                            }
+                          }}
                           className="w-full px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="">+ Agregar catálogo...</option>

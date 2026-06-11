@@ -10,10 +10,41 @@ const STATUS_COLOR = {
   GENERATED: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
 }
 
+function ConfirmModal({ modal, onConfirm, onClose }) {
+  if (!modal) return null
+  const { title, description, confirmLabel, danger } = modal
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div className="flex items-start gap-3 mb-4">
+          <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${danger ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${danger ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div>
+            <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{title}</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 leading-relaxed">{description}</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={onConfirm} className={`flex-1 py-2 text-white font-semibold rounded-xl text-sm transition-colors ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+            {confirmLabel}
+          </button>
+          <button onClick={onClose} className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-semibold rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+            Cancelar
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminCatalogsPage() {
   const [catalogs, setCatalogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
+  const [confirmModal, setConfirmModal] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -28,13 +59,25 @@ export default function AdminCatalogsPage() {
     }
   }
 
-  async function handleToggleActive(id) {
-    try {
-      const { data } = await adminApi.toggleCatalogActive(id)
-      setCatalogs(c => c.map(x => x.id === id ? { ...x, active: data.active } : x))
-    } catch {
-      toast.error('Error')
-    }
+  function confirmToggleActive(catalog) {
+    const blocking = catalog.active
+    setConfirmModal({
+      title: blocking ? `¿Bloquear "${catalog.name}"?` : `¿Activar "${catalog.name}"?`,
+      description: blocking
+        ? 'El catálogo dejará de ser visible al público hasta que lo reactives.'
+        : 'El catálogo volverá a ser visible al público.',
+      confirmLabel: blocking ? 'Bloquear' : 'Activar',
+      danger: blocking,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          const { data } = await adminApi.toggleCatalogActive(catalog.id)
+          setCatalogs(c => c.map(x => x.id === catalog.id ? { ...x, active: data.active } : x))
+        } catch {
+          toast.error('Error al cambiar estado del catálogo')
+        }
+      },
+    })
   }
 
   async function handleDelete(id, name) {
@@ -56,6 +99,7 @@ export default function AdminCatalogsPage() {
 
   return (
     <AdminLayout>
+      <ConfirmModal modal={confirmModal} onConfirm={confirmModal?.onConfirm} onClose={() => setConfirmModal(null)} />
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Catálogos</h1>
         <span className="text-sm text-gray-400 dark:text-slate-500">{catalogs.length} en total</span>
@@ -109,14 +153,14 @@ export default function AdminCatalogsPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
-                      onClick={() => handleToggleActive(c.id)}
+                      onClick={() => confirmToggleActive(c)}
                       className={`px-2 py-0.5 rounded-full text-xs font-medium transition-colors ${
                         c.active
                           ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 hover:bg-green-200'
                           : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 hover:bg-red-200'
                       }`}
                     >
-                      {c.active ? 'Activo' : 'Oculto'}
+                      {c.active ? 'Activo' : 'Bloqueado'}
                     </button>
                   </td>
                   <td className="px-4 py-3 text-center">
