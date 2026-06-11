@@ -3,6 +3,7 @@ package com.jafpsoft.ventas.controller;
 import com.jafpsoft.ventas.dto.admin.*;
 import com.jafpsoft.ventas.model.EmailLog;
 import com.jafpsoft.ventas.repository.EmailLogRepository;
+import com.jafpsoft.ventas.security.CustomUserDetails;
 import com.jafpsoft.ventas.service.AdminService;
 import com.jafpsoft.ventas.service.AiService;
 import com.jafpsoft.ventas.service.AppSettingService;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -55,8 +57,16 @@ public class AdminController {
     }
 
     @PatchMapping("/users/{id}/toggle-enabled")
-    public AdminUserResponse toggleEnabled(@PathVariable Long id) {
-        return adminService.toggleUserEnabled(id);
+    public AdminUserResponse toggleEnabled(@PathVariable Long id,
+                                           @RequestBody(required = false) Map<String, String> body,
+                                           @AuthenticationPrincipal CustomUserDetails admin) {
+        String reason = body != null ? body.get("reason") : null;
+        return adminService.toggleUserEnabled(id, reason, admin.getId(), admin.getUsername());
+    }
+
+    @GetMapping("/users/{id}/moderation-log")
+    public List<ModerationLogResponse> userModerationLog(@PathVariable Long id) {
+        return adminService.getModerationLog("USER", id);
     }
 
     @PatchMapping("/users/{id}/toggle-admin")
@@ -99,8 +109,16 @@ public class AdminController {
     }
 
     @PatchMapping("/catalogs/{id}/toggle-active")
-    public AdminCatalogResponse toggleCatalogActive(@PathVariable Long id) {
-        return adminService.toggleCatalogActive(id);
+    public AdminCatalogResponse toggleCatalogActive(@PathVariable Long id,
+                                                    @RequestBody(required = false) Map<String, String> body,
+                                                    @AuthenticationPrincipal CustomUserDetails admin) {
+        String reason = body != null ? body.get("reason") : null;
+        return adminService.toggleCatalogActive(id, reason, admin.getId(), admin.getUsername());
+    }
+
+    @GetMapping("/catalogs/{id}/moderation-log")
+    public List<ModerationLogResponse> catalogModerationLog(@PathVariable Long id) {
+        return adminService.getModerationLog("CATALOG", id);
     }
 
     @DeleteMapping("/catalogs/{id}")

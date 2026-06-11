@@ -10,9 +10,73 @@ const STATUS_COLOR = {
   GENERATED: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
 }
 
-function ConfirmModal({ modal, onConfirm, onClose }) {
+const ACTION_LABEL = { BLOCKED: 'Bloqueado', UNBLOCKED: 'Reactivado' }
+const ACTION_COLOR = {
+  BLOCKED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  UNBLOCKED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+}
+
+function fmtDate(dt) {
+  if (!dt) return ''
+  return new Date(dt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function ModerationLogPanel({ catalogId, onClose }) {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    adminApi.catalogModerationLog(catalogId)
+      .then(r => setLogs(r.data))
+      .catch(() => toast.error('Error al cargar historial'))
+      .finally(() => setLoading(false))
+  }, [catalogId])
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900 dark:text-white">Historial de moderación</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 space-y-3">
+          {loading && <p className="text-sm text-gray-400 dark:text-slate-500">Cargando...</p>}
+          {!loading && logs.length === 0 && (
+            <p className="text-sm text-gray-400 dark:text-slate-500">Sin acciones registradas.</p>
+          )}
+          {logs.map(log => (
+            <div key={log.id} className="border border-gray-100 dark:border-slate-700 rounded-xl p-3 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ACTION_COLOR[log.action] || ''}`}>
+                  {ACTION_LABEL[log.action] || log.action}
+                </span>
+                <span className="text-xs text-gray-400 dark:text-slate-500">{fmtDate(log.createdAt)}</span>
+              </div>
+              {log.reason && (
+                <p className="text-sm text-gray-700 dark:text-slate-300">"{log.reason}"</p>
+              )}
+              <p className="text-xs text-gray-400 dark:text-slate-500">por {log.adminName}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ConfirmWithReasonModal({ modal, onClose }) {
+  const [reason, setReason] = useState('')
   if (!modal) return null
-  const { title, description, confirmLabel, danger } = modal
+  const { title, description, confirmLabel, danger, onConfirm } = modal
+
+  function handleConfirm() {
+    onConfirm(reason.trim())
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -27,8 +91,15 @@ function ConfirmModal({ modal, onConfirm, onClose }) {
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 leading-relaxed">{description}</p>
           </div>
         </div>
+        <textarea
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+          placeholder="Motivo de la acción (requerido)..."
+          rows={3}
+          className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
+        />
         <div className="flex gap-2">
-          <button onClick={onConfirm} className={`flex-1 py-2 text-white font-semibold rounded-xl text-sm transition-colors ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+          <button onClick={handleConfirm} disabled={!reason.trim()} className={`flex-1 py-2 text-white font-semibold rounded-xl text-sm transition-colors disabled:opacity-40 ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
             {confirmLabel}
           </button>
           <button onClick={onClose} className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-semibold rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
@@ -45,6 +116,7 @@ export default function AdminCatalogsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [confirmModal, setConfirmModal] = useState(null)
+  const [logCatalogId, setLogCatalogId] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -68,11 +140,12 @@ export default function AdminCatalogsPage() {
         : 'El catálogo volverá a ser visible al público.',
       confirmLabel: blocking ? 'Bloquear' : 'Activar',
       danger: blocking,
-      onConfirm: async () => {
+      onConfirm: async (reason) => {
         setConfirmModal(null)
         try {
-          const { data } = await adminApi.toggleCatalogActive(catalog.id)
+          const { data } = await adminApi.toggleCatalogActive(catalog.id, reason)
           setCatalogs(c => c.map(x => x.id === catalog.id ? { ...x, active: data.active } : x))
+          toast.success(blocking ? 'Catálogo bloqueado' : 'Catálogo reactivado')
         } catch {
           toast.error('Error al cambiar estado del catálogo')
         }
@@ -99,7 +172,8 @@ export default function AdminCatalogsPage() {
 
   return (
     <AdminLayout>
-      <ConfirmModal modal={confirmModal} onConfirm={confirmModal?.onConfirm} onClose={() => setConfirmModal(null)} />
+      <ConfirmWithReasonModal modal={confirmModal} onClose={() => setConfirmModal(null)} />
+      {logCatalogId && <ModerationLogPanel catalogId={logCatalogId} onClose={() => setLogCatalogId(null)} />}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Catálogos</h1>
         <span className="text-sm text-gray-400 dark:text-slate-500">{catalogs.length} en total</span>
@@ -165,6 +239,15 @@ export default function AdminCatalogsPage() {
                   </td>
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
+                      <button
+                        onClick={() => setLogCatalogId(c.id)}
+                        className="p-1.5 text-gray-400 hover:text-violet-500 dark:text-slate-500 dark:hover:text-violet-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                        title="Historial de moderación"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
                       {c.publicId && (
                         <a
                           href={`/c/${c.publicId}`}

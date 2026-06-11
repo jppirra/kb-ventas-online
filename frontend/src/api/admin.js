@@ -6,7 +6,8 @@ export const adminApi = {
 
   // Users
   users: () => api.get('/admin/users'),
-  toggleEnabled: (id) => api.patch(`/admin/users/${id}/toggle-enabled`),
+  toggleEnabled: (id, reason) => api.patch(`/admin/users/${id}/toggle-enabled`, { reason }),
+  userModerationLog: (id) => api.get(`/admin/users/${id}/moderation-log`),
   toggleAdmin: (id) => api.patch(`/admin/users/${id}/toggle-admin`),
   updateEmail: (id, email) => api.patch(`/admin/users/${id}/email`, { email }),
   resetPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
@@ -22,7 +23,8 @@ export const adminApi = {
 
   // Catalogs
   catalogs: () => api.get('/admin/catalogs'),
-  toggleCatalogActive: (id) => api.patch(`/admin/catalogs/${id}/toggle-active`),
+  toggleCatalogActive: (id, reason) => api.patch(`/admin/catalogs/${id}/toggle-active`, { reason }),
+  catalogModerationLog: (id) => api.get(`/admin/catalogs/${id}/moderation-log`),
   deleteCatalog: (id) => api.delete(`/admin/catalogs/${id}`),
 
   // Email

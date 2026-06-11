@@ -5,11 +5,13 @@ import com.jafpsoft.ventas.model.Catalog;
 import com.jafpsoft.ventas.model.CatalogReport;
 import com.jafpsoft.ventas.model.CatalogStatus;
 import com.jafpsoft.ventas.model.EmailVerificationToken;
+import com.jafpsoft.ventas.model.ModerationLog;
 import com.jafpsoft.ventas.model.OrderRequest;
 import com.jafpsoft.ventas.model.User;
 import com.jafpsoft.ventas.repository.CatalogRepository;
 import com.jafpsoft.ventas.repository.CatalogReportRepository;
 import com.jafpsoft.ventas.repository.EmailVerificationTokenRepository;
+import com.jafpsoft.ventas.repository.ModerationLogRepository;
 import com.jafpsoft.ventas.repository.OrderRequestRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
@@ -36,6 +38,7 @@ public class AdminService {
     private final OrderRequestRepository orderRequestRepository;
     private final CatalogReportRepository catalogReportRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final ModerationLogRepository moderationLogRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
@@ -83,10 +86,29 @@ public class AdminService {
     }
 
     @Transactional
-    public AdminUserResponse toggleUserEnabled(Long userId) {
+    public AdminUserResponse toggleUserEnabled(Long userId, String reason, Long adminId, String adminName) {
         User user = findUser(userId);
         user.setEnabled(!user.isEnabled());
-        return AdminUserResponse.from(userRepository.save(user), 0);
+        userRepository.save(user);
+        moderationLogRepository.save(ModerationLog.builder()
+                .targetType("USER")
+                .targetId(userId)
+                .targetName(user.getName() != null ? user.getName() : user.getEmail())
+                .action(user.isEnabled() ? "UNBLOCKED" : "BLOCKED")
+                .reason(reason)
+                .adminId(adminId)
+                .adminName(adminName)
+                .build());
+        return AdminUserResponse.from(user, 0);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ModerationLogResponse> getModerationLog(String targetType, Long targetId) {
+        return moderationLogRepository
+                .findByTargetTypeAndTargetIdOrderByCreatedAtDesc(targetType, targetId)
+                .stream()
+                .map(ModerationLogResponse::from)
+                .toList();
     }
 
     @Transactional
@@ -148,12 +170,22 @@ public class AdminService {
     }
 
     @Transactional
-    public AdminCatalogResponse toggleCatalogActive(Long catalogId) {
+    public AdminCatalogResponse toggleCatalogActive(Long catalogId, String reason, Long adminId, String adminName) {
         Catalog catalog = catalogRepository.findById(catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
         catalog.setActive(!catalog.isActive());
+        catalogRepository.save(catalog);
+        moderationLogRepository.save(ModerationLog.builder()
+                .targetType("CATALOG")
+                .targetId(catalogId)
+                .targetName(catalog.getName())
+                .action(catalog.isActive() ? "UNBLOCKED" : "BLOCKED")
+                .reason(reason)
+                .adminId(adminId)
+                .adminName(adminName)
+                .build());
         User owner = userRepository.findById(catalog.getUserId()).orElse(null);
-        return AdminCatalogResponse.from(catalogRepository.save(catalog), owner);
+        return AdminCatalogResponse.from(catalog, owner);
     }
 
     @Transactional

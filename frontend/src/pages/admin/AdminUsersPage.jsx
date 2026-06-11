@@ -4,9 +4,71 @@ import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
 import { useAuth } from '../../context/AuthContext'
 
-function ConfirmModal({ modal, onConfirm, onClose }) {
+const ACTION_LABEL = { BLOCKED: 'Bloqueado', UNBLOCKED: 'Desbloqueado' }
+const ACTION_COLOR = {
+  BLOCKED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  UNBLOCKED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+}
+
+function fmtDate(dt) {
+  if (!dt) return ''
+  return new Date(dt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
+}
+
+function UserModerationLogPanel({ userId, onClose }) {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    adminApi.userModerationLog(userId)
+      .then(r => setLogs(r.data))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [userId])
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold text-gray-900 dark:text-white">Historial de moderación</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="overflow-y-auto flex-1 space-y-3">
+          {loading && <p className="text-sm text-gray-400 dark:text-slate-500">Cargando...</p>}
+          {!loading && logs.length === 0 && (
+            <p className="text-sm text-gray-400 dark:text-slate-500">Sin acciones registradas.</p>
+          )}
+          {logs.map(log => (
+            <div key={log.id} className="border border-gray-100 dark:border-slate-700 rounded-xl p-3 space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ACTION_COLOR[log.action] || ''}`}>
+                  {ACTION_LABEL[log.action] || log.action}
+                </span>
+                <span className="text-xs text-gray-400 dark:text-slate-500">{fmtDate(log.createdAt)}</span>
+              </div>
+              {log.reason && <p className="text-sm text-gray-700 dark:text-slate-300">"{log.reason}"</p>}
+              <p className="text-xs text-gray-400 dark:text-slate-500">por {log.adminName}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ConfirmModal({ modal, onClose }) {
+  const [reason, setReason] = useState('')
   if (!modal) return null
-  const { title, description, confirmLabel, danger } = modal
+  const { title, description, confirmLabel, danger, withReason, onConfirm } = modal
+
+  function handleConfirm() {
+    onConfirm(withReason ? reason.trim() : undefined)
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -21,10 +83,20 @@ function ConfirmModal({ modal, onConfirm, onClose }) {
             <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 leading-relaxed">{description}</p>
           </div>
         </div>
+        {withReason && (
+          <textarea
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+            placeholder="Motivo de la acción (requerido)..."
+            rows={3}
+            className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none mb-3"
+          />
+        )}
         <div className="flex gap-2">
           <button
-            onClick={onConfirm}
-            className={`flex-1 py-2 text-white font-semibold rounded-xl text-sm transition-colors ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}
+            onClick={handleConfirm}
+            disabled={withReason && !reason.trim()}
+            className={`flex-1 py-2 text-white font-semibold rounded-xl text-sm transition-colors disabled:opacity-40 ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}
           >
             {confirmLabel}
           </button>
@@ -46,7 +118,8 @@ export default function AdminUsersPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  const [confirmModal, setConfirmModal] = useState(null) // { title, description, confirmLabel, danger, onConfirm }
+  const [confirmModal, setConfirmModal] = useState(null) // { title, description, confirmLabel, danger, withReason, onConfirm }
+  const [logUserId, setLogUserId] = useState(null)
 
   const [editModal, setEditModal] = useState(null) // { id, name, email }
   const [editEmailValue, setEditEmailValue] = useState('')
@@ -77,10 +150,11 @@ export default function AdminUsersPage() {
         : 'El usuario podrá volver a iniciar sesión y usar la plataforma.',
       confirmLabel: blocking ? 'Bloquear cuenta' : 'Desbloquear cuenta',
       danger: blocking,
-      onConfirm: async () => {
+      withReason: true,
+      onConfirm: async (reason) => {
         setConfirmModal(null)
         try {
-          const { data } = await adminApi.toggleEnabled(u.id)
+          const { data } = await adminApi.toggleEnabled(u.id, reason)
           setUsers(prev => prev.map(x => x.id === u.id ? { ...x, enabled: data.enabled } : x))
           toast.success(data.enabled ? 'Cuenta desbloqueada' : 'Cuenta bloqueada')
         } catch {
@@ -355,6 +429,16 @@ export default function AdminUsersPage() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
                         </svg>
                       </button>
+                      {/* Historial de moderación */}
+                      <button
+                        onClick={() => setLogUserId(u.id)}
+                        title="Historial de moderación"
+                        className="p-1.5 text-gray-400 hover:text-indigo-500 dark:text-slate-500 dark:hover:text-indigo-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button>
                       {/* Eliminar */}
                       <button
                         onClick={() => confirmDelete(u)}
@@ -444,11 +528,11 @@ export default function AdminUsersPage() {
         </div>
       )}
 
-      <ConfirmModal
-        modal={confirmModal}
-        onConfirm={() => confirmModal?.onConfirm()}
-        onClose={() => setConfirmModal(null)}
-      />
+      <ConfirmModal modal={confirmModal} onClose={() => setConfirmModal(null)} />
+
+      {logUserId && (
+        <UserModerationLogPanel userId={logUserId} onClose={() => setLogUserId(null)} />
+      )}
     </AdminLayout>
   )
 }
