@@ -3,6 +3,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
 import Footer from '../components/Footer'
 import { useAuth } from '../context/AuthContext'
+import ImageModal from '../components/ImageModal'
 
 const PLATFORM_ICONS = {
   WHATSAPP: { label: 'WhatsApp', color: '#25D366', icon: (
@@ -176,6 +177,7 @@ export default function PublicProfilePage() {
   const catalogNotFoundName = location.state?.catalogName
   const [profile, setProfile] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [imgModal, setImgModal] = useState(null)
   const [notFound, setNotFound] = useState(false)
 
   const viewedRef = useRef(false)
@@ -259,10 +261,15 @@ export default function PublicProfilePage() {
           </p>
         </div>
       )}
+      {imgModal && <ImageModal src={imgModal} onClose={() => setImgModal(null)} />}
       {/* Profile header — banner con bordes redondeados igual que edición */}
       <div className="max-w-4xl mx-auto w-full px-4 pt-5">
         <div className="relative mb-12">
-          <div className="w-full rounded-2xl overflow-hidden" style={{ aspectRatio: '16/5' }}>
+          <div
+            className={`w-full rounded-2xl overflow-hidden ${profile.bannerImageUrl ? 'cursor-zoom-in' : ''}`}
+            style={{ aspectRatio: '16/5' }}
+            onClick={() => profile.bannerImageUrl && setImgModal(profile.bannerImageUrl)}
+          >
             {profile.bannerImageUrl ? (
               <img src={profile.bannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
             ) : (
@@ -272,7 +279,8 @@ export default function PublicProfilePage() {
           <div className="absolute -bottom-8 left-6">
             {profile.profileImageUrl ? (
               <img src={profile.profileImageUrl} alt={profile.name}
-                className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 object-cover shadow-md" />
+                onClick={() => setImgModal(profile.profileImageUrl)}
+                className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 object-cover shadow-md cursor-zoom-in" />
             ) : (
               <div className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 shadow-md flex items-center justify-center text-xl font-bold text-white"
                 style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }}>

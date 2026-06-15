@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { catalogsApi } from '../api/catalogs'
 import { publicApi } from '../api/profile'
+import ImageModal from '../components/ImageModal'
 
 const VIEW_MODES = [
   { value: 'GRID', label: 'Grilla', icon: (
@@ -65,6 +66,7 @@ export default function CatalogDetailPage() {
   const [bgColor, setBgColor] = useState('#f8fafc')
   const [bgTemplateId, setBgTemplateId] = useState(null)
   const [bgTemplates, setBgTemplates] = useState([])
+  const [bgModalIdx, setBgModalIdx] = useState(null)
   const [uploadingBg, setUploadingBg] = useState(false)
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
@@ -528,31 +530,60 @@ export default function CatalogDetailPage() {
           {/* Predefined templates */}
           {bgType === 'PREDEFINED' && (
             <div className="mb-4">
+              {bgModalIdx !== null && bgTemplates[bgModalIdx]?.imageUrl && (
+                <ImageModal
+                  src={bgTemplates[bgModalIdx].imageUrl}
+                  alt={bgTemplates[bgModalIdx].name}
+                  onClose={() => setBgModalIdx(null)}
+                  prev={bgModalIdx > 0 ? () => setBgModalIdx(bgModalIdx - 1) : null}
+                  next={bgModalIdx < bgTemplates.length - 1 ? () => setBgModalIdx(bgModalIdx + 1) : null}
+                >
+                  <button
+                    onClick={() => { setBgTemplateId(bgTemplates[bgModalIdx].id); setBgModalIdx(null) }}
+                    className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-lg transition-colors"
+                  >
+                    Seleccionar este fondo
+                  </button>
+                </ImageModal>
+              )}
               {bgTemplates.length === 0 ? (
                 <p className="text-xs text-gray-400 dark:text-slate-500 italic">No hay fondos prediseñados disponibles todavía.</p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                  {bgTemplates.map(t => (
-                    <button key={t.id} onClick={() => setBgTemplateId(t.id)}
-                      className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${
-                        bgTemplateId === t.id ? 'border-blue-600 ring-2 ring-blue-500' : 'border-transparent hover:border-gray-300'
-                      }`}>
-                      {t.imageUrl ? (
-                        <img src={t.imageUrl} alt={t.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gray-100 dark:bg-slate-700" />
-                      )}
-                      {bgTemplateId === t.id && (
-                        <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
+                  {bgTemplates.map((t, idx) => (
+                    <div key={t.id} className="relative group">
+                      <button onClick={() => setBgTemplateId(t.id)}
+                        className={`relative aspect-video w-full rounded-xl overflow-hidden border-2 transition-all ${
+                          bgTemplateId === t.id ? 'border-blue-600 ring-2 ring-blue-500' : 'border-transparent hover:border-gray-300'
+                        }`}>
+                        {t.imageUrl ? (
+                          <img src={t.imageUrl} alt={t.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100 dark:bg-slate-700" />
+                        )}
+                        {bgTemplateId === t.id && (
+                          <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                        <div className="absolute bottom-0 inset-x-0 bg-black/40 px-1 py-0.5">
+                          <p className="text-white text-[9px] truncate">{t.name}</p>
                         </div>
+                      </button>
+                      {t.imageUrl && (
+                        <button
+                          onClick={() => setBgModalIdx(idx)}
+                          className="absolute top-1 right-1 p-0.5 bg-black/50 hover:bg-black/70 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Ver en grande"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                        </button>
                       )}
-                      <div className="absolute bottom-0 inset-x-0 bg-black/40 px-1 py-0.5">
-                        <p className="text-white text-[9px] truncate">{t.name}</p>
-                      </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}

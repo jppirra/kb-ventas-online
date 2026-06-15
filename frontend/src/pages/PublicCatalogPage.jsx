@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
 import { reportsApi } from '../api/reports'
 import { useAuth } from '../context/AuthContext'
+import ImageModal from '../components/ImageModal'
 
 // ── Cart persistence (base64, 24h TTL) ────────────────────────────────────────
 const CART_TTL = 24 * 60 * 60 * 1000
@@ -717,6 +718,7 @@ export default function PublicCatalogPage() {
   const [search, setSearch] = useState('')
   const [showQR, setShowQR] = useState(false)
   const [lightbox, setLightbox] = useState(null) // { items, startIndex, productName }
+  const [imgModal, setImgModal] = useState(null)
   // cart: { [productId]: { product, qty, variants } }
   const [cart, setCart] = useState(() => loadCart(catalogId))
   // variants selection per product: { [productId]: { VariantName: option } }
@@ -885,7 +887,7 @@ export default function PublicCatalogPage() {
             {/* Banner redondeado 16/5 igual que perfil */}
             <div className="w-full rounded-2xl overflow-hidden relative" style={{ aspectRatio: '16/5' }}>
               {vendorBannerImageUrl ? (
-                <img src={vendorBannerImageUrl} alt="Banner" className="w-full h-full object-cover" />
+                <img src={vendorBannerImageUrl} alt="Banner" className="w-full h-full object-cover cursor-zoom-in" onClick={() => setImgModal(vendorBannerImageUrl)} />
               ) : (
                 <div className="w-full h-full" style={{ background: `linear-gradient(135deg, ${brandColor}, ${brandColor}99)` }} />
               )}
@@ -914,7 +916,8 @@ export default function PublicCatalogPage() {
                 <Link to={`/p/${vendorSlug}`}>
                   {vendorProfileImageUrl ? (
                     <img src={vendorProfileImageUrl} alt={vendorName}
-                      className="w-16 h-16 rounded-full object-cover border-2 border-white dark:border-slate-950 shadow-md hover:opacity-90 transition-opacity" />
+                      className="w-16 h-16 rounded-full object-cover border-2 border-white dark:border-slate-950 shadow-md hover:opacity-90 transition-opacity cursor-zoom-in"
+                      onClick={e => { e.preventDefault(); setImgModal(vendorProfileImageUrl) }} />
                   ) : (
                     <div className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 shadow-md flex items-center justify-center text-white text-xl font-bold hover:opacity-90 transition-opacity"
                       style={{ backgroundColor: brandColor }}>
@@ -925,7 +928,8 @@ export default function PublicCatalogPage() {
               ) : (
                 vendorProfileImageUrl ? (
                   <img src={vendorProfileImageUrl} alt={vendorName}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-white dark:border-slate-950 shadow-md" />
+                    className="w-16 h-16 rounded-full object-cover border-2 border-white dark:border-slate-950 shadow-md cursor-zoom-in"
+                    onClick={() => setImgModal(vendorProfileImageUrl)} />
                 ) : (
                   <div className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 shadow-md flex items-center justify-center text-white text-xl font-bold"
                     style={{ backgroundColor: brandColor }}>
@@ -1097,6 +1101,8 @@ export default function PublicCatalogPage() {
       </div>
 
       {showQR && <QRModal url={pageUrl} catalogName={catalog.name} onClose={() => setShowQR(false)} />}
+
+      {imgModal && <ImageModal src={imgModal} onClose={() => setImgModal(null)} />}
 
       {lightbox && (
         <LightboxModal

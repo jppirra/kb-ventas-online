@@ -2,8 +2,9 @@ import React, { useEffect, useRef, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
 import { toast } from 'sonner'
+import ImageModal from '../../components/ImageModal'
 
-function BackgroundCard({ bg, onEdit, onDelete, onUpload }) {
+function BackgroundCard({ bg, onEdit, onDelete, onUpload, onPreview }) {
   const fileRef = useRef()
   const [uploading, setUploading] = useState(false)
 
@@ -24,13 +25,23 @@ function BackgroundCard({ bg, onEdit, onDelete, onUpload }) {
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-      <div className="aspect-video bg-gray-100 dark:bg-slate-700 relative">
+      <div
+        className={`aspect-video bg-gray-100 dark:bg-slate-700 relative ${bg.imageUrl ? 'cursor-zoom-in' : ''}`}
+        onClick={() => bg.imageUrl && onPreview(bg)}
+      >
         {bg.imageUrl ? (
           <img src={bg.imageUrl} alt={bg.name} className="w-full h-full object-cover" />
         ) : (
           <div className="w-full h-full flex items-center justify-center text-gray-300 dark:text-slate-600">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+        )}
+        {bg.imageUrl && (
+          <div className="absolute top-2 right-2 bg-black/40 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
             </svg>
           </div>
         )}
@@ -83,6 +94,10 @@ export default function AdminBackgroundsPage() {
   const [selectedFile, setSelectedFile] = useState(null)
   const [previewUrl, setPreviewUrl] = useState(null)
   const formFileRef = useRef()
+  const [modalBg, setModalBg] = useState(null)
+
+  const withImages = backgrounds.filter(b => b.imageUrl)
+  const modalIdx = modalBg ? withImages.findIndex(b => b.id === modalBg.id) : -1
 
   useEffect(() => { load() }, [])
 
@@ -166,6 +181,15 @@ export default function AdminBackgroundsPage() {
 
   return (
     <AdminLayout>
+      {modalBg && (
+        <ImageModal
+          src={modalBg.imageUrl}
+          alt={modalBg.name}
+          onClose={() => setModalBg(null)}
+          prev={modalIdx > 0 ? () => setModalBg(withImages[modalIdx - 1]) : null}
+          next={modalIdx < withImages.length - 1 ? () => setModalBg(withImages[modalIdx + 1]) : null}
+        />
+      )}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Fondos de catálogo</h1>
         <button onClick={openCreate}
@@ -246,7 +270,7 @@ export default function AdminBackgroundsPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {backgrounds.map(bg => (
-            <BackgroundCard key={bg.id} bg={bg} onEdit={openEdit} onDelete={handleDelete} onUpload={handleUpload} />
+            <BackgroundCard key={bg.id} bg={bg} onEdit={openEdit} onDelete={handleDelete} onUpload={handleUpload} onPreview={setModalBg} />
           ))}
         </div>
       )}
