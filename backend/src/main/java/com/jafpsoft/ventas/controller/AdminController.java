@@ -61,7 +61,7 @@ public class AdminController {
                                            @RequestBody(required = false) Map<String, String> body,
                                            @AuthenticationPrincipal CustomUserDetails admin) {
         String reason = body != null ? body.get("reason") : null;
-        return adminService.toggleUserEnabled(id, reason, admin.getId(), admin.getUsername());
+        return adminService.toggleUserEnabled(id, reason, admin.getUserId(), admin.getUsername());
     }
 
     @GetMapping("/users/{id}/moderation-log")
@@ -113,7 +113,7 @@ public class AdminController {
                                                     @RequestBody(required = false) Map<String, String> body,
                                                     @AuthenticationPrincipal CustomUserDetails admin) {
         String reason = body != null ? body.get("reason") : null;
-        return adminService.toggleCatalogActive(id, reason, admin.getId(), admin.getUsername());
+        return adminService.toggleCatalogActive(id, reason, admin.getUserId(), admin.getUsername());
     }
 
     @GetMapping("/catalogs/{id}/moderation-log")
