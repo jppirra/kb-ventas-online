@@ -5,6 +5,8 @@ import com.jafpsoft.ventas.model.Notification;
 import com.jafpsoft.ventas.repository.NotificationRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +18,9 @@ import java.util.Map;
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
+
+    @Autowired(required = false)
+    private SimpMessagingTemplate messagingTemplate;
 
     @Transactional(readOnly = true)
     public List<NotificationResponse> listForUser(Long userId) {
@@ -46,12 +51,13 @@ public class NotificationService {
     }
 
     public Notification create(Long userId, String type, String title, String message, Long referenceId) {
-        return notificationRepository.save(Notification.builder()
-                .userId(userId)
-                .type(type)
-                .title(title)
-                .message(message)
-                .referenceId(referenceId)
+        Notification n = notificationRepository.save(Notification.builder()
+                .userId(userId).type(type).title(title).message(message).referenceId(referenceId)
                 .build());
+        if (messagingTemplate != null) {
+            messagingTemplate.convertAndSendToUser(
+                    String.valueOf(userId), "/queue/notifications", NotificationResponse.from(n));
+        }
+        return n;
     }
 }

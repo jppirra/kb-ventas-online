@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeToggle from './ThemeToggle'
 import { notificationsApi } from '../api/notifications'
+import { Client } from '@stomp/stompjs'
+import SockJS from 'sockjs-client'
 
 // ── SVG Icons ─────────────────────────────────────────────────────────────────
 const IC = {
@@ -45,13 +47,31 @@ function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const panelRef = useRef(null)
+  const stompRef = useRef(null)
 
   useEffect(() => {
     notificationsApi.unreadCount().then(r => setUnread(r.data.count)).catch(() => {})
-    const interval = setInterval(() => {
-      notificationsApi.unreadCount().then(r => setUnread(r.data.count)).catch(() => {})
-    }, 30000)
-    return () => clearInterval(interval)
+
+    const token = localStorage.getItem('token')
+    if (!token) return
+
+    const apiBase = import.meta.env.VITE_API_URL || '/api'
+    const wsBase = apiBase.replace('/api', '')
+    const client = new Client({
+      webSocketFactory: () => new SockJS(`${wsBase}/ws`),
+      connectHeaders: { Authorization: `Bearer ${token}` },
+      reconnectDelay: 10000,
+      onConnect: () => {
+        client.subscribe('/user/queue/notifications', (msg) => {
+          const n = JSON.parse(msg.body)
+          setNotifications(prev => [n, ...prev])
+          setUnread(u => u + 1)
+        })
+      },
+    })
+    client.activate()
+    stompRef.current = client
+    return () => client.deactivate()
   }, [])
 
   useEffect(() => {

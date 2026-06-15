@@ -145,6 +145,17 @@ public class EmailService {
     }
 
     @Async
+    public void sendContactNotification(String name, String email, String subject, String message) {
+        String html = buildActionEmail(
+                "Nuevo mensaje de contacto",
+                "De: <strong>" + name + "</strong> (" + email + ")<br>" +
+                "Asunto: <strong>" + subject + "</strong><br><br>" + message,
+                null, null,
+                fromName() + " — Admin");
+        send(fromEmail, "CONTACT", "Contacto: " + subject + " — " + fromName(), html);
+    }
+
+    @Async
     public void sendOrderRequestEmail(String toEmail, String vendorName, String catalogName,
                                       Long catalogId, String customerName,
                                       List<OrderRequestPayload.Item> items, BigDecimal total) {
