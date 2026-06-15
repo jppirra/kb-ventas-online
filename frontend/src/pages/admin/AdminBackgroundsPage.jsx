@@ -80,6 +80,9 @@ export default function AdminBackgroundsPage() {
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const formFileRef = useRef()
 
   useEffect(() => { load() }, [])
 
@@ -97,13 +100,25 @@ export default function AdminBackgroundsPage() {
   function openCreate() {
     setEditingId(null)
     setForm(emptyForm)
+    setSelectedFile(null)
+    setPreviewUrl(null)
     setShowForm(true)
   }
 
   function openEdit(bg) {
     setEditingId(bg.id)
     setForm({ name: bg.name, description: bg.description || '', sortOrder: bg.sortOrder ?? 0, active: bg.active, imageUrl: bg.imageUrl || '' })
+    setSelectedFile(null)
+    setPreviewUrl(bg.imageUrl || null)
     setShowForm(true)
+  }
+
+  function handleFileSelect(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setSelectedFile(file)
+    setPreviewUrl(URL.createObjectURL(file))
+    setForm(f => ({ ...f, imageUrl: '' }))
   }
 
   async function handleSave(e) {
@@ -111,14 +126,20 @@ export default function AdminBackgroundsPage() {
     setSaving(true)
     try {
       const payload = { ...form, sortOrder: Number(form.sortOrder) }
+      let id = editingId
       if (editingId) {
         await adminApi.updateBackground(editingId, payload)
-        toast.success('Fondo actualizado')
       } else {
-        await adminApi.createBackground(payload)
-        toast.success('Fondo creado')
+        const { data } = await adminApi.createBackground(payload)
+        id = data.id
       }
+      if (selectedFile && id) {
+        await adminApi.uploadBackgroundImage(id, selectedFile)
+      }
+      toast.success(editingId ? 'Fondo actualizado' : 'Fondo creado')
       setShowForm(false)
+      setSelectedFile(null)
+      setPreviewUrl(null)
       load()
     } catch {
       toast.error('Error al guardar fondo')
@@ -167,10 +188,29 @@ export default function AdminBackgroundsPage() {
               <input type="text" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">URL de imagen (opcional)</label>
-              <input type="url" value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div className="sm:col-span-2">
+              <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Imagen</label>
+              <div className="flex gap-3 items-start">
+                {previewUrl && (
+                  <div className="w-32 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-slate-600">
+                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="flex-1 space-y-2">
+                  <button type="button" onClick={() => formFileRef.current.click()}
+                    className="flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-gray-300 dark:border-slate-600 rounded-xl text-gray-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 transition-colors w-full justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    {selectedFile ? selectedFile.name : 'Subir desde PC'}
+                  </button>
+                  <input ref={formFileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-center">o</p>
+                  <input type="url" value={form.imageUrl} onChange={e => { setForm(f => ({ ...f, imageUrl: e.target.value })); setSelectedFile(null); setPreviewUrl(e.target.value || null) }}
+                    placeholder="URL de imagen externa"
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Orden</label>
