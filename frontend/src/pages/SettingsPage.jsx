@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { settingsApi } from '../api/settings'
+import { ratingsApi } from '../api/ratings'
 import { useAuth } from '../context/AuthContext'
 
 function Section({ title, description, children }) {
@@ -26,6 +27,26 @@ export default function SettingsPage() {
 
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
+
+  const [npsScore, setNpsScore] = useState(0)
+  const [npsHover, setNpsHover] = useState(0)
+  const [npsComment, setNpsComment] = useState('')
+  const [npsLoading, setNpsLoading] = useState(false)
+  const [npsLoaded, setNpsLoaded] = useState(false)
+  const [npsSaved, setNpsSaved] = useState(false)
+
+  useEffect(() => {
+    ratingsApi.mine()
+      .then(r => {
+        if (r.status === 200 && r.data) {
+          setNpsScore(r.data.score)
+          setNpsComment(r.data.comment || '')
+          setNpsSaved(true)
+        }
+      })
+      .catch(() => {})
+      .finally(() => setNpsLoaded(true))
+  }, [])
 
   async function handleChangePassword(e) {
     e.preventDefault()
@@ -70,6 +91,21 @@ export default function SettingsPage() {
       toast.error(msg)
     } finally {
       setDeleteLoading(false)
+    }
+  }
+
+  async function handleNpsSubmit(e) {
+    e.preventDefault()
+    if (!npsScore) { toast.error('Seleccioná una valoración'); return }
+    setNpsLoading(true)
+    try {
+      await ratingsApi.submit({ score: npsScore, comment: npsComment })
+      toast.success('Valoración enviada. ¡Gracias!')
+      setNpsSaved(true)
+    } catch {
+      toast.error('Error al enviar la valoración')
+    } finally {
+      setNpsLoading(false)
     }
   }
 
@@ -127,6 +163,70 @@ export default function SettingsPage() {
               {pwLoading ? 'Guardando...' : 'Guardar contraseña'}
             </button>
           </form>
+        </Section>
+
+        {/* Valoración NPS */}
+        <Section
+          title="Tu opinión"
+          description="Contanos cómo te está yendo con Mercato. Tu feedback nos ayuda a mejorar."
+        >
+          {!npsLoaded ? (
+            <p className="text-sm text-gray-400">Cargando...</p>
+          ) : (
+            <form onSubmit={handleNpsSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-slate-400 mb-2">
+                  ¿Cómo calificás tu experiencia con Mercato?
+                </label>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map(star => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => { setNpsScore(star); setNpsSaved(false) }}
+                      onMouseEnter={() => setNpsHover(star)}
+                      onMouseLeave={() => setNpsHover(0)}
+                      className="text-3xl leading-none transition-transform hover:scale-110 focus:outline-none"
+                    >
+                      <span className={star <= (npsHover || npsScore) ? 'text-yellow-400' : 'text-gray-200 dark:text-slate-600'}>
+                        ★
+                      </span>
+                    </button>
+                  ))}
+                  {npsScore > 0 && (
+                    <span className="ml-2 self-center text-sm text-gray-500 dark:text-slate-400">
+                      {['', 'Muy malo', 'Malo', 'Regular', 'Bueno', 'Excelente'][npsScore]}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1">
+                  Comentario <span className="text-gray-400 dark:text-slate-500">(opcional)</span>
+                </label>
+                <textarea
+                  value={npsComment}
+                  onChange={e => { setNpsComment(e.target.value); setNpsSaved(false) }}
+                  rows={3}
+                  maxLength={500}
+                  placeholder="Contanos qué te gustó o qué podemos mejorar..."
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm resize-none"
+                />
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="submit"
+                  disabled={npsLoading || !npsScore}
+                  className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors"
+                >
+                  {npsLoading ? 'Enviando...' : npsSaved ? 'Actualizar valoración' : 'Enviar valoración'}
+                </button>
+                {npsSaved && (
+                  <span className="text-sm text-green-600 dark:text-green-400">Valoración enviada</span>
+                )}
+              </div>
+            </form>
+          )}
         </Section>
 
         {/* Zona peligrosa */}
