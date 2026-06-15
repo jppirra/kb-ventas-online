@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -39,11 +40,17 @@ public class StorageService {
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + serviceRoleKey);
+        headers.set("x-upsert", "true");
         headers.setContentType(MediaType.parseMediaType(
                 file.getContentType() != null ? file.getContentType() : "image/jpeg"));
 
         HttpEntity<byte[]> entity = new HttpEntity<>(file.getBytes(), headers);
-        restTemplate.exchange(uploadUrl, HttpMethod.POST, entity, String.class);
+        try {
+            restTemplate.exchange(uploadUrl, HttpMethod.POST, entity, String.class);
+        } catch (HttpStatusCodeException e) {
+            log.error("Supabase upload error [{}] bucket={} path={}: {}", e.getStatusCode(), bucket, path, e.getResponseBodyAsString());
+            throw new IllegalArgumentException("Error al subir imagen a Supabase [" + e.getStatusCode() + "]: " + e.getResponseBodyAsString());
+        }
 
         return supabaseUrl + "/storage/v1/object/public/" + bucket + "/" + path;
     }

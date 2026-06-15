@@ -1,5 +1,6 @@
 package com.jafpsoft.ventas.exception;
 
+import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -41,6 +42,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Map<String, String>> handleAccessDenied(AccessDeniedException e) {
         return error(HttpStatus.FORBIDDEN, "No tenés permisos para realizar esta acción.");
+    }
+
+    @ExceptionHandler(EntityNotFoundException.class)
+    public ResponseEntity<Map<String, String>> handleEntityNotFound(EntityNotFoundException e) {
+        return error(HttpStatus.NOT_FOUND, e.getMessage() != null ? e.getMessage() : "Recurso no encontrado.");
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
