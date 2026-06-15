@@ -219,7 +219,7 @@ export default function SettingsPage() {
                   disabled={npsLoading || !npsScore}
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors"
                 >
-                  {npsLoading ? 'Enviando...' : npsSaved ? 'Actualizar valoración' : 'Enviar valoración'}
+                  {npsLoading ? 'Enviando...' : npsSaved ? 'Actualizar calificación' : 'Calificar'}
                 </button>
                 {npsSaved && (
                   <span className="text-sm text-green-600 dark:text-green-400">Valoración enviada</span>

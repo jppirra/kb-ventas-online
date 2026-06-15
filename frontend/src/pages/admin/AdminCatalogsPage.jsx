@@ -21,21 +21,21 @@ function fmtDate(dt) {
   return new Date(dt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
 }
 
-function ModerationLogPanel({ catalogId, onClose }) {
+function ModerationLogPanel({ catalog, onClose }) {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    adminApi.catalogModerationLog(catalogId)
+    adminApi.catalogModerationLog(catalog.id)
       .then(r => setLogs(r.data))
       .catch(() => toast.error('Error al cargar historial'))
       .finally(() => setLoading(false))
-  }, [catalogId])
+  }, [catalog.id])
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-1">
           <h3 className="font-semibold text-gray-900 dark:text-white">Historial de moderación</h3>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-200">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -43,25 +43,63 @@ function ModerationLogPanel({ catalogId, onClose }) {
             </svg>
           </button>
         </div>
-        <div className="overflow-y-auto flex-1 space-y-3">
+        <p className="text-xs text-gray-400 dark:text-slate-500 mb-4">{catalog.name}</p>
+
+        {/* Estado actual */}
+        <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-gray-100 dark:border-slate-700">
+          <span className="text-xs text-gray-500 dark:text-slate-400 font-medium">Estado actual:</span>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLOR[catalog.status] || ''}`}>
+            {STATUS_LABEL[catalog.status] ?? catalog.status}
+          </span>
+          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${catalog.active ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+            {catalog.active ? 'Visible' : 'Bloqueado'}
+          </span>
+        </div>
+
+        {/* Timeline */}
+        <div className="overflow-y-auto flex-1 space-y-0">
           {loading && <p className="text-sm text-gray-400 dark:text-slate-500">Cargando...</p>}
+
           {!loading && logs.length === 0 && (
-            <p className="text-sm text-gray-400 dark:text-slate-500">Sin acciones registradas.</p>
+            <p className="text-sm text-gray-400 dark:text-slate-500 mb-3">Sin acciones de moderación registradas.</p>
           )}
-          {logs.map(log => (
-            <div key={log.id} className="border border-gray-100 dark:border-slate-700 rounded-xl p-3 space-y-1">
-              <div className="flex items-center justify-between gap-2">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ACTION_COLOR[log.action] || ''}`}>
-                  {ACTION_LABEL[log.action] || log.action}
-                </span>
-                <span className="text-xs text-gray-400 dark:text-slate-500">{fmtDate(log.createdAt)}</span>
+
+          {!loading && logs.map((log, i) => (
+            <div key={log.id} className="relative pl-6">
+              <div className="absolute left-1.5 top-2 w-2 h-2 rounded-full bg-gray-300 dark:bg-slate-600" />
+              {i < logs.length - 1 || catalog.createdAt
+                ? <div className="absolute left-2.5 top-4 w-px h-full bg-gray-100 dark:bg-slate-700" />
+                : null}
+              <div className="pb-4">
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${ACTION_COLOR[log.action] || ''}`}>
+                    {ACTION_LABEL[log.action] || log.action}
+                  </span>
+                  <span className="text-xs text-gray-400 dark:text-slate-500">{fmtDate(log.createdAt)}</span>
+                </div>
+                {log.reason && (
+                  <p className="text-sm text-gray-700 dark:text-slate-300 mt-1">"{log.reason}"</p>
+                )}
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">por {log.adminName}</p>
               </div>
-              {log.reason && (
-                <p className="text-sm text-gray-700 dark:text-slate-300">"{log.reason}"</p>
-              )}
-              <p className="text-xs text-gray-400 dark:text-slate-500">por {log.adminName}</p>
             </div>
           ))}
+
+          {/* Creación del catálogo */}
+          {!loading && catalog.createdAt && (
+            <div className="relative pl-6">
+              <div className="absolute left-1.5 top-2 w-2 h-2 rounded-full bg-blue-300 dark:bg-blue-700" />
+              <div className="pb-2">
+                <div className="flex items-center justify-between gap-2 mb-0.5">
+                  <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                    Creado
+                  </span>
+                  <span className="text-xs text-gray-400 dark:text-slate-500">{fmtDate(catalog.createdAt)}</span>
+                </div>
+                <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">Catálogo creado como borrador</p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -116,7 +154,7 @@ export default function AdminCatalogsPage() {
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
   const [confirmModal, setConfirmModal] = useState(null)
-  const [logCatalogId, setLogCatalogId] = useState(null)
+  const [logCatalog, setLogCatalog] = useState(null)
 
   useEffect(() => { load() }, [])
 
@@ -173,7 +211,7 @@ export default function AdminCatalogsPage() {
   return (
     <AdminLayout>
       <ConfirmWithReasonModal modal={confirmModal} onClose={() => setConfirmModal(null)} />
-      {logCatalogId && <ModerationLogPanel catalogId={logCatalogId} onClose={() => setLogCatalogId(null)} />}
+      {logCatalog && <ModerationLogPanel catalog={logCatalog} onClose={() => setLogCatalog(null)} />}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Catálogos</h1>
         <span className="text-sm text-gray-400 dark:text-slate-500">{catalogs.length} en total</span>
@@ -240,7 +278,7 @@ export default function AdminCatalogsPage() {
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-1">
                       <button
-                        onClick={() => setLogCatalogId(c.id)}
+                        onClick={() => setLogCatalog(c)}
                         className="p-1.5 text-gray-400 hover:text-violet-500 dark:text-slate-500 dark:hover:text-violet-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors"
                         title="Historial de moderación"
                       >
