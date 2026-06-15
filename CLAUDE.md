@@ -40,6 +40,12 @@
 - `VITE_API_URL` en producción = `/api` (Vercel proxea).
 - Errores al usuario en español.
 
+## Versionado
+
+- En cada sesión de cambios, incrementar la versión en `frontend/package.json` en `+0.01` (ej. `1.000.10` → `1.000.11`).
+- Al finalizar cada mensaje de respuesta, mostrar la versión actual como: `v1.000.XX`
+- La versión se incluye en el commit junto con los demás cambios.
+
 ## Lo que NO hacer
 
 - No agregar features no solicitadas.
