@@ -8,7 +8,7 @@
 ## Comportamiento general
 
 - Ejecutar comandos directamente sin pedir confirmación previa.
-- Al terminar una tarea de desarrollo, siempre hacer commit y push.
+- **SIEMPRE** hacer commit y push al terminar cualquier cambio, sin excepción. La única excepción es que el usuario lo indique explícitamente.
 - Respuestas cortas y directas.
 - No usar emojis salvo que el usuario lo pida.
 
