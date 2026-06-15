@@ -2,9 +2,13 @@ import React, { useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { contactApi } from '../../api/contact'
 import { toast } from 'sonner'
+import { fmtDate, fmtDateTime } from '../../utils/date'
 
 function timeAgo(dateStr) {
-  const diff = (Date.now() - new Date(dateStr)) / 1000
+  if (!dateStr) return ''
+  const s = String(dateStr)
+  const d = new Date(s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s) ? s : s + 'Z')
+  const diff = (Date.now() - d) / 1000
   if (diff < 60) return 'ahora'
   if (diff < 3600) return `${Math.floor(diff / 60)}m`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`
@@ -83,7 +87,7 @@ export default function AdminContactPage() {
                       <span className="font-medium text-gray-700 dark:text-slate-300">{selected.name}</span>
                       {' — '}<a href={`mailto:${selected.email}`} className="text-blue-500 hover:underline">{selected.email}</a>
                     </p>
-                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{new Date(selected.createdAt).toLocaleString('es-AR')}</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">{fmtDateTime(selected.createdAt)}</p>
                   </div>
                   <hr className="border-gray-100 dark:border-slate-700" />
                   <p className="text-sm text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">{selected.message}</p>

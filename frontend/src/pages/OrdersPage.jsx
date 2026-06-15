@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { ordersApi } from '../api/orders'
+import { fmtDateTime } from '../utils/date'
 
 const STATUS_OPTIONS = [
   { value: 'PENDING',     label: 'Pendiente',    color: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' },
@@ -20,9 +21,7 @@ function parseItems(itemsJson) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return fmtDateTime(dateStr)
 }
 
 function OrderCard({ order, onUpdated }) {

@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
 import { useAuth } from '../../context/AuthContext'
+import { fmtDate, fmtDateTime } from '../../utils/date'
 
 const ACTION_LABEL = { BLOCKED: 'Bloqueado', UNBLOCKED: 'Desbloqueado' }
 const ACTION_COLOR = {
@@ -10,10 +11,6 @@ const ACTION_COLOR = {
   UNBLOCKED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
 }
 
-function fmtDate(dt) {
-  if (!dt) return ''
-  return new Date(dt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
-}
 
 function UserModerationLogPanel({ userId, onClose }) {
   const [logs, setLogs] = useState([])
@@ -353,7 +350,7 @@ export default function AdminUsersPage() {
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     {u.lastAccessAt
-                      ? <span className="text-xs text-gray-500 dark:text-slate-400">{new Date(u.lastAccessAt).toLocaleString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}</span>
+                      ? <span className="text-xs text-gray-500 dark:text-slate-400">{fmtDateTime(u.lastAccessAt)}</span>
                       : <span className="text-xs text-gray-300 dark:text-slate-600">Nunca</span>
                     }
                   </td>

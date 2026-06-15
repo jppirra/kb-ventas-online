@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
+import { fmtDate } from '../../utils/date'
 
 const STATUS_LABEL = { DRAFT: 'Borrador', GENERATING: 'Generando', GENERATED: 'Generado' }
 const STATUS_COLOR = {
@@ -16,10 +17,6 @@ const ACTION_COLOR = {
   UNBLOCKED: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
 }
 
-function fmtDate(dt) {
-  if (!dt) return ''
-  return new Date(dt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })
-}
 
 function ModerationLogPanel({ catalog, onClose }) {
   const [logs, setLogs] = useState([])

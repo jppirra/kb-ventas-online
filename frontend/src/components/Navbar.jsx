@@ -36,7 +36,10 @@ const NAV_LINKS = [
 ]
 
 function timeAgo(dateStr) {
-  const diff = (Date.now() - new Date(dateStr)) / 1000
+  if (!dateStr) return ''
+  const s = String(dateStr)
+  const d = new Date(s.endsWith('Z') || /[+-]\d{2}:\d{2}$/.test(s) ? s : s + 'Z')
+  const diff = (Date.now() - d) / 1000
   if (diff < 60) return 'ahora'
   if (diff < 3600) return `${Math.floor(diff / 60)}m`
   if (diff < 86400) return `${Math.floor(diff / 3600)}h`

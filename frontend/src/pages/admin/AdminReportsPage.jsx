@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
+import { fmtDateOnly } from '../../utils/date'
 
 const REASON_LABEL = {
   inappropriate: 'Contenido inapropiado',
@@ -122,7 +123,7 @@ export default function AdminReportsPage() {
                     <p className="text-gray-600 dark:text-slate-400 text-xs max-w-xs truncate">{r.details || '—'}</p>
                   </td>
                   <td className="px-4 py-3 text-center text-xs text-gray-400 dark:text-slate-500 hidden sm:table-cell">
-                    {new Date(r.createdAt).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                    {fmtDateOnly(r.createdAt)}
                   </td>
                 </tr>
               ))}
