@@ -42,11 +42,12 @@
 
 ## Versionado
 
-- Formato: `vX.xxx.xx.xf` — ejemplo: `v1.001.12.1f`
+- Formato: `vX.xxx.xx` con sufijo opcional `.xf` para fixes — ejemplo: `v1.002.01`
 - El campo de versión para mostrar está en `frontend/package.json` → campo `appVersion` (no `version`, que debe mantenerse como semver válido para npm).
 - También actualizar `app.version` en `backend/src/main/resources/application.properties`.
-- **Features/mejoras**: incrementar el segundo segmento (`xxx`) — ej. `v1.001.12` → `v1.002.00`
-- **Fixes**: agregar o incrementar el sufijo `xf` sobre la versión base — ej. `v1.001.12` → `v1.001.12.1f`, luego `v1.001.12.2f`
+- **Cambio mayor** (módulo nuevo, refactor grande): incrementar tercer segmento `xxx` — ej. `v1.002.01` → `v1.003.00`
+- **Mejora o feature pequeña**: incrementar último segmento `xx` en +01 — ej. `v1.002.00` → `v1.002.01`
+- **Fix**: agregar o incrementar sufijo `.xf` sobre la versión base — ej. `v1.002.01` → `v1.002.01.1f`, luego `v1.002.01.2f`
 - Al finalizar cada mensaje de respuesta, mostrar la versión actual.
 - La versión se incluye en el commit junto con los demás cambios.
 
