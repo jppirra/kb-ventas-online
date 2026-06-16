@@ -284,24 +284,27 @@ export default function StockPage() {
   }
 
   async function handleGalleryImageUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
+    const files = Array.from(e.target.files)
+    if (!files.length) return
     e.target.value = ''
 
     if (editingId) {
       setUploadingGallery(true)
-      try {
-        const { data } = await productsApi.uploadGalleryImage(editingId, file)
-        setForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
-        toast.success('Imagen agregada a la galería')
-      } catch {
-        toast.error('Error al subir imagen')
-      } finally {
-        setUploadingGallery(false)
+      let added = 0
+      for (const file of files) {
+        try {
+          const { data } = await productsApi.uploadGalleryImage(editingId, file)
+          setForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
+          added++
+        } catch {
+          toast.error(`Error al subir ${file.name}`)
+        }
       }
+      if (added > 0) toast.success(`${added} imagen${added > 1 ? 'es' : ''} agregada${added > 1 ? 's' : ''}`)
+      setUploadingGallery(false)
     } else {
-      setPendingGalleryFiles(prev => [...prev, file])
-      setForm(f => ({ ...f, extraImages: [...f.extraImages, URL.createObjectURL(file)] }))
+      setPendingGalleryFiles(prev => [...prev, ...files])
+      setForm(f => ({ ...f, extraImages: [...f.extraImages, ...files.map(f => URL.createObjectURL(f))] }))
     }
   }
 
@@ -580,7 +583,7 @@ export default function StockPage() {
         )}
 
         <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-        <input ref={galleryImgRef} type="file" accept="image/*" className="hidden" onChange={handleGalleryImageUpload} />
+        <input ref={galleryImgRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryImageUpload} />
 
         {/* Products list */}
         {filtered.length === 0 ? (
