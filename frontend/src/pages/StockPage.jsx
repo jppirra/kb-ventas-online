@@ -304,7 +304,7 @@ export default function StockPage() {
       setUploadingGallery(false)
     } else {
       setPendingGalleryFiles(prev => [...prev, ...files])
-      setForm(f => ({ ...f, extraImages: [...f.extraImages, ...files.map(f => URL.createObjectURL(f))] }))
+      setForm(f => ({ ...f, extraImages: [...f.extraImages, ...files.map(file => URL.createObjectURL(file))] }))
     }
   }
 

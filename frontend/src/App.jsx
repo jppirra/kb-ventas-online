@@ -47,7 +47,9 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 function RootRedirect() {
   const { isAuthenticated, loading } = useAuth()
   if (loading) return null
-  return <Navigate to={isAuthenticated ? '/dashboard' : '/mercato/'} replace />
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />
+  window.location.replace('/mercato/')
+  return null
 }
 
 const PUBLIC_PATHS = ['/c/', '/p/', '/s/']

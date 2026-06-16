@@ -4,6 +4,7 @@ import com.jafpsoft.ventas.dto.customer.CustomerRequest;
 import com.jafpsoft.ventas.dto.customer.CustomerResponse;
 import com.jafpsoft.ventas.security.CustomUserDetails;
 import com.jafpsoft.ventas.service.CustomerService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,7 +28,7 @@ public class CustomerController {
     @PostMapping
     public CustomerResponse create(
             @AuthenticationPrincipal CustomUserDetails principal,
-            @RequestBody CustomerRequest req) {
+            @Valid @RequestBody CustomerRequest req) {
         return customerService.create(principal.getUserId(), req);
     }
 
@@ -35,7 +36,7 @@ public class CustomerController {
     public CustomerResponse update(
             @AuthenticationPrincipal CustomUserDetails principal,
             @PathVariable Long id,
-            @RequestBody CustomerRequest req) {
+            @Valid @RequestBody CustomerRequest req) {
         return customerService.update(principal.getUserId(), id, req);
     }
 

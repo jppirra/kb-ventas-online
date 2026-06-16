@@ -6,8 +6,10 @@ import com.jafpsoft.ventas.model.Customer;
 import com.jafpsoft.ventas.repository.CustomerRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 
@@ -24,6 +26,9 @@ public class CustomerService {
 
     @Transactional
     public CustomerResponse create(Long vendorUserId, CustomerRequest req) {
+        if (req.getOrderId() != null && customerRepository.existsByVendorUserIdAndOrderId(vendorUserId, req.getOrderId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El cliente ya fue guardado desde este pedido");
+        }
         Customer customer = Customer.builder()
                 .vendorUserId(vendorUserId)
                 .name(req.getName())

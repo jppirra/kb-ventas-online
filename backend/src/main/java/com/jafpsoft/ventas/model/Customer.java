@@ -7,9 +7,10 @@ import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "customers", indexes = {
-        @Index(name = "idx_customer_vendor", columnList = "vendor_user_id"),
-})
+@Table(name = "customers",
+        indexes = { @Index(name = "idx_customer_vendor", columnList = "vendor_user_id") },
+        uniqueConstraints = { @UniqueConstraint(name = "uq_customer_vendor_order", columnNames = {"vendor_user_id", "order_id"}) }
+)
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class Customer {
 
