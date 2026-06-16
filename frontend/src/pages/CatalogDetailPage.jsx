@@ -296,19 +296,22 @@ export default function CatalogDetailPage() {
   }
 
   async function handleExtraImageUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    e.target.value = ''
     setUploadingExtraImg(true)
-    try {
-      const { data } = await catalogsApi.uploadTempProductImage(id, file)
-      setProductForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
-      toast.success('Imagen agregada')
-    } catch {
-      toast.error('Error al subir imagen')
-    } finally {
-      setUploadingExtraImg(false)
-      e.target.value = ''
+    let added = 0
+    for (const file of files) {
+      try {
+        const { data } = await catalogsApi.uploadTempProductImage(id, file)
+        setProductForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
+        added++
+      } catch {
+        toast.error(`Error al subir ${file.name}`)
+      }
     }
+    if (added > 0) toast.success(`${added} imagen${added > 1 ? 'es' : ''} agregada${added > 1 ? 's' : ''}`)
+    setUploadingExtraImg(false)
   }
 
   function triggerProductImageUpload() {
@@ -688,7 +691,7 @@ export default function CatalogDetailPage() {
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcel} />
           <input ref={productImgRef} type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
-          <input ref={extraImgRef} type="file" accept="image/*" className="hidden" onChange={handleExtraImageUpload} />
+          <input ref={extraImgRef} type="file" accept="image/*" multiple className="hidden" onChange={handleExtraImageUpload} />
           <span className="text-sm text-gray-400 dark:text-slate-500 ml-auto">
             {catalog.products?.length ?? 0} productos ({catalog.products?.filter(p => p.active).length ?? 0} visibles)
           </span>
