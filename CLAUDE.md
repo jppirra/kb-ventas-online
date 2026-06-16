@@ -42,8 +42,12 @@
 
 ## Versionado
 
-- En cada sesión de cambios, incrementar la versión en `frontend/package.json` en `+0.01` (ej. `1.000.10` → `1.000.11`).
-- Al finalizar cada mensaje de respuesta, mostrar la versión actual como: `v1.000.XX`
+- Formato: `vX.xxx.xx.xf` — ejemplo: `v1.001.12.1f`
+- El campo de versión para mostrar está en `frontend/package.json` → campo `appVersion` (no `version`, que debe mantenerse como semver válido para npm).
+- También actualizar `app.version` en `backend/src/main/resources/application.properties`.
+- **Features/mejoras**: incrementar el segundo segmento (`xxx`) — ej. `v1.001.12` → `v1.002.00`
+- **Fixes**: agregar o incrementar el sufijo `xf` sobre la versión base — ej. `v1.001.12` → `v1.001.12.1f`, luego `v1.001.12.2f`
+- Al finalizar cada mensaje de respuesta, mostrar la versión actual.
 - La versión se incluye en el commit junto con los demás cambios.
 
 ## Lo que NO hacer
