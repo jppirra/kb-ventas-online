@@ -189,10 +189,11 @@ export default function AdminAnalyticsPage() {
         <div className="text-gray-400 dark:text-slate-500">Cargando analytics...</div>
       ) : data ? (
         <div className="space-y-6">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <StatCard label="Usuarios activos (7d)" value={data.activeUsers7d} onClick={() => setActiveUsersPanel(7)} />
             <StatCard label="Usuarios activos (30d)" value={data.activeUsers30d} onClick={() => setActiveUsersPanel(30)} />
-            <StatCard label="Eventos totales (30d)" value={data.totalEvents30d} sub="en la base de datos" />
+            <StatCard label="Eventos totales (30d)" value={data.totalEvents30d} sub="incluye anónimos" />
+            <StatCard label="Accesos sin login (30d)" value={data.anonymousVisits30d} sub="landing + catálogos públicos" />
           </div>
 
           {dauChartData.length > 0 && (

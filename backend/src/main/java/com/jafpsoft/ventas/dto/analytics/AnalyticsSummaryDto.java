@@ -10,6 +10,7 @@ import java.util.Map;
 @Builder
 public class AnalyticsSummaryDto {
     private long totalEvents30d;
+    private long anonymousVisits30d;
     private long activeUsers7d;
     private long activeUsers30d;
     private List<Map<String, Object>> topPages;

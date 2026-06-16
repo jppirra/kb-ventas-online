@@ -44,9 +44,10 @@ public class AnalyticsService {
         Instant since30d = now.minus(30, ChronoUnit.DAYS);
         Instant since7d  = now.minus(7,  ChronoUnit.DAYS);
 
-        long totalEvents30d  = userEventRepository.countDistinctUsersSince(since30d);
-        long activeUsers7d   = userEventRepository.countDistinctUsersSince(since7d);
-        long activeUsers30d  = userEventRepository.countDistinctUsersSince(since30d);
+        long totalEvents30d    = userEventRepository.countTotalEventsSince(since30d);
+        long anonymousVisits30d = userEventRepository.countAnonymousEventsSince(since30d);
+        long activeUsers7d     = userEventRepository.countDistinctUsersSince(since7d);
+        long activeUsers30d    = userEventRepository.countDistinctUsersSince(since30d);
 
         List<Map<String, Object>> topPages        = userEventRepository.findTopPagesSince(since30d);
         List<Map<String, Object>> dailyActiveUsers = userEventRepository.findDailyActiveUsersSince(since30d);
@@ -58,6 +59,7 @@ public class AnalyticsService {
 
         return AnalyticsSummaryDto.builder()
                 .totalEvents30d(totalEvents30d)
+                .anonymousVisits30d(anonymousVisits30d)
                 .activeUsers7d(activeUsers7d)
                 .activeUsers30d(activeUsers30d)
                 .topPages(topPages)

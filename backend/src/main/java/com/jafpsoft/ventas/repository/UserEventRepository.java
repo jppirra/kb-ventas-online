@@ -12,8 +12,14 @@ import java.util.Map;
 
 public interface UserEventRepository extends JpaRepository<UserEvent, Long> {
 
-    @Query("SELECT COUNT(DISTINCT e.userId) FROM UserEvent e WHERE e.createdAt >= :since")
+    @Query("SELECT COUNT(DISTINCT e.userId) FROM UserEvent e WHERE e.createdAt >= :since AND e.userId IS NOT NULL")
     long countDistinctUsersSince(@Param("since") Instant since);
+
+    @Query("SELECT COUNT(e) FROM UserEvent e WHERE e.createdAt >= :since")
+    long countTotalEventsSince(@Param("since") Instant since);
+
+    @Query("SELECT COUNT(e) FROM UserEvent e WHERE e.createdAt >= :since AND e.userId IS NULL")
+    long countAnonymousEventsSince(@Param("since") Instant since);
 
     @Query("""
             SELECT e.page AS page, COUNT(e) AS count
