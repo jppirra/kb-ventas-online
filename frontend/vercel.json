@@ -1,4 +1,7 @@
 {
+  "redirects": [
+    { "source": "/mercato", "destination": "/mercato/", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://catalogia-backend.onrender.com/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
