@@ -4,6 +4,7 @@ import { publicApi } from '../api/profile'
 import { reportsApi } from '../api/reports'
 import { useAuth } from '../context/AuthContext'
 import ImageModal from '../components/ImageModal'
+import { track } from '../utils/track'
 
 // ── Cart persistence (base64, 24h TTL) ────────────────────────────────────────
 const CART_TTL = 24 * 60 * 60 * 1000
@@ -305,6 +306,7 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
   const variantLabel = Object.entries(selectedVariants || {}).map(([k, v]) => `${k}: ${v}`).join(', ')
 
   function handleWhatsapp() {
+    track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
     const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
     window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
   }
@@ -372,6 +374,7 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
   const hasVariants = variants.length > 0
 
   function handleWhatsapp() {
+    track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
     const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
     window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
   }
@@ -466,10 +469,12 @@ function ShareButton({ url, catalogName }) {
   const [open, setOpen] = useState(false)
 
   function copyLink() {
+    track('SHARE_COPY')
     navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
     setOpen(false)
   }
   function shareWhatsapp() {
+    track('SHARE_WHATSAPP')
     const msg = encodeURIComponent(`Mirá el catálogo "${catalogName}": ${url}`)
     window.open(`https://wa.me/?text=${msg}`, '_blank')
     setOpen(false)
@@ -535,6 +540,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
   async function handleSubmit(e) {
     e.preventDefault()
     setSubmitting(true)
+    track('ORDER_REQUEST', { metadata: JSON.stringify({ itemCount: items.length, total }) })
     const payload = {
       customerName: customerName.trim() || null,
       customerPhone: customerPhone.trim() || null,
@@ -751,6 +757,7 @@ export default function PublicCatalogPage() {
         if (!viewedRef.current) {
           viewedRef.current = true
           publicApi.trackCatalogView(d.catalog.id).catch(() => {})
+          track('PAGE_VIEW')
         }
       })
       .catch(() => setNotFound(true))
@@ -772,6 +779,7 @@ export default function PublicCatalogPage() {
   useEffect(() => { saveCart(catalogId, cart) }, [cart, catalogId])
 
   function addToCart(product) {
+    track('CART_ADD', { metadata: JSON.stringify({ product: product.name }) })
     const vs = variantSelections[product.id] || {}
     setCart(c => ({
       ...c,
@@ -788,6 +796,11 @@ export default function PublicCatalogPage() {
   function clearCart() {
     setCart({})
     localStorage.removeItem(cartKey(catalogId))
+  }
+
+  function openLightbox(items, idx, productName) {
+    track('GALLERY_OPEN', { metadata: JSON.stringify({ product: productName }) })
+    setLightbox({ items, startIndex: idx, productName })
   }
 
   const cartCount = Object.keys(cart).length
@@ -894,14 +907,14 @@ export default function PublicCatalogPage() {
               {/* Action buttons top-right */}
               <div className="absolute top-3 right-3 flex items-center gap-2">
                 <ShareButton url={pageUrl} catalogName={catalog.name} />
-                <button onClick={() => setShowQR(true)}
+                <button onClick={() => { setShowQR(true); track('QR_VIEW') }}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-800 hover:bg-white text-xs font-semibold rounded-xl transition-colors shadow-sm">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
                   </svg>
                   QR
                 </button>
-                <button onClick={() => window.print()}
+                <button onClick={() => { track('PDF_EXPORT'); window.print() }}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white/90 backdrop-blur-sm border border-gray-200 text-gray-800 hover:bg-white text-xs font-semibold rounded-xl transition-colors shadow-sm">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2v-5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -1032,7 +1045,7 @@ export default function PublicCatalogPage() {
                     selectedVariants={variantSelections[p.id] || {}}
                     onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
                     onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
-                    onOpenGallery={(items, idx) => setLightbox({ items, startIndex: idx, productName: p.name })}
+                    onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
                   />
                 ))}
               </div>
@@ -1045,7 +1058,7 @@ export default function PublicCatalogPage() {
                       selectedVariants={variantSelections[p.id] || {}}
                       onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
                       onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
-                      onOpenGallery={(items, idx) => setLightbox({ items, startIndex: idx, productName: p.name })}
+                      onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
                     />
                   </div>
                 ))}
@@ -1058,7 +1071,7 @@ export default function PublicCatalogPage() {
                     selectedVariants={variantSelections[p.id] || {}}
                     onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
                     onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
-                    onOpenGallery={(items, idx) => setLightbox({ items, startIndex: idx, productName: p.name })}
+                    onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
                   />
                 ))}
               </div>
@@ -1090,7 +1103,7 @@ export default function PublicCatalogPage() {
               : <span className="font-medium text-gray-600">{vendorName}</span>
             }
           </p>
-          <p>Desarrollado por <a href="https://jafpsoft.com" target="_blank" rel="noopener noreferrer" className="font-medium text-gray-500 hover:text-gray-700 transition-colors">JAFPSoft</a> · © {new Date().getFullYear()} Todos los derechos reservados</p>
+          <p>Desarrollado por <a href="https://jafpsoft.com" target="_blank" rel="noopener noreferrer" className="font-medium text-gray-500 hover:text-gray-700 transition-colors" onClick={() => track('LINK_CLICK', { metadata: JSON.stringify({ target: 'jafpsoft' }) })}>JAFPSoft</a> · © {new Date().getFullYear()} Todos los derechos reservados</p>
           <button
             onClick={() => setShowReportModal(true)}
             className="mt-2 text-xs text-gray-400 hover:text-red-500 underline transition-colors"
