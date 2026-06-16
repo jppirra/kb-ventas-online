@@ -71,7 +71,7 @@ public class CatalogService {
         catalog.setDescription(req.getDescription());
         applyAppearance(catalog, req);
         if (catalog.getPublishedSnapshotJson() != null) catalog.setHasDraftChanges(true);
-        return CatalogResponse.from(catalogRepository.save(catalog), false);
+        return CatalogResponse.from(catalogRepository.save(catalog), true);
     }
 
     private void applyAppearance(Catalog catalog, CatalogRequest req) {

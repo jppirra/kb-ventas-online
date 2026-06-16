@@ -346,7 +346,7 @@ export default function CatalogDetailPage() {
         colorOptions: colorsEnabled ? colorOptions : '',
       }
       const { data } = await catalogsApi.update(id, payload)
-      setCatalog(c => ({ ...c, ...data }))
+      setCatalog(c => ({ ...c, ...data, products: data.products ?? c.products }))
       toast.success('Apariencia guardada')
     } catch {
       toast.error('Error al guardar apariencia')
