@@ -464,7 +464,7 @@ export default function CatalogDetailPage() {
 
         {/* Share link */}
         <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-2xl p-4">
-          <p className="text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wide mb-2">Enlace publico del catalogo</p>
+          <p className="text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wide mb-2">Enlace público del catálogo</p>
           <div className="flex items-center gap-2 flex-wrap">
             <a href={publicLink} target="_blank" rel="noopener noreferrer"
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate flex-1 min-w-0">{publicLink}</a>
@@ -478,25 +478,25 @@ export default function CatalogDetailPage() {
             </button>
           </div>
           {catalog.hasDraftChanges && catalog.publishedAt ? (
-            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Hay cambios sin publicar. El enlace publico muestra la ultima version publicada hasta que vuelvas a publicar.</p>
+            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Hay cambios sin publicar. El enlace público muestra la última versión publicada hasta que vuelvas a publicar.</p>
           ) : !catalog.publishedAt ? (
-            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Este catalogo aun no fue publicado. Publica para confirmar que el contenido es el correcto.</p>
+            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Este catálogo aún no fue publicado. Publicá para confirmar que el contenido es el correcto.</p>
           ) : (
-            <p className="text-xs text-blue-400 dark:text-blue-500 mt-1.5">Este link es publico. Quien lo tenga puede ver el catalogo y exportarlo a PDF.</p>
+            <p className="text-xs text-blue-400 dark:text-blue-500 mt-1.5">Este link es público. Quien lo tenga puede ver el catálogo y exportarlo a PDF.</p>
           )}
         </div>
 
         {/* AI Content */}
         {catalog.aiContent && (
           <div className="mb-6 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 rounded-2xl p-5">
-            <p className="text-xs font-semibold text-violet-500 dark:text-violet-400 uppercase tracking-wide mb-2">Introduccion generada por IA</p>
+            <p className="text-xs font-semibold text-violet-500 dark:text-violet-400 uppercase tracking-wide mb-2">Introducción generada por IA</p>
             <p className="text-gray-700 dark:text-slate-300 text-sm leading-relaxed">{catalog.aiContent}</p>
           </div>
         )}
 
         {/* ── Appearance section ─────────────────────────────────────────────── */}
         <div className="mb-6 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
-          <h2 className="font-semibold text-gray-900 dark:text-white text-sm mb-4">Apariencia del catalogo</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-white text-sm mb-4">Apariencia del catálogo</h2>
 
           {/* View mode */}
           <div className="mb-4">

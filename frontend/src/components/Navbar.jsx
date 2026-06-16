@@ -64,10 +64,11 @@ function NotificationBell() {
     const token = localStorage.getItem('token')
     if (!token) return
 
-    const apiBase = import.meta.env.VITE_API_URL || '/api'
-    const wsBase = apiBase.replace('/api', '')
+    const wsUrl = import.meta.env.VITE_WS_URL
+    if (!wsUrl) return
+
     const client = new Client({
-      webSocketFactory: () => new SockJS(`${wsBase}/ws`),
+      webSocketFactory: () => new SockJS(`${wsUrl}/ws`),
       connectHeaders: { Authorization: `Bearer ${token}` },
       reconnectDelay: 10000,
       onConnect: () => {
