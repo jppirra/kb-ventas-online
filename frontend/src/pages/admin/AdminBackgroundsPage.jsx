@@ -3,7 +3,8 @@ import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
 import { toast } from 'sonner'
 import ImageModal from '../../components/ImageModal'
-import { directUpload } from '../../utils/directUpload'
+import { uploadCompressed } from '../../utils/directUpload'
+import api from '../../api/axios'
 
 function BackgroundCard({ bg, onEdit, onDelete, onUploaded, onPreview }) {
   const fileRef = useRef()
@@ -14,12 +15,15 @@ function BackgroundCard({ bg, onEdit, onDelete, onUploaded, onPreview }) {
     if (!file) return
     setProgress(0)
     try {
-      const publicUrl = await directUpload(file, 'backgrounds', setProgress)
-      await adminApi.updateBackground(bg.id, {
-        name: bg.name, description: bg.description || '',
-        sortOrder: bg.sortOrder, active: bg.active, imageUrl: publicUrl
-      })
-      onUploaded(bg.id, publicUrl)
+      const { data } = await uploadCompressed(file, (compressed, onPct) => {
+        const form = new FormData()
+        form.append('file', compressed)
+        return api.post(`/admin/backgrounds/${bg.id}/upload-image`, form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: e => e.total && onPct(Math.round(e.loaded / e.total * 100))
+        })
+      }, setProgress)
+      onUploaded(bg.id, data.imageUrl)
       toast.success('Imagen actualizada')
     } catch {
       toast.error('Error al subir imagen')
@@ -150,16 +154,25 @@ export default function AdminBackgroundsPage() {
     setSaving(true)
     try {
       const payload = { ...form, sortOrder: Number(form.sortOrder) }
-      let bgId = editingId
-      let finalImageUrl = form.imageUrl
-      if (selectedFile) {
-        finalImageUrl = await directUpload(selectedFile, 'backgrounds', () => {})
+
+      async function uploadFile(bgId) {
+        if (!selectedFile) return
+        await uploadCompressed(selectedFile, (compressed, onPct) => {
+          const fd = new FormData()
+          fd.append('file', compressed)
+          return api.post(`/admin/backgrounds/${bgId}/upload-image`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: e => e.total && onPct(Math.round(e.loaded / e.total * 100))
+          })
+        }, () => {})
       }
+
       if (editingId) {
-        await adminApi.updateBackground(editingId, { ...payload, imageUrl: finalImageUrl || form.imageUrl })
+        await adminApi.updateBackground(editingId, payload)
+        await uploadFile(editingId)
       } else {
-        const { data } = await adminApi.createBackground({ ...payload, imageUrl: finalImageUrl })
-        bgId = data.id
+        const { data } = await adminApi.createBackground(payload)
+        await uploadFile(data.id)
       }
       toast.success(editingId ? 'Fondo actualizado' : 'Fondo creado')
       setShowForm(false)

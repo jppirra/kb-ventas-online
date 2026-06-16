@@ -5,7 +5,8 @@ import Layout from '../components/Layout'
 import { catalogsApi } from '../api/catalogs'
 import { publicApi } from '../api/profile'
 import ImageModal from '../components/ImageModal'
-import { directUpload } from '../utils/directUpload'
+import { uploadCompressed } from '../utils/directUpload'
+import api from '../api/axios'
 
 const VIEW_MODES = [
   { value: 'GRID', label: 'Grilla', icon: (
@@ -320,8 +321,15 @@ export default function CatalogDetailPage() {
     setUploadingBg(true)
     setBgProgress(0)
     try {
-      const publicUrl = await directUpload(file, 'catalog-backgrounds', setBgProgress)
-      setCatalog(c => ({ ...c, backgroundImageUrl: publicUrl, backgroundType: 'CUSTOM' }))
+      const { data } = await uploadCompressed(file, (compressed, onPct) => {
+        const fd = new FormData()
+        fd.append('file', compressed)
+        return api.post(`/catalogs/${id}/upload-background`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: e => e.total && onPct(Math.round(e.loaded / e.total * 100))
+        })
+      }, setBgProgress)
+      setCatalog(c => ({ ...c, backgroundImageUrl: data.backgroundImageUrl, backgroundType: 'CUSTOM' }))
       setBgType('CUSTOM')
       toast.success('Fondo subido')
     } catch {
