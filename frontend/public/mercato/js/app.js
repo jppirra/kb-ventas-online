@@ -40,9 +40,13 @@ document.getElementById('year').textContent = new Date().getFullYear()
   let sid = sessionStorage.getItem('_sid')
   if (!sid) { sid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2) + Date.now().toString(36); sessionStorage.setItem('_sid', sid) }
 
+  const token = localStorage.getItem('token')
+  const headers = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = 'Bearer ' + token
+
   fetch('/api/app/events', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ eventType: 'PAGE_VIEW', page: '/mercato/', sessionId: sid, browser, browserVersion, os, deviceType }),
   }).catch(() => {})
 })()
