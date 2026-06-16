@@ -3,31 +3,39 @@ import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
 import { toast } from 'sonner'
 import ImageModal from '../../components/ImageModal'
+import { directUpload } from '../../utils/directUpload'
 
-function BackgroundCard({ bg, onEdit, onDelete, onUpload, onPreview }) {
+function BackgroundCard({ bg, onEdit, onDelete, onUploaded, onPreview }) {
   const fileRef = useRef()
-  const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(null)
 
   async function handleUpload(e) {
     const file = e.target.files[0]
     if (!file) return
-    setUploading(true)
+    setProgress(0)
     try {
-      await onUpload(bg.id, file)
+      const publicUrl = await directUpload(file, 'backgrounds', setProgress)
+      await adminApi.updateBackground(bg.id, {
+        name: bg.name, description: bg.description || '',
+        sortOrder: bg.sortOrder, active: bg.active, imageUrl: publicUrl
+      })
+      onUploaded(bg.id, publicUrl)
       toast.success('Imagen actualizada')
     } catch {
       toast.error('Error al subir imagen')
     } finally {
-      setUploading(false)
+      setProgress(null)
       e.target.value = ''
     }
   }
+
+  const uploading = progress !== null
 
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
       <div
         className={`aspect-video bg-gray-100 dark:bg-slate-700 relative ${bg.imageUrl ? 'cursor-zoom-in' : ''}`}
-        onClick={() => bg.imageUrl && onPreview(bg)}
+        onClick={() => bg.imageUrl && !uploading && onPreview(bg)}
       >
         {bg.imageUrl ? (
           <img src={bg.imageUrl} alt={bg.name} className="w-full h-full object-cover" />
@@ -38,14 +46,15 @@ function BackgroundCard({ bg, onEdit, onDelete, onUpload, onPreview }) {
             </svg>
           </div>
         )}
-        {bg.imageUrl && (
-          <div className="absolute top-2 right-2 bg-black/40 rounded-lg p-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-            </svg>
+        {uploading && (
+          <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 px-4">
+            <div className="w-full bg-white/20 rounded-full h-1.5">
+              <div className="bg-white h-1.5 rounded-full transition-all duration-200" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="text-white text-xs font-medium">{progress}%</span>
           </div>
         )}
-        {!bg.active && (
+        {!bg.active && !uploading && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <span className="text-white text-xs font-medium bg-black/60 px-2 py-1 rounded">Inactivo</span>
           </div>
@@ -65,15 +74,15 @@ function BackgroundCard({ bg, onEdit, onDelete, onUpload, onPreview }) {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            {uploading ? 'Subiendo...' : 'Subir imagen'}
+            {uploading ? `${progress}%` : 'Subir imagen'}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-          <button onClick={() => onEdit(bg)}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+          <button onClick={() => onEdit(bg)} disabled={uploading}
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors disabled:opacity-50">
             Editar
           </button>
-          <button onClick={() => onDelete(bg.id)}
-            className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+          <button onClick={() => onDelete(bg.id)} disabled={uploading}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50">
             Eliminar
           </button>
         </div>
@@ -141,15 +150,16 @@ export default function AdminBackgroundsPage() {
     setSaving(true)
     try {
       const payload = { ...form, sortOrder: Number(form.sortOrder) }
-      let id = editingId
-      if (editingId) {
-        await adminApi.updateBackground(editingId, payload)
-      } else {
-        const { data } = await adminApi.createBackground(payload)
-        id = data.id
+      let bgId = editingId
+      let finalImageUrl = form.imageUrl
+      if (selectedFile) {
+        finalImageUrl = await directUpload(selectedFile, 'backgrounds', () => {})
       }
-      if (selectedFile && id) {
-        await adminApi.uploadBackgroundImage(id, selectedFile)
+      if (editingId) {
+        await adminApi.updateBackground(editingId, { ...payload, imageUrl: finalImageUrl || form.imageUrl })
+      } else {
+        const { data } = await adminApi.createBackground({ ...payload, imageUrl: finalImageUrl })
+        bgId = data.id
       }
       toast.success(editingId ? 'Fondo actualizado' : 'Fondo creado')
       setShowForm(false)
@@ -174,9 +184,8 @@ export default function AdminBackgroundsPage() {
     }
   }
 
-  async function handleUpload(id, file) {
-    await adminApi.uploadBackgroundImage(id, file)
-    load()
+  function handleUploaded(id, publicUrl) {
+    setBackgrounds(bs => bs.map(b => b.id === id ? { ...b, imageUrl: publicUrl } : b))
   }
 
   return (
@@ -270,7 +279,7 @@ export default function AdminBackgroundsPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {backgrounds.map(bg => (
-            <BackgroundCard key={bg.id} bg={bg} onEdit={openEdit} onDelete={handleDelete} onUpload={handleUpload} onPreview={setModalBg} />
+            <BackgroundCard key={bg.id} bg={bg} onEdit={openEdit} onDelete={handleDelete} onUploaded={handleUploaded} onPreview={setModalBg} />
           ))}
         </div>
       )}

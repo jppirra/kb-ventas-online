@@ -5,6 +5,7 @@ import Layout from '../components/Layout'
 import { catalogsApi } from '../api/catalogs'
 import { publicApi } from '../api/profile'
 import ImageModal from '../components/ImageModal'
+import { directUpload } from '../utils/directUpload'
 
 const VIEW_MODES = [
   { value: 'GRID', label: 'Grilla', icon: (
@@ -68,6 +69,7 @@ export default function CatalogDetailPage() {
   const [bgTemplates, setBgTemplates] = useState([])
   const [bgModalIdx, setBgModalIdx] = useState(null)
   const [uploadingBg, setUploadingBg] = useState(false)
+  const [bgProgress, setBgProgress] = useState(null)
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
   const [sizesEnabled, setSizesEnabled] = useState(false)
@@ -316,15 +318,17 @@ export default function CatalogDetailPage() {
     const file = e.target.files[0]
     if (!file) return
     setUploadingBg(true)
+    setBgProgress(0)
     try {
-      const { data } = await catalogsApi.uploadBackground(id, file)
-      setCatalog(c => ({ ...c, backgroundImageUrl: data.backgroundImageUrl, backgroundType: 'CUSTOM' }))
+      const publicUrl = await directUpload(file, 'catalog-backgrounds', setBgProgress)
+      setCatalog(c => ({ ...c, backgroundImageUrl: publicUrl, backgroundType: 'CUSTOM' }))
       setBgType('CUSTOM')
       toast.success('Fondo subido')
     } catch {
       toast.error('Error al subir fondo')
     } finally {
       setUploadingBg(false)
+      setBgProgress(null)
       e.target.value = ''
     }
   }
@@ -597,11 +601,22 @@ export default function CatalogDetailPage() {
                 <img src={catalog.backgroundImageUrl} alt="Fondo" className="w-20 h-12 rounded-xl object-cover border border-gray-200 dark:border-slate-600" />
               )}
               <button onClick={() => bgFileRef.current.click()} disabled={uploadingBg}
-                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-                {uploadingBg ? 'Subiendo...' : 'Subir imagen de fondo'}
+                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50 min-w-[160px]">
+                {uploadingBg ? (
+                  <span className="flex items-center gap-2 w-full">
+                    <span className="flex-1 bg-gray-200 dark:bg-slate-600 rounded-full h-1.5">
+                      <span className="block bg-blue-500 h-1.5 rounded-full transition-all duration-200" style={{ width: `${bgProgress ?? 0}%` }} />
+                    </span>
+                    <span className="text-xs tabular-nums">{bgProgress ?? 0}%</span>
+                  </span>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Subir imagen de fondo
+                  </>
+                )}
               </button>
               <input ref={bgFileRef} type="file" accept="image/*" className="hidden" onChange={handleBgImageUpload} />
             </div>

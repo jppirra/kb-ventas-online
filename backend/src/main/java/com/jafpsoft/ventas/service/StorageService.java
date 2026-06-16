@@ -9,6 +9,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Map;
 import java.util.UUID;
 
 @Slf4j
@@ -55,6 +56,34 @@ public class StorageService {
         }
 
         return supabaseUrl + "/storage/v1/object/public/" + bucket + "/" + path;
+    }
+
+    @SuppressWarnings("unchecked")
+    public Map<String, String> presignUpload(String folder, String ext) {
+        if (supabaseUrl.isBlank() || serviceRoleKey.isBlank()) {
+            throw new IllegalStateException("Supabase no configurado");
+        }
+        String path = folder + "/" + UUID.randomUUID() + "." + ext;
+        String presignUrl = supabaseUrl + "/storage/v1/object/upload/sign/" + bucket + "/" + path + "?expiresIn=3600";
+        try {
+            Map<String, Object> resp = RestClient.create()
+                    .post()
+                    .uri(presignUrl)
+                    .header("Authorization", "Bearer " + serviceRoleKey)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body("{}")
+                    .retrieve()
+                    .body(Map.class);
+            String signedPath = resp != null ? (String) resp.get("signedURL") : null;
+            if (signedPath == null) throw new IllegalStateException("Supabase no devolvió signedURL");
+            return Map.of(
+                "signedUrl", supabaseUrl + signedPath,
+                "publicUrl", supabaseUrl + "/storage/v1/object/public/" + bucket + "/" + path
+            );
+        } catch (Exception e) {
+            log.error("Supabase presign failed path={}: {}", path, e.getMessage());
+            throw new IllegalArgumentException("Error al generar URL de subida: " + e.getMessage());
+        }
     }
 
     private String getExtension(String filename) {
