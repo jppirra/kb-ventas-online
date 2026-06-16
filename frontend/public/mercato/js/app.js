@@ -14,3 +14,22 @@ btn.addEventListener('click', () => {
 })
 
 document.getElementById('year').textContent = new Date().getFullYear()
+
+// Si el usuario ya tiene sesión, reemplazar botones de auth por "Ir a la app"
+if (localStorage.getItem('token')) {
+  const actions = document.querySelector('.actions')
+  if (actions) {
+    const outlineBtn = actions.querySelector('.btn-outline')
+    const primaryBtn = actions.querySelector('.btn-primary')
+    if (outlineBtn) outlineBtn.remove()
+    if (primaryBtn) {
+      primaryBtn.textContent = 'Ir a la app'
+      primaryBtn.href = '/dashboard'
+    }
+  }
+
+  const footerLinks = document.querySelector('.footer-links')
+  if (footerLinks) {
+    footerLinks.innerHTML = '<a href="/dashboard">Ir a la app</a>'
+  }
+}
