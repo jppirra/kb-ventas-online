@@ -69,6 +69,12 @@ public class AnalyticsService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> getActiveUsers(int days) {
+        Instant since = Instant.now().minus(days, ChronoUnit.DAYS);
+        return userEventRepository.findActiveUsersSince(since);
+    }
+
     @Transactional
     public void resetAnalytics() {
         userEventRepository.deleteAll();

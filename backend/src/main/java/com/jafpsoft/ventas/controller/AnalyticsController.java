@@ -10,6 +10,9 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/app")
 @RequiredArgsConstructor
@@ -30,6 +33,12 @@ public class AnalyticsController {
     @PreAuthorize("hasRole('ADMIN')")
     public AnalyticsSummaryDto summary() {
         return analyticsService.getSummary();
+    }
+
+    @GetMapping("/active-users")
+    @PreAuthorize("hasRole('ADMIN')")
+    public List<Map<String, Object>> activeUsers(@RequestParam(defaultValue = "7") int days) {
+        return analyticsService.getActiveUsers(days);
     }
 
     @DeleteMapping("/reset")

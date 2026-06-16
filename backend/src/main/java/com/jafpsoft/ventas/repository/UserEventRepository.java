@@ -66,4 +66,15 @@ public interface UserEventRepository extends JpaRepository<UserEvent, Long> {
     List<Map<String, Object>> findDailyActiveUsersSince(@Param("since") Instant since);
 
     List<UserEvent> findTop200ByOrderByCreatedAtDesc();
+
+    @Query(value = """
+            SELECT e.user_id AS userId, u.name, u.email,
+                   MAX(e.created_at) AS lastSeen, COUNT(e.id) AS eventCount
+            FROM user_events e
+            LEFT JOIN users u ON u.id = e.user_id
+            WHERE e.created_at >= :since AND e.user_id IS NOT NULL
+            GROUP BY e.user_id, u.name, u.email
+            ORDER BY MAX(e.created_at) DESC
+            """, nativeQuery = true)
+    List<Map<String, Object>> findActiveUsersSince(@Param("since") Instant since);
 }

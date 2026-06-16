@@ -7,12 +7,76 @@ import {
   ResponsiveContainer, CartesianGrid,
 } from 'recharts'
 
-function StatCard({ label, value, sub }) {
+function StatCard({ label, value, sub, onClick }) {
   return (
-    <div className="bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5">
+    <div
+      onClick={onClick}
+      className={`bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-2xl p-5 ${onClick ? 'cursor-pointer hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors' : ''}`}
+    >
       <p className="text-xs font-semibold uppercase tracking-wide text-indigo-500 dark:text-indigo-400 mb-1">{label}</p>
       <p className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">{value ?? '—'}</p>
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
+      {onClick && <p className="text-xs text-indigo-400 mt-1">Ver listado</p>}
+    </div>
+  )
+}
+
+function ActiveUsersPanel({ days, onClose }) {
+  const [users, setUsers] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get(`/app/active-users?days=${days}`)
+      .then(r => setUsers(r.data))
+      .catch(() => toast.error('No se pudo cargar la lista de usuarios'))
+      .finally(() => setLoading(false))
+
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [days, onClose])
+
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/40" onClick={onClose} />
+      <div className="w-full max-w-md bg-white dark:bg-slate-900 h-full overflow-y-auto shadow-2xl flex flex-col">
+        <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-slate-700 sticky top-0 bg-white dark:bg-slate-900">
+          <h2 className="font-semibold text-gray-900 dark:text-white text-sm">
+            Usuarios activos ({days}d) — {users ? users.length : '…'} usuarios
+          </h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div className="flex-1 p-4">
+          {loading ? (
+            <p className="text-gray-400 dark:text-slate-500 text-sm">Cargando...</p>
+          ) : users && users.length > 0 ? (
+            <div className="space-y-2">
+              {users.map((u, i) => (
+                <div key={i} className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 dark:bg-slate-800">
+                  <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
+                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                      {String(u.name || u.email || '?')[0].toUpperCase()}
+                    </span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{u.name || 'Sin nombre'}</p>
+                    <p className="text-xs text-gray-500 dark:text-slate-400 truncate">{u.email}</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5">
+                      {u.eventCount} eventos · último: {u.lastSeen ? new Date(u.lastSeen).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) : '—'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-400 dark:text-slate-500 text-sm">Sin usuarios en este período.</p>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
@@ -54,6 +118,7 @@ export default function AdminAnalyticsPage() {
   const [loading, setLoading] = useState(true)
   const [confirmReset, setConfirmReset] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [activeUsersPanel, setActiveUsersPanel] = useState(null)
 
   const loadData = () => {
     setLoading(true)
@@ -125,8 +190,8 @@ export default function AdminAnalyticsPage() {
       ) : data ? (
         <div className="space-y-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <StatCard label="Usuarios activos (7d)" value={data.activeUsers7d} />
-            <StatCard label="Usuarios activos (30d)" value={data.activeUsers30d} />
+            <StatCard label="Usuarios activos (7d)" value={data.activeUsers7d} onClick={() => setActiveUsersPanel(7)} />
+            <StatCard label="Usuarios activos (30d)" value={data.activeUsers30d} onClick={() => setActiveUsersPanel(30)} />
             <StatCard label="Eventos totales (30d)" value={data.totalEvents30d} sub="en la base de datos" />
           </div>
 
@@ -190,6 +255,10 @@ export default function AdminAnalyticsPage() {
           </div>
         </div>
       ) : null}
+
+      {activeUsersPanel && (
+        <ActiveUsersPanel days={activeUsersPanel} onClose={() => setActiveUsersPanel(null)} />
+      )}
     </AdminLayout>
   )
 }
