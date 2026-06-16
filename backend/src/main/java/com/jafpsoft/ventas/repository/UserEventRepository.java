@@ -2,6 +2,7 @@ package com.jafpsoft.ventas.repository;
 
 import com.jafpsoft.ventas.model.UserEvent;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -77,4 +78,8 @@ public interface UserEventRepository extends JpaRepository<UserEvent, Long> {
             ORDER BY MAX(e.created_at) DESC
             """, nativeQuery = true)
     List<Map<String, Object>> findActiveUsersSince(@Param("since") Instant since);
+
+    @Modifying
+    @Query("DELETE FROM UserEvent")
+    void deleteAllEvents();
 }

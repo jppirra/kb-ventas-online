@@ -77,7 +77,7 @@ public class AnalyticsService {
 
     @Transactional
     public void resetAnalytics() {
-        userEventRepository.deleteAll();
+        userEventRepository.deleteAllEvents();
     }
 
     private Map<String, Long> toBreakdownMap(List<Map<String, Object>> rows) {
