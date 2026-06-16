@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { contactApi } from '../api/contact'
 import { useAuth } from '../context/AuthContext'
 import { toast } from 'sonner'
+import Layout from '../components/Layout'
 
 function BrandBar({ isAuthenticated }) {
   return (
@@ -75,12 +76,8 @@ export default function ContactPage() {
 
   const inputClass = 'w-full px-3 py-2 text-sm border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500'
 
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col">
-      <BrandBar isAuthenticated={isAuthenticated} />
-
-      <main className="flex-1 flex items-center justify-center p-4 py-10">
-        <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-8 space-y-6">
+  const formContent = (
+    <div className="w-full max-w-lg bg-white dark:bg-slate-900 rounded-2xl shadow-lg p-8 space-y-6">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Contacto</h1>
             <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Completá el formulario y te respondemos a la brevedad.</p>
@@ -122,9 +119,25 @@ export default function ContactPage() {
               </button>
             </form>
           )}
-        </div>
-      </main>
+    </div>
+  )
 
+  if (isAuthenticated) {
+    return (
+      <Layout>
+        <div className="flex items-center justify-center p-6 py-10">
+          {formContent}
+        </div>
+      </Layout>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-950 flex flex-col">
+      <BrandBar isAuthenticated={isAuthenticated} />
+      <main className="flex-1 flex items-center justify-center p-4 py-10">
+        {formContent}
+      </main>
       <PageFooter />
     </div>
   )
