@@ -47,18 +47,12 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-900">
-      <header className="w-full bg-white dark:bg-slate-900 border-b border-gray-100 dark:border-slate-800 sticky top-0 z-30">
-        <div className="max-w-4xl mx-auto px-4 h-14 flex items-center gap-3">
-          <a href="/mercato/" className="flex items-center gap-2 shrink-0">
-            <img src="/logo-icon.png" alt="" className="h-8 w-8 rounded-lg object-cover" />
-            <img src="/logo-text.png" alt="Mercato" className="h-5 object-contain mix-blend-multiply dark:hidden" />
-            <span className="hidden dark:block font-bold text-white text-base tracking-tight">Mercato</span>
-          </a>
-        </div>
-      </header>
-      <div className="flex-1 flex items-center justify-center p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
+        <a href="/mercato/" className="flex flex-col items-center gap-2 mb-6">
+          <img src="/logo-icon.png" alt="" className="h-24 w-24 rounded-2xl object-cover shadow-lg" />
+          <span className="font-bold text-gray-900 dark:text-white text-3xl tracking-tight">Mercato</span>
+        </a>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Iniciar sesión</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -122,7 +116,6 @@ export default function Login() {
           </a>
           {' '}© {YEAR} · Todos los derechos reservados · {VERSION}
         </p>
-      </div>
       </div>
     </div>
   )
