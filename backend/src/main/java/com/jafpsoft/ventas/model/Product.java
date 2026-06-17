@@ -83,6 +83,12 @@ public class Product {
     @Column(name = "variants_json", columnDefinition = "TEXT")
     private String variantsJson;
 
+    @Column(name = "product_sizes", columnDefinition = "TEXT")
+    private String productSizes;
+
+    @Column(name = "product_colors", columnDefinition = "TEXT")
+    private String productColors;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

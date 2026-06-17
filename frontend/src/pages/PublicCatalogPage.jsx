@@ -5,6 +5,7 @@ import { reportsApi } from '../api/reports'
 import { useAuth } from '../context/AuthContext'
 import ImageModal from '../components/ImageModal'
 import { track } from '../utils/track'
+import { getRubro } from '../config/rubros'
 
 // ── Cart persistence (base64, 24h TTL) ────────────────────────────────────────
 const CART_TTL = 24 * 60 * 60 * 1000
@@ -269,6 +270,32 @@ function VariantSelector({ variantsJson, selected, onChange }) {
   )
 }
 
+function parseJsonArray(json) {
+  try { return JSON.parse(json) || [] } catch { return [] }
+}
+
+function OptionChips({ label, options, selected, onSelect }) {
+  if (!options.length) return null
+  return (
+    <div className="mt-1">
+      <p className="text-xs font-medium text-gray-600 dark:text-slate-400 mb-1">{label}</p>
+      <div className="flex flex-wrap gap-1">
+        {options.map(opt => (
+          <button key={opt} type="button"
+            onClick={() => onSelect(opt === selected ? null : opt)}
+            className={`px-2 py-0.5 text-xs rounded-lg border transition-colors ${
+              selected === opt
+                ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-400 font-medium'
+                : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:border-gray-400'
+            }`}>
+            {opt}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 function AddToCartButton({ inCart, onAdd, onRemove, hasVariants, variantSelected }) {
   const allSelected = !hasVariants || variantSelected
   if (inCart) {
@@ -298,16 +325,27 @@ function AddToCartButton({ inCart, onAdd, onRemove, hasVariants, variantSelected
   )
 }
 
-function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery }) {
+function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, rubroInfo }) {
   const galleryItems = getGalleryItems(product)
   const hasGallery = galleryItems.length > 1
   const variants = parseVariants(product.variantsJson)
-  const hasVariants = variants.length > 0
-  const variantLabel = Object.entries(selectedVariants || {}).map(([k, v]) => `${k}: ${v}`).join(', ')
+  const sizes = parseJsonArray(product.productSizes)
+  const colors = parseJsonArray(product.productColors)
+  const sizeKey = rubroInfo?.atributo || 'Talle'
+  const hasRequiredSelections = (
+    (variants.length === 0 || variants.every(v => selectedVariants?.[v.name])) &&
+    (sizes.length === 0 || !!selectedVariants?.[sizeKey]) &&
+    (colors.length === 0 || !!selectedVariants?.['Color'])
+  )
+  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || colors.length > 0
 
   function handleWhatsapp() {
     track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
-    const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
+    const extras = []
+    if (selectedVariants?.[sizeKey]) extras.push(`${sizeKey}: ${selectedVariants[sizeKey]}`)
+    if (selectedVariants?.['Color']) extras.push(`Color: ${selectedVariants['Color']}`)
+    const extraStr = extras.length ? ` (${extras.join(', ')})` : ''
+    const msg = encodeURIComponent(`Hola, vi el producto "${product.name}"${extraStr} en el catálogo "${catalogName}" y me interesa.`)
     window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
   }
 
@@ -350,11 +388,15 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
           <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1">{product.description}</p>
         ) : null}
         {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
-        {hasVariants && (
+        {variants.length > 0 && (
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
         )}
-        <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} hasVariants={hasVariants}
-          variantSelected={!hasVariants || (selectedVariants && Object.keys(selectedVariants).length === variants.length)} />
+        <OptionChips label={sizeKey} options={sizes} selected={selectedVariants?.[sizeKey]}
+          onSelect={v => onVariantChange({ ...(selectedVariants || {}), [sizeKey]: v })} />
+        <OptionChips label="Color" options={colors} selected={selectedVariants?.['Color']}
+          onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+        <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove}
+          hasVariants={hasAnyRequired} variantSelected={hasRequiredSelections} />
         {vendorWhatsapp && (
           <button onClick={handleWhatsapp}
             className="w-full py-1.5 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium flex items-center justify-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors print:hidden">
@@ -367,15 +409,27 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
   )
 }
 
-function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery }) {
+function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, rubroInfo }) {
   const galleryItems = getGalleryItems(product)
   const hasGallery = galleryItems.length > 1
   const variants = parseVariants(product.variantsJson)
-  const hasVariants = variants.length > 0
+  const sizes = parseJsonArray(product.productSizes)
+  const colors = parseJsonArray(product.productColors)
+  const sizeKey = rubroInfo?.atributo || 'Talle'
+  const hasRequiredSelections = (
+    (variants.length === 0 || variants.every(v => selectedVariants?.[v.name])) &&
+    (sizes.length === 0 || !!selectedVariants?.[sizeKey]) &&
+    (colors.length === 0 || !!selectedVariants?.['Color'])
+  )
+  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || colors.length > 0
 
   function handleWhatsapp() {
     track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
-    const msg = encodeURIComponent(`Hola, vi el producto "${product.name}" en el catálogo "${catalogName}" y me interesa.`)
+    const extras = []
+    if (selectedVariants?.[sizeKey]) extras.push(`${sizeKey}: ${selectedVariants[sizeKey]}`)
+    if (selectedVariants?.['Color']) extras.push(`Color: ${selectedVariants['Color']}`)
+    const extraStr = extras.length ? ` (${extras.join(', ')})` : ''
+    const msg = encodeURIComponent(`Hola, vi el producto "${product.name}"${extraStr} en el catálogo "${catalogName}" y me interesa.`)
     window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
   }
 
@@ -417,12 +471,16 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
           <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{product.description}</p>
         ) : null}
         {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
-        {hasVariants && (
+        {variants.length > 0 && (
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
         )}
+        <OptionChips label={sizeKey} options={sizes} selected={selectedVariants?.[sizeKey]}
+          onSelect={v => onVariantChange({ ...(selectedVariants || {}), [sizeKey]: v })} />
+        <OptionChips label="Color" options={colors} selected={selectedVariants?.['Color']}
+          onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
         <div className="flex items-center gap-2 mt-auto pt-2 flex-wrap print:hidden">
-          <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove} hasVariants={hasVariants}
-            variantSelected={!hasVariants || (selectedVariants && Object.keys(selectedVariants).length === variants.length)} />
+          <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove}
+            hasVariants={hasAnyRequired} variantSelected={hasRequiredSelections} />
           {vendorWhatsapp && (
             <button onClick={handleWhatsapp}
               className="px-3 py-1.5 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-xs font-medium flex items-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
@@ -829,6 +887,7 @@ export default function PublicCatalogPage() {
   const hasBg = Object.keys(bgStyle).length > 0
   const pageUrl = window.location.href
 
+  const rubroInfo = catalog.rubro ? getRubro(catalog.rubro) : null
   const allProducts = catalog.products || []
   const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
 
@@ -1046,6 +1105,7 @@ export default function PublicCatalogPage() {
                     onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
                     onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
                     onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+                    rubroInfo={rubroInfo}
                   />
                 ))}
               </div>
@@ -1059,6 +1119,7 @@ export default function PublicCatalogPage() {
                       onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
                       onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
                       onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+                      rubroInfo={rubroInfo}
                     />
                   </div>
                 ))}
@@ -1072,6 +1133,7 @@ export default function PublicCatalogPage() {
                     onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
                     onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
                     onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+                    rubroInfo={rubroInfo}
                   />
                 ))}
               </div>

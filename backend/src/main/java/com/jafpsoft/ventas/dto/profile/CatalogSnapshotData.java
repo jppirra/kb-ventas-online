@@ -8,6 +8,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 public class CatalogSnapshotData {
+    private String rubro;
     private String name;
     private String description;
     private String aiContent;

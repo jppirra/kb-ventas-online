@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { catalogsApi } from '../api/catalogs'
+import { RUBROS, getRubro } from '../config/rubros'
 
 function QRModal({ catalogId, catalogName, onClose }) {
   const url = `${window.location.origin}/c/${catalogId || ''}`
@@ -40,7 +41,7 @@ export default function CatalogsPage() {
   const [catalogs, setCatalogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({ name: '', description: '' })
+  const [form, setForm] = useState({ name: '', description: '', rubro: '' })
   const [showForm, setShowForm] = useState(false)
   const [qrCatalog, setQrCatalog] = useState(null)
 
@@ -112,6 +113,19 @@ export default function CatalogsPage() {
               />
             </div>
             <div>
+              <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1">Rubro</label>
+              <select
+                value={form.rubro}
+                onChange={e => setForm(f => ({ ...f, rubro: e.target.value }))}
+                className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="">Seleccioná un rubro...</option>
+                {RUBROS.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1">Descripción</label>
               <textarea
                 value={form.description}
@@ -156,11 +170,16 @@ export default function CatalogsPage() {
                 onClick={() => navigate(`/catalogs/${catalog.id}`)}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h3 className="font-semibold text-gray-900 dark:text-white truncate">{catalog.name}</h3>
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[catalog.status]}`}>
                       {STATUS_LABEL[catalog.status]}
                     </span>
+                    {catalog.rubro && getRubro(catalog.rubro) && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                        {getRubro(catalog.rubro).label}
+                      </span>
+                    )}
                   </div>
                   {catalog.description && (
                     <p className="text-sm text-gray-500 dark:text-slate-400 truncate">{catalog.description}</p>

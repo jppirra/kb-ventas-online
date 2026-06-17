@@ -13,6 +13,7 @@ public class CatalogRequest {
     private String backgroundColor;
     private String backgroundImageUrl;
     private Long backgroundTemplateId;
+    private String rubro;
     private Boolean sizesEnabled;
     private String sizeOptions;
     private Boolean colorsEnabled;

@@ -26,4 +26,6 @@ public class ProductRequest {
     private String videoUrl;
     private String variantsJson;
     private String sizeStock;
+    private String productSizes;
+    private String productColors;
 }

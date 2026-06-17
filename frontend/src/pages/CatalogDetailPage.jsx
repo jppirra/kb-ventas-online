@@ -34,8 +34,44 @@ const BG_TYPES = [
 ]
 
 import { productsApi } from '../api/products'
+import { RUBROS, getRubro } from '../config/rubros'
 
-const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false }
+const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: [] }
+
+function TagInput({ label, values, onChange, placeholder }) {
+  const [input, setInput] = useState('')
+  function add() {
+    const v = input.trim()
+    if (!v || values.includes(v)) { setInput(''); return }
+    onChange([...values, v])
+    setInput('')
+  }
+  function onKey(e) {
+    if (e.key === 'Enter') { e.preventDefault(); add() }
+  }
+  return (
+    <div>
+      <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">{label}</label>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {values.map(v => (
+          <span key={v} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
+            {v}
+            <button type="button" onClick={() => onChange(values.filter(x => x !== v))} className="hover:text-red-500 leading-none">&times;</button>
+          </span>
+        ))}
+      </div>
+      <div className="flex gap-2">
+        <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKey}
+          placeholder={placeholder}
+          className="flex-1 px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        <button type="button" onClick={add}
+          className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300 text-xs font-medium rounded-xl transition-colors">
+          + Agregar
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export default function CatalogDetailPage() {
   const { id } = useParams()
@@ -174,6 +210,10 @@ export default function CatalogDetailPage() {
       setEditingProductId(product.id)
       let extraImages = []
       try { extraImages = product.extraImagesJson ? JSON.parse(product.extraImagesJson) : [] } catch {}
+      let productSizes = []
+      let productColors = []
+      try { productSizes = product.productSizes ? JSON.parse(product.productSizes) : [] } catch {}
+      try { productColors = product.productColors ? JSON.parse(product.productColors) : [] } catch {}
       setProductForm({
         name: product.name || '',
         description: product.description || '',
@@ -187,6 +227,8 @@ export default function CatalogDetailPage() {
         stockStatus: product.stockStatus || 'IN_STOCK',
         stockCount: product.stockCount ?? '',
         showStockQuantity: product.showStockQuantity || false,
+        productSizes,
+        productColors,
       })
     } else {
       setEditingProductId(null)
@@ -205,6 +247,8 @@ export default function CatalogDetailPage() {
       stockCount: productForm.stockCount !== '' ? parseInt(productForm.stockCount) : null,
       extraImagesJson: productForm.extraImages.length > 0 ? JSON.stringify(productForm.extraImages) : null,
       videoUrl: productForm.videoUrl || null,
+      productSizes: productForm.productSizes.length > 0 ? JSON.stringify(productForm.productSizes) : null,
+      productColors: productForm.productColors.length > 0 ? JSON.stringify(productForm.productColors) : null,
     }
     try {
       if (editingProductId) {
@@ -402,7 +446,14 @@ export default function CatalogDetailPage() {
               </svg>
               Catálogos
             </button>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{catalog.name}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{catalog.name}</h1>
+              {catalog.rubro && getRubro(catalog.rubro) && (
+                <span className="text-sm px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                  {getRubro(catalog.rubro).label}
+                </span>
+              )}
+            </div>
             {catalog.description && (
               <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{catalog.description}</p>
             )}
@@ -849,6 +900,29 @@ export default function CatalogDetailPage() {
               )}
             </div>
 
+            {/* Talles y colores por producto */}
+            {(() => {
+              const rubroInfo = catalog.rubro ? getRubro(catalog.rubro) : null
+              return (
+                <div className="border-t border-gray-100 dark:border-slate-700 pt-3 space-y-4">
+                  {rubroInfo && rubroInfo.atributo && (
+                    <TagInput
+                      label={`${rubroInfo.atributo}s disponibles`}
+                      values={productForm.productSizes}
+                      onChange={v => setProductForm(f => ({ ...f, productSizes: v }))}
+                      placeholder={rubroInfo.opcionesDefault.slice(0, 3).join(', ') || `Ej: ${rubroInfo.atributo} 1`}
+                    />
+                  )}
+                  <TagInput
+                    label="Colores disponibles"
+                    values={productForm.productColors}
+                    onChange={v => setProductForm(f => ({ ...f, productColors: v }))}
+                    placeholder="Rojo, Azul, Negro..."
+                  />
+                </div>
+              )
+            })()}
+
             <div className="flex gap-2">
               <button type="submit" disabled={savingProduct}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
@@ -913,6 +987,17 @@ export default function CatalogDetailPage() {
                     {product.description && (
                       <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{product.description}</p>
                     )}
+                    {(() => {
+                      const sizes = (() => { try { return product.productSizes ? JSON.parse(product.productSizes) : [] } catch { return [] } })()
+                      const colors = (() => { try { return product.productColors ? JSON.parse(product.productColors) : [] } catch { return [] } })()
+                      if (!sizes.length && !colors.length) return null
+                      return (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {sizes.map(s => <span key={s} className="text-xs px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-full">{s}</span>)}
+                          {colors.map(c => <span key={c} className="text-xs px-1.5 py-0.5 bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-full">{c}</span>)}
+                        </div>
+                      )
+                    })()}
                     {product.aiDescription && (
                       <div className="mt-2 pl-3 border-l-2 border-violet-400 dark:border-violet-500">
                         <p className="text-xs text-violet-500 dark:text-violet-400 font-medium mb-0.5">IA</p>

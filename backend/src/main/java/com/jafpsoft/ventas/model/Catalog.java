@@ -56,6 +56,9 @@ public class Catalog {
     @Column(name = "background_template_id")
     private Long backgroundTemplateId;
 
+    @Column(name = "rubro", length = 50)
+    private String rubro;
+
     @Column(name = "sizes_enabled", nullable = false, columnDefinition = "boolean default false")
     @Builder.Default
     private boolean sizesEnabled = false;
