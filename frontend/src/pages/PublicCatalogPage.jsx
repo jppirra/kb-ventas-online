@@ -383,9 +383,9 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
           <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full self-start">{product.category}</span>
         )}
         {product.aiDescription ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1">{product.aiDescription}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.aiDescription}</p>
         ) : product.description ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1">{product.description}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.description}</p>
         ) : null}
         {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
         {variants.length > 0 && (
