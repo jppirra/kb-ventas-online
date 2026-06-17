@@ -853,6 +853,8 @@ export default function PublicCatalogPage() {
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [activeCategory, setActiveCategory] = useState(null)
+  const [activeSize, setActiveSize] = useState(null)
+  const [activeColor, setActiveColor] = useState(null)
   const [search, setSearch] = useState('')
   const [showQR, setShowQR] = useState(false)
   const [lightbox, setLightbox] = useState(null) // { items, startIndex, productName }
@@ -965,11 +967,20 @@ export default function PublicCatalogPage() {
   const allProducts = catalog.products || []
   const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
 
+  function parseProdArr(json) { try { return json ? JSON.parse(json) : [] } catch { return [] } }
+
+  const allSizes = rubroInfo?.atributo
+    ? [...new Set(allProducts.flatMap(p => parseProdArr(p.productSizes)))]
+    : []
+  const allColors = [...new Set(allProducts.flatMap(p => parseProdArr(p.productColors)))]
+
   const visibleProducts = allProducts.filter(p => {
     const matchCat = !activeCategory || p.category === activeCategory
     const q = search.toLowerCase()
     const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q)
-    return matchCat && matchSearch
+    const matchSize = !activeSize || parseProdArr(p.productSizes).includes(activeSize)
+    const matchColor = !activeColor || parseProdArr(p.productColors).includes(activeColor)
+    return matchCat && matchSearch && matchSize && matchColor
   })
 
   return (
@@ -1140,7 +1151,7 @@ export default function PublicCatalogPage() {
               {catalog.aiContent && <p className="text-gray-500 text-sm italic mt-2 max-w-2xl leading-relaxed">{catalog.aiContent}</p>}
             </div>
 
-            {/* Search + Category filter */}
+            {/* Search + Filters */}
             <div className="mb-6 print:hidden space-y-3">
               <input
                 type="text"
@@ -1152,13 +1163,43 @@ export default function PublicCatalogPage() {
               {categories.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   <button onClick={() => setActiveCategory(null)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === null ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === null ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
                     Todos ({allProducts.length})
                   </button>
                   {categories.map(cat => (
                     <button key={cat} onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
                       {cat} ({allProducts.filter(p => p.category === cat).length})
+                    </button>
+                  ))}
+                </div>
+              )}
+              {allSizes.length > 0 && (
+                <div className="flex gap-2 flex-wrap items-center">
+                  <span className="text-xs text-gray-500 dark:text-slate-400 font-medium shrink-0">{rubroInfo.atributo}:</span>
+                  <button onClick={() => setActiveSize(null)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeSize === null ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                    Todos
+                  </button>
+                  {allSizes.map(s => (
+                    <button key={s} onClick={() => setActiveSize(activeSize === s ? null : s)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeSize === s ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {allColors.length > 0 && (
+                <div className="flex gap-2 flex-wrap items-center">
+                  <span className="text-xs text-gray-500 dark:text-slate-400 font-medium shrink-0">Color:</span>
+                  <button onClick={() => setActiveColor(null)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeColor === null ? 'bg-pink-600 border-pink-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                    Todos
+                  </button>
+                  {allColors.map(c => (
+                    <button key={c} onClick={() => setActiveColor(activeColor === c ? null : c)}
+                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeColor === c ? 'bg-pink-600 border-pink-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                      {c}
                     </button>
                   ))}
                 </div>
