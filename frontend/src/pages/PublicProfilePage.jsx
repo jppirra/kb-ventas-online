@@ -280,9 +280,9 @@ export default function PublicProfilePage() {
           {profile.profileImageUrl ? (
             <img src={profile.profileImageUrl} alt={profile.name}
               onClick={() => setImgModal(profile.profileImageUrl)}
-              className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 object-cover shadow-md cursor-zoom-in" />
+              className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-950 object-cover shadow-lg cursor-zoom-in" />
           ) : (
-            <div className="w-16 h-16 rounded-full border-2 border-white dark:border-slate-950 shadow-md flex items-center justify-center text-xl font-bold text-white"
+            <div className="w-24 h-24 rounded-full border-4 border-white dark:border-slate-950 shadow-lg flex items-center justify-center text-2xl font-bold text-white"
               style={{ background: 'linear-gradient(135deg, var(--brand-primary), var(--brand-secondary))' }}>
               {profile.name?.charAt(0).toUpperCase()}
             </div>
@@ -295,7 +295,7 @@ export default function PublicProfilePage() {
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white leading-tight mb-1">{profile.name}</h1>
 
         {profile.bio && (
-          <p className="text-gray-600 dark:text-slate-400 text-sm leading-relaxed mb-4 max-w-xl whitespace-pre-line">{profile.bio}</p>
+          <p className="text-gray-600 dark:text-slate-400 text-sm leading-relaxed mb-4 whitespace-pre-line">{profile.bio}</p>
         )}
 
         {/* Social links */}
