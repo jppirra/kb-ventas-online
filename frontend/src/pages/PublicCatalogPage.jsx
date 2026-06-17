@@ -885,7 +885,7 @@ export default function PublicCatalogPage() {
         document.title = `${d.catalog.name} — ${d.vendorName}`
         setOrUpdateMeta('og:title', `${d.catalog.name} — ${d.vendorName}`)
         setOrUpdateMeta('og:description', d.catalog.description || d.catalog.aiContent || `Catálogo de ${d.vendorName}`)
-        setOrUpdateMeta('og:image', d.catalog.coverImageUrl || d.vendorProfileImageUrl)
+        setOrUpdateMeta('og:image', d.catalog.coverImageUrl || d.vendorProfileImageUrl || 'https://mercato.jafpsoft.com/logo-icon.png')
         setOrUpdateMeta('og:url', window.location.href)
         setOrUpdateMeta('og:type', 'website')
         if (!viewedRef.current) {
