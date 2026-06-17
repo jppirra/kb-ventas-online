@@ -38,37 +38,36 @@ import { RUBROS, getRubro } from '../config/rubros'
 
 const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: [] }
 
-function TagInput({ label, values, onChange, placeholder }) {
-  const [input, setInput] = useState('')
-  function add() {
-    const v = input.trim()
-    if (!v || values.includes(v)) { setInput(''); return }
-    onChange([...values, v])
-    setInput('')
-  }
-  function onKey(e) {
-    if (e.key === 'Enter') { e.preventDefault(); add() }
+function CsvInput({ label, values, onChange, placeholder, hint }) {
+  const [text, setText] = useState(() => values.join(', '))
+  useEffect(() => { setText(values.join(', ')) }, [values.join(',')])
+  function commit() {
+    const arr = text.split(',').map(v => v.trim()).filter(Boolean)
+    onChange(arr)
+    setText(arr.join(', '))
   }
   return (
     <div>
-      <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">{label}</label>
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        {values.map(v => (
-          <span key={v} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs rounded-full">
-            {v}
-            <button type="button" onClick={() => onChange(values.filter(x => x !== v))} className="hover:text-red-500 leading-none">&times;</button>
+      <div className="flex items-center gap-1.5 mb-1">
+        <label className="text-xs text-gray-500 dark:text-slate-400">{label}</label>
+        <span className="group relative cursor-help">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-gray-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-gray-800 dark:bg-slate-700 text-white text-xs rounded-lg px-2.5 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 leading-relaxed shadow-lg">
+            {hint}
+            <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-slate-700" />
           </span>
-        ))}
+        </span>
       </div>
-      <div className="flex gap-2">
-        <input type="text" value={input} onChange={e => setInput(e.target.value)} onKeyDown={onKey}
-          placeholder={placeholder}
-          className="flex-1 px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-        <button type="button" onClick={add}
-          className="px-3 py-1.5 bg-gray-100 dark:bg-slate-700 hover:bg-gray-200 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-300 text-xs font-medium rounded-xl transition-colors">
-          + Agregar
-        </button>
-      </div>
+      <input
+        type="text"
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onBlur={commit}
+        placeholder={placeholder}
+        className="w-full px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
     </div>
   )
 }
@@ -861,18 +860,20 @@ export default function CatalogDetailPage() {
               return (
                 <div className="border-t border-gray-100 dark:border-slate-700 pt-3 space-y-4">
                   {rubroInfo && rubroInfo.atributo && (
-                    <TagInput
+                    <CsvInput
                       label={`${rubroInfo.atributo}s disponibles`}
                       values={productForm.productSizes}
                       onChange={v => setProductForm(f => ({ ...f, productSizes: v }))}
-                      placeholder={rubroInfo.opcionesDefault.slice(0, 3).join(', ') || `Ej: ${rubroInfo.atributo} 1`}
+                      placeholder={rubroInfo.opcionesDefault.slice(0, 4).join(', ') || `Ej: ${rubroInfo.atributo} 1, ${rubroInfo.atributo} 2`}
+                      hint={`Ingresá las opciones separadas por coma. Ej: ${rubroInfo.opcionesDefault.slice(0, 4).join(', ')}. Cada valor separado por coma será una opción individual.`}
                     />
                   )}
-                  <TagInput
+                  <CsvInput
                     label="Colores disponibles"
                     values={productForm.productColors}
                     onChange={v => setProductForm(f => ({ ...f, productColors: v }))}
-                    placeholder="Rojo, Azul, Negro..."
+                    placeholder="Rojo, Azul, Negro, Blanco"
+                    hint="Ingresá los colores separados por coma. Ej: Rojo, Azul, Negro, Blanco. Cada color separado por coma será una opción individual."
                   />
                 </div>
               )
