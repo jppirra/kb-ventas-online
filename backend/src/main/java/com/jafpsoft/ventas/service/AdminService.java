@@ -13,7 +13,9 @@ import com.jafpsoft.ventas.repository.CatalogReportRepository;
 import com.jafpsoft.ventas.repository.EmailVerificationTokenRepository;
 import com.jafpsoft.ventas.repository.ModerationLogRepository;
 import com.jafpsoft.ventas.repository.OrderRequestRepository;
+import com.jafpsoft.ventas.repository.PasswordResetTokenRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
+import com.jafpsoft.ventas.repository.RatingRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,8 @@ public class AdminService {
     private final OrderRequestRepository orderRequestRepository;
     private final CatalogReportRepository catalogReportRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RatingRepository ratingRepository;
     private final ModerationLogRepository moderationLogRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
@@ -122,7 +126,14 @@ public class AdminService {
     public void deleteUser(Long userId) {
         User user = findUser(userId);
         if (user.isAppAdmin()) throw new IllegalStateException("No se puede eliminar un administrador");
+        purgeUserDependencies(user);
         userRepository.delete(user);
+    }
+
+    private void purgeUserDependencies(User user) {
+        emailVerificationTokenRepository.deleteByUser(user);
+        passwordResetTokenRepository.deleteByUser(user);
+        ratingRepository.deleteByUser(user);
     }
 
     @Transactional
@@ -222,6 +233,7 @@ public class AdminService {
         for (Long id : ids) {
             User user = userRepository.findById(id).orElse(null);
             if (user == null || user.isAppAdmin() || id.equals(currentAdminId)) { skipped++; continue; }
+            purgeUserDependencies(user);
             userRepository.delete(user);
             processed++;
         }
