@@ -109,10 +109,6 @@ export default function CatalogDetailPage() {
   const [bgProgress, setBgProgress] = useState(null)
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
-  const [sizesEnabled, setSizesEnabled] = useState(false)
-  const [sizeOptions, setSizeOptions] = useState('')
-  const [colorsEnabled, setColorsEnabled] = useState(false)
-  const [colorOptions, setColorOptions] = useState('')
 
   useEffect(() => {
     load()
@@ -128,10 +124,6 @@ export default function CatalogDetailPage() {
       setBgType(data.backgroundType || 'NONE')
       setBgColor(data.backgroundColor || '#f8fafc')
       setBgTemplateId(data.backgroundTemplateId || null)
-      setSizesEnabled(data.sizesEnabled || false)
-      setSizeOptions(data.sizeOptions || '')
-      setColorsEnabled(data.colorsEnabled || false)
-      setColorOptions(data.colorOptions || '')
       if (data.status === 'GENERATING') startPolling()
     } catch {
       toast.error('Catálogo no encontrado')
@@ -399,10 +391,6 @@ export default function CatalogDetailPage() {
         backgroundColor: bgType === 'COLOR' ? bgColor : null,
         backgroundTemplateId: bgType === 'PREDEFINED' ? bgTemplateId : null,
         backgroundImageUrl: bgType === 'CUSTOM' ? catalog.backgroundImageUrl : null,
-        sizesEnabled,
-        sizeOptions: sizesEnabled ? sizeOptions : '',
-        colorsEnabled,
-        colorOptions: colorsEnabled ? colorOptions : '',
       }
       const { data } = await catalogsApi.update(id, payload)
       setCatalog(c => ({ ...c, ...data, products: data.products ?? c.products }))
@@ -684,39 +672,6 @@ export default function CatalogDetailPage() {
             </div>
           )}
 
-          {/* Talles y colores */}
-          <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-4">
-            <p className="text-xs text-gray-500 dark:text-slate-400 mb-3">Talles y colores (para Facturación)</p>
-            <div className="space-y-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <input type="checkbox" id="sizesEnabled" checked={sizesEnabled}
-                    onChange={e => setSizesEnabled(e.target.checked)} className="rounded" />
-                  <label htmlFor="sizesEnabled" className="text-sm text-gray-700 dark:text-slate-300">Habilitar talles</label>
-                </div>
-                {sizesEnabled && (
-                  <input type="text" value={sizeOptions}
-                    onChange={e => setSizeOptions(e.target.value)}
-                    placeholder="XS, S, M, L, XL, XXL"
-                    className="w-full px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <input type="checkbox" id="colorsEnabled" checked={colorsEnabled}
-                    onChange={e => setColorsEnabled(e.target.checked)} className="rounded" />
-                  <label htmlFor="colorsEnabled" className="text-sm text-gray-700 dark:text-slate-300">Habilitar colores</label>
-                </div>
-                {colorsEnabled && (
-                  <input type="text" value={colorOptions}
-                    onChange={e => setColorOptions(e.target.value)}
-                    placeholder="Negro, Blanco, Rojo, Azul"
-                    className="w-full px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                )}
-              </div>
-            </div>
-          </div>
-
           <button onClick={handleSaveAppearance} disabled={savingAppearance}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
             {savingAppearance ? 'Guardando...' : 'Guardar apariencia'}
@@ -985,7 +940,7 @@ export default function CatalogDetailPage() {
                       )}
                     </div>
                     {product.description && (
-                      <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{product.description}</p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 whitespace-pre-line">{product.description}</p>
                     )}
                     {(() => {
                       const sizes = (() => { try { return product.productSizes ? JSON.parse(product.productSizes) : [] } catch { return [] } })()
