@@ -31,6 +31,9 @@ export const adminApi = {
   toggleCatalogActive: (id, reason) => api.patch(`/admin/catalogs/${id}/toggle-active`, { reason }),
   catalogModerationLog: (id) => api.get(`/admin/catalogs/${id}/moderation-log`),
   deleteCatalog: (id) => api.delete(`/admin/catalogs/${id}`),
+  bulkBlockCatalogs: (ids, reason) => api.post('/admin/catalogs/bulk/block', { ids, reason }),
+  bulkUnblockCatalogs: (ids, reason) => api.post('/admin/catalogs/bulk/unblock', { ids, reason }),
+  bulkDeleteCatalogs: (ids) => api.post('/admin/catalogs/bulk/delete', { ids }),
 
   // Email
   sendEmail: (data) => api.post('/admin/email/send', data),

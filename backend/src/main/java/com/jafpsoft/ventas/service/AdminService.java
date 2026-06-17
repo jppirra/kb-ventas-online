@@ -288,6 +288,50 @@ public class AdminService {
         catalogRepository.delete(catalog);
     }
 
+    @Transactional
+    public Map<String, Integer> bulkBlockCatalogs(List<Long> ids, String reason, Long adminId, String adminName) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            Catalog catalog = catalogRepository.findById(id).orElse(null);
+            if (catalog == null || !catalog.isActive()) { skipped++; continue; }
+            catalog.setActive(false);
+            catalogRepository.save(catalog);
+            moderationLogRepository.save(ModerationLog.builder()
+                    .targetType("CATALOG").targetId(id).targetName(catalog.getName())
+                    .action("BLOCKED").reason(reason).adminId(adminId).adminName(adminName).build());
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkUnblockCatalogs(List<Long> ids, String reason, Long adminId, String adminName) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            Catalog catalog = catalogRepository.findById(id).orElse(null);
+            if (catalog == null || catalog.isActive()) { skipped++; continue; }
+            catalog.setActive(true);
+            catalogRepository.save(catalog);
+            moderationLogRepository.save(ModerationLog.builder()
+                    .targetType("CATALOG").targetId(id).targetName(catalog.getName())
+                    .action("UNBLOCKED").reason(reason).adminId(adminId).adminName(adminName).build());
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkDeleteCatalogs(List<Long> ids) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            Catalog catalog = catalogRepository.findById(id).orElse(null);
+            if (catalog == null) { skipped++; continue; }
+            catalogRepository.delete(catalog);
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
     @Transactional(readOnly = true)
     public List<AdminOrderResponse> getAllOrders() {
         List<OrderRequest> orders = orderRequestRepository.findAll();

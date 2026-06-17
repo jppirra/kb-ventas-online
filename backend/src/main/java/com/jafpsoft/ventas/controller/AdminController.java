@@ -165,6 +165,30 @@ public class AdminController {
         adminService.deleteCatalog(id);
     }
 
+    @PostMapping("/catalogs/bulk/block")
+    public ResponseEntity<Map<String, Integer>> bulkBlockCatalogs(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        String reason = (String) body.get("reason");
+        return ResponseEntity.ok(adminService.bulkBlockCatalogs(ids, reason, admin.getUserId(), admin.getUsername()));
+    }
+
+    @PostMapping("/catalogs/bulk/unblock")
+    public ResponseEntity<Map<String, Integer>> bulkUnblockCatalogs(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        String reason = (String) body.get("reason");
+        return ResponseEntity.ok(adminService.bulkUnblockCatalogs(ids, reason, admin.getUserId(), admin.getUsername()));
+    }
+
+    @PostMapping("/catalogs/bulk/delete")
+    public ResponseEntity<Map<String, Integer>> bulkDeleteCatalogs(@RequestBody Map<String, Object> body) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        return ResponseEntity.ok(adminService.bulkDeleteCatalogs(ids));
+    }
+
     // ── Orders ────────────────────────────────────────────────────────────────
     @GetMapping("/orders")
     public List<AdminOrderResponse> orders() {
