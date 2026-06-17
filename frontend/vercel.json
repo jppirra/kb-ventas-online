@@ -1,9 +1,10 @@
 {
+  "outputDirectory": "dist",
   "redirects": [
     { "source": "/mercato", "destination": "/mercato/", "permanent": true }
   ],
   "rewrites": [
     { "source": "/api/:path*", "destination": "https://catalogia-backend.onrender.com/api/:path*" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/((?!.*\\.[a-zA-Z0-9]+$).*)", "destination": "/index.html" }
   ]
 }
