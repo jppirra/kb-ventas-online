@@ -14,6 +14,11 @@ export const adminApi = {
   resendVerification: (id) => api.post(`/admin/users/${id}/resend-verification`),
   verifyEmail: (id) => api.post(`/admin/users/${id}/verify-email`),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  bulkBlock: (ids, reason) => api.post('/admin/users/bulk/block', { ids, reason }),
+  bulkUnblock: (ids, reason) => api.post('/admin/users/bulk/unblock', { ids, reason }),
+  bulkResendVerification: (ids) => api.post('/admin/users/bulk/resend-verification', { ids }),
+  bulkResetPassword: (ids) => api.post('/admin/users/bulk/reset-password', { ids }),
+  bulkDelete: (ids) => api.post('/admin/users/bulk/delete', { ids }),
 
   // Orders
   orders: () => api.get('/admin/orders'),

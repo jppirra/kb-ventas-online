@@ -147,6 +147,87 @@ public class AdminService {
         return tempPassword;
     }
 
+    // ── Bulk operations ────────────────────────────────────────────────────────
+
+    @Transactional
+    public Map<String, Integer> bulkBlock(List<Long> ids, String reason, Long adminId, String adminName) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null || user.isAppAdmin() || !user.isEnabled()) { skipped++; continue; }
+            user.setEnabled(false);
+            userRepository.save(user);
+            moderationLogRepository.save(ModerationLog.builder()
+                    .targetType("USER").targetId(id)
+                    .targetName(user.getName() != null ? user.getName() : user.getEmail())
+                    .action("BLOCKED").reason(reason).adminId(adminId).adminName(adminName).build());
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkUnblock(List<Long> ids, String reason, Long adminId, String adminName) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null || user.isEnabled()) { skipped++; continue; }
+            user.setEnabled(true);
+            userRepository.save(user);
+            moderationLogRepository.save(ModerationLog.builder()
+                    .targetType("USER").targetId(id)
+                    .targetName(user.getName() != null ? user.getName() : user.getEmail())
+                    .action("UNBLOCKED").reason(reason).adminId(adminId).adminName(adminName).build());
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkResendVerification(List<Long> ids) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null || user.isEmailVerified()) { skipped++; continue; }
+            String token = UUID.randomUUID().toString();
+            emailVerificationTokenRepository.save(EmailVerificationToken.builder()
+                    .user(user).token(token)
+                    .expiresAt(LocalDateTime.now().plusDays(1)).build());
+            emailService.sendVerificationEmail(user.getEmail(),
+                    user.getName() != null ? user.getName() : user.getEmail(), token);
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkResetPasswordByEmail(List<Long> ids) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null) { skipped++; continue; }
+            String tempPassword = generateTempPassword();
+            user.setPasswordHash(passwordEncoder.encode(tempPassword));
+            userRepository.save(user);
+            emailService.sendTempPasswordEmail(user.getEmail(),
+                    user.getName() != null ? user.getName() : user.getEmail(), tempPassword);
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkDelete(List<Long> ids, Long currentAdminId) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null || user.isAppAdmin() || id.equals(currentAdminId)) { skipped++; continue; }
+            userRepository.delete(user);
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
     private String generateTempPassword() {
         String chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
         SecureRandom random = new SecureRandom();

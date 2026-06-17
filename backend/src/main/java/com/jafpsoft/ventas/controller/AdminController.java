@@ -102,6 +102,44 @@ public class AdminController {
         adminService.deleteUser(id);
     }
 
+    @PostMapping("/users/bulk/block")
+    public ResponseEntity<Map<String, Integer>> bulkBlock(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        String reason = (String) body.get("reason");
+        return ResponseEntity.ok(adminService.bulkBlock(ids, reason, admin.getUserId(), admin.getUsername()));
+    }
+
+    @PostMapping("/users/bulk/unblock")
+    public ResponseEntity<Map<String, Integer>> bulkUnblock(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        String reason = (String) body.get("reason");
+        return ResponseEntity.ok(adminService.bulkUnblock(ids, reason, admin.getUserId(), admin.getUsername()));
+    }
+
+    @PostMapping("/users/bulk/resend-verification")
+    public ResponseEntity<Map<String, Integer>> bulkResendVerification(@RequestBody Map<String, Object> body) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        return ResponseEntity.ok(adminService.bulkResendVerification(ids));
+    }
+
+    @PostMapping("/users/bulk/reset-password")
+    public ResponseEntity<Map<String, Integer>> bulkResetPassword(@RequestBody Map<String, Object> body) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        return ResponseEntity.ok(adminService.bulkResetPasswordByEmail(ids));
+    }
+
+    @PostMapping("/users/bulk/delete")
+    public ResponseEntity<Map<String, Integer>> bulkDelete(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        return ResponseEntity.ok(adminService.bulkDelete(ids, admin.getUserId()));
+    }
+
     // ── Catalogs ──────────────────────────────────────────────────────────────
     @GetMapping("/catalogs")
     public List<AdminCatalogResponse> catalogs() {

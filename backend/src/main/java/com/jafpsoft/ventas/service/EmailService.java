@@ -129,6 +129,17 @@ public class EmailService {
     }
 
     @Async
+    public void sendTempPasswordEmail(String toEmail, String userName, String tempPassword) {
+        String body = "Hola <strong>" + userName + "</strong>,<br><br>" +
+                "Un administrador ha restablecido tu contraseña.<br>" +
+                "Tu nueva contraseña temporal es:<br><br>" +
+                "<strong style=\"font-size:18px;letter-spacing:2px;font-family:monospace\">" + tempPassword + "</strong><br><br>" +
+                "Ingresá con esta clave y cambiala desde tu perfil.";
+        String html = buildActionEmail("Tu contraseña fue restablecida", body, null, null, fromName());
+        send(toEmail, "TEMP_PASSWORD", "Tu contraseña fue restablecida — " + fromName(), html);
+    }
+
+    @Async
     public void sendAdminEmail(String toEmail, String subject, String body) {
         String html = buildActionEmail(subject, body, null, null, fromName() + " — Admin");
         send(toEmail, "ADMIN", subject, html);
