@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { ticketsApi } from '../api/tickets'
 import { adminApi } from '../api/admin'
+import { fmtDate, fmtDateLong } from '../utils/date'
 
 const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
 
@@ -12,7 +13,7 @@ function buildWhatsAppText(ticket, config) {
   const biz = config?.businessName || 'Tienda'
   let text = `*Comprobante de compra — ${biz}*\n`
   if (ticket.ticketNumber) text += `Ticket: ${ticket.ticketNumber}\n`
-  text += `Fecha: ${new Date(ticket.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}\n\n`
+  text += `Fecha: ${fmtDate(ticket.createdAt)}\n\n`
   text += `*Detalle:*\n`
   ticket.items?.forEach(it => {
     const sub = (Number(it.unitPrice) * it.quantity).toLocaleString('es-AR')
@@ -89,7 +90,7 @@ export default function TicketDetailPage() {
               </button>
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{ticket.ticketNumber}</h1>
               <p className="text-sm text-gray-500 dark:text-slate-400">
-                {new Date(ticket.createdAt).toLocaleString('es-AR', { dateStyle: 'long', timeStyle: 'short' })}
+                {fmtDateLong(ticket.createdAt)}
               </p>
             </div>
             <div className="flex gap-2 flex-wrap justify-end">
@@ -142,7 +143,7 @@ export default function TicketDetailPage() {
                 <div className="text-right">
                   <p className="text-xs text-gray-400 dark:text-slate-500">Fecha</p>
                   <p className="text-sm text-gray-700 dark:text-slate-300">
-                    {new Date(ticket.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+                    {fmtDate(ticket.createdAt)}
                   </p>
                 </div>
               </div>
@@ -232,7 +233,7 @@ function buildTicketHtml(ticket, config) {
   ).join('')
 
   return `<strong>${biz}</strong> — ${ticket.ticketNumber}<br>
-    ${new Date(ticket.createdAt).toLocaleString('es-AR', { dateStyle: 'long', timeStyle: 'short' })}<br><br>
+    ${fmtDateLong(ticket.createdAt)}<br><br>
     <table width="100%" cellpadding="0" cellspacing="0">
       <thead><tr style="font-size:12px;color:#9ca3af">
         <th align="left">Producto</th><th>Cant.</th><th align="right">Precio</th><th align="right">Subtotal</th>

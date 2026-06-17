@@ -1,11 +1,12 @@
 import api from './axios'
+import { track } from '../utils/track'
 
 export const catalogsApi = {
   list: () => api.get('/catalogs'),
   get: (id) => api.get(`/catalogs/${id}`),
-  create: (data) => api.post('/catalogs', data),
+  create: (data) => api.post('/catalogs', data).then(r => { track('CATALOG_CREATED'); return r }),
   update: (id, data) => api.put(`/catalogs/${id}`, data),
-  remove: (id) => api.delete(`/catalogs/${id}`),
+  remove: (id) => api.delete(`/catalogs/${id}`).then(r => { track('CATALOG_DELETED'); return r }),
 
   addProduct: (catalogId, data) => api.post(`/catalogs/${catalogId}/products`, data),
   updateProduct: (catalogId, productId, data) => api.put(`/catalogs/${catalogId}/products/${productId}`, data),
@@ -46,6 +47,6 @@ export const catalogsApi = {
     })
   },
 
-  generate: (catalogId) => api.post(`/catalogs/${catalogId}/generate`),
-  publish: (catalogId) => api.post(`/catalogs/${catalogId}/publish`),
+  generate: (catalogId) => api.post(`/catalogs/${catalogId}/generate`).then(r => { track('CATALOG_AI_GENERATED'); return r }),
+  publish: (catalogId) => api.post(`/catalogs/${catalogId}/publish`).then(r => { track('CATALOG_PUBLISHED'); return r }),
 }

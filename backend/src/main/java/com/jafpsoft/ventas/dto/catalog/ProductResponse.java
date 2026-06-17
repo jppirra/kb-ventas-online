@@ -31,6 +31,8 @@ public class ProductResponse {
     private String videoUrl;
     private String variantsJson;
     private String sizeStock;
+    private String productSizes;
+    private String productColors;
     private LocalDateTime createdAt;
 
     public static ProductResponse from(Product p) {
@@ -58,6 +60,8 @@ public class ProductResponse {
         r.videoUrl = p.getVideoUrl();
         r.variantsJson = p.getVariantsJson();
         r.sizeStock = p.getSizeStock();
+        r.productSizes = p.getProductSizes();
+        r.productColors = p.getProductColors();
         r.createdAt = p.getCreatedAt();
         return r;
     }

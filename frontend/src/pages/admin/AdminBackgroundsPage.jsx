@@ -2,29 +2,45 @@ import React, { useEffect, useRef, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
 import { toast } from 'sonner'
+import ImageModal from '../../components/ImageModal'
+import { uploadCompressed } from '../../utils/directUpload'
+import api from '../../api/axios'
 
-function BackgroundCard({ bg, onEdit, onDelete, onUpload }) {
+function BackgroundCard({ bg, onEdit, onDelete, onUploaded, onPreview }) {
   const fileRef = useRef()
-  const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(null)
 
   async function handleUpload(e) {
     const file = e.target.files[0]
     if (!file) return
-    setUploading(true)
+    setProgress(0)
     try {
-      await onUpload(bg.id, file)
+      const { data } = await uploadCompressed(file, (compressed, onPct) => {
+        const form = new FormData()
+        form.append('file', compressed)
+        return api.post(`/admin/backgrounds/${bg.id}/upload-image`, form, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: e => e.total && onPct(Math.round(e.loaded / e.total * 100))
+        })
+      }, setProgress)
+      onUploaded(bg.id, data.imageUrl)
       toast.success('Imagen actualizada')
     } catch {
       toast.error('Error al subir imagen')
     } finally {
-      setUploading(false)
+      setProgress(null)
       e.target.value = ''
     }
   }
 
+  const uploading = progress !== null
+
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
-      <div className="aspect-video bg-gray-100 dark:bg-slate-700 relative">
+      <div
+        className={`aspect-video bg-gray-100 dark:bg-slate-700 relative ${bg.imageUrl ? 'cursor-zoom-in' : ''}`}
+        onClick={() => bg.imageUrl && !uploading && onPreview(bg)}
+      >
         {bg.imageUrl ? (
           <img src={bg.imageUrl} alt={bg.name} className="w-full h-full object-cover" />
         ) : (
@@ -34,7 +50,15 @@ function BackgroundCard({ bg, onEdit, onDelete, onUpload }) {
             </svg>
           </div>
         )}
-        {!bg.active && (
+        {uploading && (
+          <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center gap-2 px-4">
+            <div className="w-full bg-white/20 rounded-full h-1.5">
+              <div className="bg-white h-1.5 rounded-full transition-all duration-200" style={{ width: `${progress}%` }} />
+            </div>
+            <span className="text-white text-xs font-medium">{progress}%</span>
+          </div>
+        )}
+        {!bg.active && !uploading && (
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
             <span className="text-white text-xs font-medium bg-black/60 px-2 py-1 rounded">Inactivo</span>
           </div>
@@ -54,15 +78,15 @@ function BackgroundCard({ bg, onEdit, onDelete, onUpload }) {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
             </svg>
-            {uploading ? 'Subiendo...' : 'Subir imagen'}
+            {uploading ? `${progress}%` : 'Subir imagen'}
           </button>
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-          <button onClick={() => onEdit(bg)}
-            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors">
+          <button onClick={() => onEdit(bg)} disabled={uploading}
+            className="flex items-center gap-1 px-2 py-1 text-xs bg-gray-50 dark:bg-slate-700 text-gray-600 dark:text-slate-300 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-600 transition-colors disabled:opacity-50">
             Editar
           </button>
-          <button onClick={() => onDelete(bg.id)}
-            className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+          <button onClick={() => onDelete(bg.id)} disabled={uploading}
+            className="flex items-center gap-1 px-2 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors disabled:opacity-50">
             Eliminar
           </button>
         </div>
@@ -80,6 +104,13 @@ export default function AdminBackgroundsPage() {
   const [form, setForm] = useState(emptyForm)
   const [editingId, setEditingId] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [previewUrl, setPreviewUrl] = useState(null)
+  const formFileRef = useRef()
+  const [modalBg, setModalBg] = useState(null)
+
+  const withImages = backgrounds.filter(b => b.imageUrl)
+  const modalIdx = modalBg ? withImages.findIndex(b => b.id === modalBg.id) : -1
 
   useEffect(() => { load() }, [])
 
@@ -97,13 +128,25 @@ export default function AdminBackgroundsPage() {
   function openCreate() {
     setEditingId(null)
     setForm(emptyForm)
+    setSelectedFile(null)
+    setPreviewUrl(null)
     setShowForm(true)
   }
 
   function openEdit(bg) {
     setEditingId(bg.id)
     setForm({ name: bg.name, description: bg.description || '', sortOrder: bg.sortOrder ?? 0, active: bg.active, imageUrl: bg.imageUrl || '' })
+    setSelectedFile(null)
+    setPreviewUrl(bg.imageUrl || null)
     setShowForm(true)
+  }
+
+  function handleFileSelect(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setSelectedFile(file)
+    setPreviewUrl(URL.createObjectURL(file))
+    setForm(f => ({ ...f, imageUrl: '' }))
   }
 
   async function handleSave(e) {
@@ -111,14 +154,30 @@ export default function AdminBackgroundsPage() {
     setSaving(true)
     try {
       const payload = { ...form, sortOrder: Number(form.sortOrder) }
+
+      async function uploadFile(bgId) {
+        if (!selectedFile) return
+        await uploadCompressed(selectedFile, (compressed, onPct) => {
+          const fd = new FormData()
+          fd.append('file', compressed)
+          return api.post(`/admin/backgrounds/${bgId}/upload-image`, fd, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            onUploadProgress: e => e.total && onPct(Math.round(e.loaded / e.total * 100))
+          })
+        }, () => {})
+      }
+
       if (editingId) {
         await adminApi.updateBackground(editingId, payload)
-        toast.success('Fondo actualizado')
+        await uploadFile(editingId)
       } else {
-        await adminApi.createBackground(payload)
-        toast.success('Fondo creado')
+        const { data } = await adminApi.createBackground(payload)
+        await uploadFile(data.id)
       }
+      toast.success(editingId ? 'Fondo actualizado' : 'Fondo creado')
       setShowForm(false)
+      setSelectedFile(null)
+      setPreviewUrl(null)
       load()
     } catch {
       toast.error('Error al guardar fondo')
@@ -138,13 +197,21 @@ export default function AdminBackgroundsPage() {
     }
   }
 
-  async function handleUpload(id, file) {
-    await adminApi.uploadBackgroundImage(id, file)
-    load()
+  function handleUploaded(id, publicUrl) {
+    setBackgrounds(bs => bs.map(b => b.id === id ? { ...b, imageUrl: publicUrl } : b))
   }
 
   return (
     <AdminLayout>
+      {modalBg && (
+        <ImageModal
+          src={modalBg.imageUrl}
+          alt={modalBg.name}
+          onClose={() => setModalBg(null)}
+          prev={modalIdx > 0 ? () => setModalBg(withImages[modalIdx - 1]) : null}
+          next={modalIdx < withImages.length - 1 ? () => setModalBg(withImages[modalIdx + 1]) : null}
+        />
+      )}
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Fondos de catálogo</h1>
         <button onClick={openCreate}
@@ -167,10 +234,29 @@ export default function AdminBackgroundsPage() {
               <input type="text" value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">URL de imagen (opcional)</label>
-              <input type="url" value={form.imageUrl} onChange={e => setForm(f => ({ ...f, imageUrl: e.target.value }))}
-                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <div className="sm:col-span-2">
+              <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Imagen</label>
+              <div className="flex gap-3 items-start">
+                {previewUrl && (
+                  <div className="w-32 h-20 rounded-xl overflow-hidden shrink-0 border border-gray-200 dark:border-slate-600">
+                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="flex-1 space-y-2">
+                  <button type="button" onClick={() => formFileRef.current.click()}
+                    className="flex items-center gap-2 px-3 py-2 text-sm border border-dashed border-gray-300 dark:border-slate-600 rounded-xl text-gray-500 dark:text-slate-400 hover:border-blue-400 hover:text-blue-500 transition-colors w-full justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    {selectedFile ? selectedFile.name : 'Subir desde PC'}
+                  </button>
+                  <input ref={formFileRef} type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
+                  <p className="text-xs text-gray-400 dark:text-slate-500 text-center">o</p>
+                  <input type="url" value={form.imageUrl} onChange={e => { setForm(f => ({ ...f, imageUrl: e.target.value })); setSelectedFile(null); setPreviewUrl(e.target.value || null) }}
+                    placeholder="URL de imagen externa"
+                    className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                </div>
+              </div>
             </div>
             <div>
               <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Orden</label>
@@ -206,7 +292,7 @@ export default function AdminBackgroundsPage() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {backgrounds.map(bg => (
-            <BackgroundCard key={bg.id} bg={bg} onEdit={openEdit} onDelete={handleDelete} onUpload={handleUpload} />
+            <BackgroundCard key={bg.id} bg={bg} onEdit={openEdit} onDelete={handleDelete} onUploaded={handleUploaded} onPreview={setModalBg} />
           ))}
         </div>
       )}

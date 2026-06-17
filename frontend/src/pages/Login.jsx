@@ -1,13 +1,4 @@
 import React, { useState } from 'react'
-
-function LoginLogo() {
-  return (
-    <div className="flex flex-col items-center gap-2 mb-6">
-      <img src="/logo-icon.png" alt="" className="h-24 w-24 rounded-2xl object-cover shadow-lg" />
-      <span className="font-bold text-gray-900 dark:text-white text-3xl tracking-tight">Mercato</span>
-    </div>
-  )
-}
 import { Link, useNavigate } from 'react-router-dom'
 import { GoogleLogin } from '@react-oauth/google'
 import { toast } from 'sonner'
@@ -58,19 +49,24 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
-        <LoginLogo />
+        <a href="/mercato/" className="flex flex-col items-center gap-2 mb-6">
+          <img src="/logo-icon.png" alt="" className="h-24 w-24 rounded-2xl object-cover shadow-lg" />
+          <span className="font-bold text-gray-900 dark:text-white text-3xl tracking-tight">Mercato</span>
+        </a>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Iniciar sesión</h1>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Email</label>
             <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-              required className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl text-gray-900 dark:text-white bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              required onInvalid={e => e.target.setCustomValidity('Ingresá un email válido')} onInput={e => e.target.setCustomValidity('')}
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl text-gray-900 dark:text-white bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Contraseña</label>
             <input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-              required className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl text-gray-900 dark:text-white bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              required onInvalid={e => e.target.setCustomValidity('Ingresá tu contraseña')} onInput={e => e.target.setCustomValidity('')}
+              className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl text-gray-900 dark:text-white bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
           </div>
           <div className="text-right">
             <Link to="/forgot-password" className="text-sm text-indigo-600 hover:underline">¿Olvidaste tu contraseña?</Link>

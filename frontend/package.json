@@ -1,6 +1,7 @@
 {
   "name": "my-app-frontend",
-  "version": "1.000.09",
+  "version": "1.0.0",
+  "appVersion": "1.003.02",
   "private": true,
   "scripts": {
     "dev": "vite",
@@ -10,11 +11,14 @@
   },
   "dependencies": {
     "@react-oauth/google": "^0.13.5",
+    "@stomp/stompjs": "^7.3.0",
     "axios": "^1.6.7",
     "date-fns": "^3.3.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0",
+    "recharts": "^3.8.1",
+    "sockjs-client": "^1.6.1",
     "sonner": "^2.0.7"
   },
   "devDependencies": {

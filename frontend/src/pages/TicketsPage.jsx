@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { ticketsApi } from '../api/tickets'
 import { catalogsApi } from '../api/catalogs'
+import { fmtDate } from '../utils/date'
 import { useAuth } from '../context/AuthContext'
 
 const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
@@ -385,7 +386,7 @@ export default function TicketsPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400 dark:text-slate-500">
-                      {new Date(t.createdAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+                      {fmtDate(t.createdAt)}
                     </td>
                   </tr>
                 ))}

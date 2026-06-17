@@ -5,13 +5,17 @@ import com.jafpsoft.ventas.model.Catalog;
 import com.jafpsoft.ventas.model.CatalogReport;
 import com.jafpsoft.ventas.model.CatalogStatus;
 import com.jafpsoft.ventas.model.EmailVerificationToken;
+import com.jafpsoft.ventas.model.ModerationLog;
 import com.jafpsoft.ventas.model.OrderRequest;
 import com.jafpsoft.ventas.model.User;
 import com.jafpsoft.ventas.repository.CatalogRepository;
 import com.jafpsoft.ventas.repository.CatalogReportRepository;
 import com.jafpsoft.ventas.repository.EmailVerificationTokenRepository;
+import com.jafpsoft.ventas.repository.ModerationLogRepository;
 import com.jafpsoft.ventas.repository.OrderRequestRepository;
+import com.jafpsoft.ventas.repository.PasswordResetTokenRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
+import com.jafpsoft.ventas.repository.RatingRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +40,9 @@ public class AdminService {
     private final OrderRequestRepository orderRequestRepository;
     private final CatalogReportRepository catalogReportRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final RatingRepository ratingRepository;
+    private final ModerationLogRepository moderationLogRepository;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
@@ -83,10 +90,29 @@ public class AdminService {
     }
 
     @Transactional
-    public AdminUserResponse toggleUserEnabled(Long userId) {
+    public AdminUserResponse toggleUserEnabled(Long userId, String reason, Long adminId, String adminName) {
         User user = findUser(userId);
         user.setEnabled(!user.isEnabled());
-        return AdminUserResponse.from(userRepository.save(user), 0);
+        userRepository.save(user);
+        moderationLogRepository.save(ModerationLog.builder()
+                .targetType("USER")
+                .targetId(userId)
+                .targetName(user.getName() != null ? user.getName() : user.getEmail())
+                .action(user.isEnabled() ? "UNBLOCKED" : "BLOCKED")
+                .reason(reason)
+                .adminId(adminId)
+                .adminName(adminName)
+                .build());
+        return AdminUserResponse.from(user, 0);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ModerationLogResponse> getModerationLog(String targetType, Long targetId) {
+        return moderationLogRepository
+                .findByTargetTypeAndTargetIdOrderByCreatedAtDesc(targetType, targetId)
+                .stream()
+                .map(ModerationLogResponse::from)
+                .toList();
     }
 
     @Transactional
@@ -100,7 +126,14 @@ public class AdminService {
     public void deleteUser(Long userId) {
         User user = findUser(userId);
         if (user.isAppAdmin()) throw new IllegalStateException("No se puede eliminar un administrador");
+        purgeUserDependencies(user);
         userRepository.delete(user);
+    }
+
+    private void purgeUserDependencies(User user) {
+        emailVerificationTokenRepository.deleteByUser(user);
+        passwordResetTokenRepository.deleteByUser(user);
+        ratingRepository.deleteByUser(user);
     }
 
     @Transactional
@@ -123,6 +156,88 @@ public class AdminService {
         user.setPasswordHash(passwordEncoder.encode(tempPassword));
         userRepository.save(user);
         return tempPassword;
+    }
+
+    // ── Bulk operations ────────────────────────────────────────────────────────
+
+    @Transactional
+    public Map<String, Integer> bulkBlock(List<Long> ids, String reason, Long adminId, String adminName) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null || user.isAppAdmin() || !user.isEnabled()) { skipped++; continue; }
+            user.setEnabled(false);
+            userRepository.save(user);
+            moderationLogRepository.save(ModerationLog.builder()
+                    .targetType("USER").targetId(id)
+                    .targetName(user.getName() != null ? user.getName() : user.getEmail())
+                    .action("BLOCKED").reason(reason).adminId(adminId).adminName(adminName).build());
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkUnblock(List<Long> ids, String reason, Long adminId, String adminName) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null || user.isEnabled()) { skipped++; continue; }
+            user.setEnabled(true);
+            userRepository.save(user);
+            moderationLogRepository.save(ModerationLog.builder()
+                    .targetType("USER").targetId(id)
+                    .targetName(user.getName() != null ? user.getName() : user.getEmail())
+                    .action("UNBLOCKED").reason(reason).adminId(adminId).adminName(adminName).build());
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkResendVerification(List<Long> ids) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null || user.isEmailVerified()) { skipped++; continue; }
+            String token = UUID.randomUUID().toString();
+            emailVerificationTokenRepository.save(EmailVerificationToken.builder()
+                    .user(user).token(token)
+                    .expiresAt(LocalDateTime.now().plusDays(1)).build());
+            emailService.sendVerificationEmail(user.getEmail(),
+                    user.getName() != null ? user.getName() : user.getEmail(), token);
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkResetPasswordByEmail(List<Long> ids) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null) { skipped++; continue; }
+            String tempPassword = generateTempPassword();
+            user.setPasswordHash(passwordEncoder.encode(tempPassword));
+            userRepository.save(user);
+            emailService.sendTempPasswordEmail(user.getEmail(),
+                    user.getName() != null ? user.getName() : user.getEmail(), tempPassword);
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkDelete(List<Long> ids, Long currentAdminId) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            User user = userRepository.findById(id).orElse(null);
+            if (user == null || user.isAppAdmin() || id.equals(currentAdminId)) { skipped++; continue; }
+            purgeUserDependencies(user);
+            userRepository.delete(user);
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
     }
 
     private String generateTempPassword() {
@@ -148,12 +263,22 @@ public class AdminService {
     }
 
     @Transactional
-    public AdminCatalogResponse toggleCatalogActive(Long catalogId) {
+    public AdminCatalogResponse toggleCatalogActive(Long catalogId, String reason, Long adminId, String adminName) {
         Catalog catalog = catalogRepository.findById(catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
         catalog.setActive(!catalog.isActive());
+        catalogRepository.save(catalog);
+        moderationLogRepository.save(ModerationLog.builder()
+                .targetType("CATALOG")
+                .targetId(catalogId)
+                .targetName(catalog.getName())
+                .action(catalog.isActive() ? "UNBLOCKED" : "BLOCKED")
+                .reason(reason)
+                .adminId(adminId)
+                .adminName(adminName)
+                .build());
         User owner = userRepository.findById(catalog.getUserId()).orElse(null);
-        return AdminCatalogResponse.from(catalogRepository.save(catalog), owner);
+        return AdminCatalogResponse.from(catalog, owner);
     }
 
     @Transactional
@@ -161,6 +286,50 @@ public class AdminService {
         Catalog catalog = catalogRepository.findById(catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
         catalogRepository.delete(catalog);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkBlockCatalogs(List<Long> ids, String reason, Long adminId, String adminName) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            Catalog catalog = catalogRepository.findById(id).orElse(null);
+            if (catalog == null || !catalog.isActive()) { skipped++; continue; }
+            catalog.setActive(false);
+            catalogRepository.save(catalog);
+            moderationLogRepository.save(ModerationLog.builder()
+                    .targetType("CATALOG").targetId(id).targetName(catalog.getName())
+                    .action("BLOCKED").reason(reason).adminId(adminId).adminName(adminName).build());
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkUnblockCatalogs(List<Long> ids, String reason, Long adminId, String adminName) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            Catalog catalog = catalogRepository.findById(id).orElse(null);
+            if (catalog == null || catalog.isActive()) { skipped++; continue; }
+            catalog.setActive(true);
+            catalogRepository.save(catalog);
+            moderationLogRepository.save(ModerationLog.builder()
+                    .targetType("CATALOG").targetId(id).targetName(catalog.getName())
+                    .action("UNBLOCKED").reason(reason).adminId(adminId).adminName(adminName).build());
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
+    }
+
+    @Transactional
+    public Map<String, Integer> bulkDeleteCatalogs(List<Long> ids) {
+        int processed = 0, skipped = 0;
+        for (Long id : ids) {
+            Catalog catalog = catalogRepository.findById(id).orElse(null);
+            if (catalog == null) { skipped++; continue; }
+            catalogRepository.delete(catalog);
+            processed++;
+        }
+        return Map.of("processed", processed, "skipped", skipped);
     }
 
     @Transactional(readOnly = true)

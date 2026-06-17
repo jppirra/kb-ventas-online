@@ -3,36 +3,75 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { catalogsApi } from '../api/catalogs'
+import { RUBROS, getRubro } from '../config/rubros'
 
-function QRModal({ catalogId, catalogName, onClose }) {
-  const url = `${window.location.origin}/c/${catalogId || ''}`
-  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(url)}`
+function QRModal({ publicId, catalogName, onClose }) {
+  const url = `${window.location.origin}/c/${publicId || ''}`
+  const size = 240
+  const qrSrc = `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(url)}&ecc=H&margin=1`
+
+  function handleDownload() {
+    const canvas = document.createElement('canvas')
+    canvas.width = size
+    canvas.height = size
+    const ctx = canvas.getContext('2d')
+    const qrImg = new Image()
+    qrImg.crossOrigin = 'anonymous'
+    qrImg.onload = () => {
+      ctx.drawImage(qrImg, 0, 0, size, size)
+      const logo = new Image()
+      logo.onload = () => {
+        const logoSize = Math.round(size * 0.22)
+        const x = Math.round((size - logoSize) / 2)
+        const y = Math.round((size - logoSize) / 2)
+        const pad = 5
+        ctx.fillStyle = '#ffffff'
+        ctx.fillRect(x - pad, y - pad, logoSize + pad * 2, logoSize + pad * 2)
+        ctx.drawImage(logo, x, y, logoSize, logoSize)
+        triggerDownload(canvas)
+      }
+      logo.onerror = () => triggerDownload(canvas)
+      logo.src = '/logo-icon.png'
+    }
+    qrImg.onerror = () => window.open(qrSrc, '_blank')
+    qrImg.src = qrSrc
+  }
+
+  function triggerDownload(canvas) {
+    const link = document.createElement('a')
+    link.download = `qr-${catalogName}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+  }
+
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 flex flex-col items-center gap-4 max-w-xs w-full" onClick={e => e.stopPropagation()}>
-        <h3 className="font-semibold text-gray-900 dark:text-white text-sm">QR — {catalogName}</h3>
-        <img src={qrSrc} alt="QR" className="w-48 h-48 rounded-xl" />
+        <h3 className="font-semibold text-gray-900 dark:text-white text-sm">QR del catálogo</h3>
+        <p className="font-bold text-gray-900 dark:text-white text-center text-base leading-tight">{catalogName}</p>
+        <div className="relative inline-block">
+          <img src={qrSrc} alt="QR" className="w-48 h-48 rounded-xl" />
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="bg-white p-1.5 rounded-lg shadow-sm">
+              <img src="/logo-icon.png" alt="Logo" className="w-9 h-9 rounded object-cover" />
+            </div>
+          </div>
+        </div>
         <p className="text-xs text-gray-400 text-center break-all">{url}</p>
-        <a href={qrSrc} download={`qr-${catalogName}.png`}
+        <button onClick={handleDownload}
           className="w-full py-2 text-center text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-xl transition-colors">
           Descargar QR
-        </a>
+        </button>
         <button onClick={onClose} className="text-sm text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">Cerrar</button>
       </div>
     </div>
   )
 }
 
-const STATUS_LABEL = {
-  DRAFT: 'Borrador',
-  GENERATING: 'Generando...',
-  GENERATED: 'Generado',
-}
-
-const STATUS_COLOR = {
-  DRAFT: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300',
-  GENERATING: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400',
-  GENERATED: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400',
+function publishBadge(catalog) {
+  if (!catalog.publishedAt) return { label: 'Sin publicar', cls: 'bg-gray-100 text-gray-600 dark:bg-slate-700 dark:text-slate-300' }
+  if (catalog.hasDraftChanges) return { label: 'Cambios sin publicar', cls: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' }
+  return { label: 'Publicado', cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' }
 }
 
 export default function CatalogsPage() {
@@ -40,7 +79,7 @@ export default function CatalogsPage() {
   const [catalogs, setCatalogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({ name: '', description: '' })
+  const [form, setForm] = useState({ name: '', description: '', rubro: '' })
   const [showForm, setShowForm] = useState(false)
   const [qrCatalog, setQrCatalog] = useState(null)
 
@@ -112,6 +151,19 @@ export default function CatalogsPage() {
               />
             </div>
             <div>
+              <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1">Rubro</label>
+              <select
+                value={form.rubro}
+                onChange={e => setForm(f => ({ ...f, rubro: e.target.value }))}
+                className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+              >
+                <option value="">Seleccioná un rubro...</option>
+                {RUBROS.map(r => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1">Descripción</label>
               <textarea
                 value={form.description}
@@ -156,11 +208,17 @@ export default function CatalogsPage() {
                 onClick={() => navigate(`/catalogs/${catalog.id}`)}
               >
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <h3 className="font-semibold text-gray-900 dark:text-white truncate">{catalog.name}</h3>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLOR[catalog.status]}`}>
-                      {STATUS_LABEL[catalog.status]}
-                    </span>
+                    {(() => { const b = publishBadge(catalog); return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.cls}`}>{b.label}</span> })()}
+                    {catalog.status === 'GENERATING' && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">Generando IA...</span>
+                    )}
+                    {catalog.rubro && getRubro(catalog.rubro) && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                        {getRubro(catalog.rubro).label}
+                      </span>
+                    )}
                   </div>
                   {catalog.description && (
                     <p className="text-sm text-gray-500 dark:text-slate-400 truncate">{catalog.description}</p>
@@ -181,6 +239,20 @@ export default function CatalogsPage() {
                   </div>
                 </div>
                 <div className="ml-4 flex items-center gap-1">
+                  {catalog.publishedAt && (
+                    <a
+                      href={`/c/${catalog.publicId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={e => e.stopPropagation()}
+                      className="p-2 text-gray-400 hover:text-emerald-500 dark:text-slate-500 dark:hover:text-emerald-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                      title="Ver catálogo público"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      </svg>
+                    </a>
+                  )}
                   <button
                     onClick={e => { e.stopPropagation(); setQrCatalog(catalog) }}
                     className="p-2 text-gray-400 hover:text-blue-500 dark:text-slate-500 dark:hover:text-blue-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
@@ -207,7 +279,7 @@ export default function CatalogsPage() {
 
       {qrCatalog && (
         <QRModal
-          catalogId={qrCatalog.publicId}
+          publicId={qrCatalog.publicId}
           catalogName={qrCatalog.name}
           onClose={() => setQrCatalog(null)}
         />

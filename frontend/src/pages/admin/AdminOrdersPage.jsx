@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
+import { fmtDateTime } from '../../utils/date'
 
 const STATUS_LABEL = {
   PENDING: 'Pendiente',
@@ -20,7 +21,7 @@ const STATUS_COLOR = {
 
 function formatDate(str) {
   if (!str) return '—'
-  return new Date(str).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return fmtDateTime(str)
 }
 
 function ItemsTooltip({ json }) {

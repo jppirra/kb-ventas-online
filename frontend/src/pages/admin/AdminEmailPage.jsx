@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import AdminLayout from '../../components/AdminLayout'
 import { adminApi } from '../../api/admin'
+import { fmtDate } from '../../utils/date'
 
 const EMAIL_TYPE_LABELS = {
   VERIFICATION: 'Verificación',
@@ -141,7 +142,7 @@ function LogsTab() {
                       onClick={() => setExpandedId(expandedId === log.id ? null : log.id)}
                     >
                       <td className="py-2 pr-3 text-xs text-gray-500 dark:text-slate-400 whitespace-nowrap">
-                        {new Date(log.sentAt).toLocaleString('es-AR', { dateStyle: 'short', timeStyle: 'short' })}
+                        {fmtDate(log.sentAt)}
                       </td>
                       <td className="py-2 pr-3 text-gray-700 dark:text-slate-300 truncate max-w-[140px] text-xs">{log.toEmail}</td>
                       <td className="py-2 pr-3">

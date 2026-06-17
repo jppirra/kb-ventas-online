@@ -66,8 +66,8 @@ export default function AdminDiagnosticsPage() {
     await runOne('health', 'GET /api/health', async () => {
       const { data } = await api.get('/health'); return data
     })
-    await runOne('models', 'GET /api/health/ai-models', async () => {
-      const { data } = await api.get('/health/ai-models'); return data
+    await runOne('models', 'GET /api/admin/ai/models', async () => {
+      const { data } = await api.get('/admin/ai/models'); return data
     })
     await runOne('test', `Test IA — ${provider} / ${model}`, async () => {
       const { data } = await api.get('/admin/ai/test', { params: { provider, model } }); return data
@@ -138,15 +138,15 @@ export default function AdminDiagnosticsPage() {
             className="py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 disabled:opacity-50 transition-colors">
             {running.health ? '...' : 'Health'}
           </button>
-          <button onClick={() => runOne('models', 'Modelos Gemini', async () => { const { data } = await api.get('/health/ai-models'); return data })}
+          <button onClick={() => runOne('models', 'GET /api/admin/ai/models', async () => { const { data } = await api.get('/admin/ai/models'); return data })}
             disabled={running.models}
             className="py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 disabled:opacity-50 transition-colors">
-            {running.models ? '...' : 'Modelos Gemini'}
+            {running.models ? '...' : 'Modelos IA'}
           </button>
-          <button onClick={() => runOne('ormodels', 'Modelos OpenRouter (free)', async () => { const { data } = await api.get('/health/openrouter-models'); return data })}
-            disabled={running.ormodels}
+          <button onClick={() => runOne('settings', 'GET /api/admin/settings/ai', async () => { const { data } = await api.get('/admin/settings/ai'); return data })}
+            disabled={running.settings}
             className="py-2 text-sm rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-slate-300 disabled:opacity-50 transition-colors">
-            {running.ormodels ? '...' : 'Modelos OpenRouter'}
+            {running.settings ? '...' : 'Config IA'}
           </button>
         </div>
 

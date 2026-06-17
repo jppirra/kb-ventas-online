@@ -1,9 +1,10 @@
 import api from './axios'
+import { track } from '../utils/track'
 
 export const ticketsApi = {
   list: () => api.get('/tickets'),
   get: (id) => api.get(`/tickets/${id}`),
-  create: (data) => api.post('/tickets', data),
+  create: (data) => api.post('/tickets', data).then(r => { track('TICKET_CREATED'); return r }),
   updateStatus: (id, status) => api.patch(`/tickets/${id}/status`, { status }),
   remove: (id) => api.delete(`/tickets/${id}`),
 

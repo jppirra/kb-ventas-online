@@ -38,7 +38,9 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/')
+    const hasSession = !!localStorage.getItem('token') || !!localStorage.getItem('refreshToken')
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint && hasSession) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => failedQueue.push({ resolve, reject }))
           .then((token) => { originalRequest.headers.Authorization = `Bearer ${token}`; return api(originalRequest) })

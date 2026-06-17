@@ -3,6 +3,7 @@ package com.jafpsoft.ventas.controller;
 import com.jafpsoft.ventas.dto.admin.*;
 import com.jafpsoft.ventas.model.EmailLog;
 import com.jafpsoft.ventas.repository.EmailLogRepository;
+import com.jafpsoft.ventas.security.CustomUserDetails;
 import com.jafpsoft.ventas.service.AdminService;
 import com.jafpsoft.ventas.service.AiService;
 import com.jafpsoft.ventas.service.AppSettingService;
@@ -13,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -55,8 +57,16 @@ public class AdminController {
     }
 
     @PatchMapping("/users/{id}/toggle-enabled")
-    public AdminUserResponse toggleEnabled(@PathVariable Long id) {
-        return adminService.toggleUserEnabled(id);
+    public AdminUserResponse toggleEnabled(@PathVariable Long id,
+                                           @RequestBody(required = false) Map<String, String> body,
+                                           @AuthenticationPrincipal CustomUserDetails admin) {
+        String reason = body != null ? body.get("reason") : null;
+        return adminService.toggleUserEnabled(id, reason, admin.getUserId(), admin.getUsername());
+    }
+
+    @GetMapping("/users/{id}/moderation-log")
+    public List<ModerationLogResponse> userModerationLog(@PathVariable Long id) {
+        return adminService.getModerationLog("USER", id);
     }
 
     @PatchMapping("/users/{id}/toggle-admin")
@@ -92,6 +102,44 @@ public class AdminController {
         adminService.deleteUser(id);
     }
 
+    @PostMapping("/users/bulk/block")
+    public ResponseEntity<Map<String, Integer>> bulkBlock(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        String reason = (String) body.get("reason");
+        return ResponseEntity.ok(adminService.bulkBlock(ids, reason, admin.getUserId(), admin.getUsername()));
+    }
+
+    @PostMapping("/users/bulk/unblock")
+    public ResponseEntity<Map<String, Integer>> bulkUnblock(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        String reason = (String) body.get("reason");
+        return ResponseEntity.ok(adminService.bulkUnblock(ids, reason, admin.getUserId(), admin.getUsername()));
+    }
+
+    @PostMapping("/users/bulk/resend-verification")
+    public ResponseEntity<Map<String, Integer>> bulkResendVerification(@RequestBody Map<String, Object> body) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        return ResponseEntity.ok(adminService.bulkResendVerification(ids));
+    }
+
+    @PostMapping("/users/bulk/reset-password")
+    public ResponseEntity<Map<String, Integer>> bulkResetPassword(@RequestBody Map<String, Object> body) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        return ResponseEntity.ok(adminService.bulkResetPasswordByEmail(ids));
+    }
+
+    @PostMapping("/users/bulk/delete")
+    public ResponseEntity<Map<String, Integer>> bulkDelete(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        return ResponseEntity.ok(adminService.bulkDelete(ids, admin.getUserId()));
+    }
+
     // ── Catalogs ──────────────────────────────────────────────────────────────
     @GetMapping("/catalogs")
     public List<AdminCatalogResponse> catalogs() {
@@ -99,14 +147,46 @@ public class AdminController {
     }
 
     @PatchMapping("/catalogs/{id}/toggle-active")
-    public AdminCatalogResponse toggleCatalogActive(@PathVariable Long id) {
-        return adminService.toggleCatalogActive(id);
+    public AdminCatalogResponse toggleCatalogActive(@PathVariable Long id,
+                                                    @RequestBody(required = false) Map<String, String> body,
+                                                    @AuthenticationPrincipal CustomUserDetails admin) {
+        String reason = body != null ? body.get("reason") : null;
+        return adminService.toggleCatalogActive(id, reason, admin.getUserId(), admin.getUsername());
+    }
+
+    @GetMapping("/catalogs/{id}/moderation-log")
+    public List<ModerationLogResponse> catalogModerationLog(@PathVariable Long id) {
+        return adminService.getModerationLog("CATALOG", id);
     }
 
     @DeleteMapping("/catalogs/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteCatalog(@PathVariable Long id) {
         adminService.deleteCatalog(id);
+    }
+
+    @PostMapping("/catalogs/bulk/block")
+    public ResponseEntity<Map<String, Integer>> bulkBlockCatalogs(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        String reason = (String) body.get("reason");
+        return ResponseEntity.ok(adminService.bulkBlockCatalogs(ids, reason, admin.getUserId(), admin.getUsername()));
+    }
+
+    @PostMapping("/catalogs/bulk/unblock")
+    public ResponseEntity<Map<String, Integer>> bulkUnblockCatalogs(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails admin) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        String reason = (String) body.get("reason");
+        return ResponseEntity.ok(adminService.bulkUnblockCatalogs(ids, reason, admin.getUserId(), admin.getUsername()));
+    }
+
+    @PostMapping("/catalogs/bulk/delete")
+    public ResponseEntity<Map<String, Integer>> bulkDeleteCatalogs(@RequestBody Map<String, Object> body) {
+        List<Long> ids = ((List<?>) body.get("ids")).stream().map(i -> Long.valueOf(i.toString())).toList();
+        return ResponseEntity.ok(adminService.bulkDeleteCatalogs(ids));
     }
 
     // ── Orders ────────────────────────────────────────────────────────────────

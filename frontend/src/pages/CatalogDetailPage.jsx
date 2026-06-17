@@ -4,6 +4,9 @@ import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { catalogsApi } from '../api/catalogs'
 import { publicApi } from '../api/profile'
+import ImageModal from '../components/ImageModal'
+import { uploadCompressed } from '../utils/directUpload'
+import api from '../api/axios'
 
 const VIEW_MODES = [
   { value: 'GRID', label: 'Grilla', icon: (
@@ -31,8 +34,43 @@ const BG_TYPES = [
 ]
 
 import { productsApi } from '../api/products'
+import { RUBROS, getRubro } from '../config/rubros'
 
-const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false }
+const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: [] }
+
+function CsvInput({ label, values, onChange, placeholder, hint }) {
+  const [text, setText] = useState(() => values.join(', '))
+  useEffect(() => { setText(values.join(', ')) }, [values.join(',')])
+  function commit() {
+    const arr = text.split(',').map(v => v.trim()).filter(Boolean)
+    onChange(arr)
+    setText(arr.join(', '))
+  }
+  return (
+    <div>
+      <div className="flex items-center gap-1.5 mb-1">
+        <label className="text-xs text-gray-500 dark:text-slate-400">{label}</label>
+        <span className="group relative cursor-help">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 text-gray-400 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-52 bg-gray-800 dark:bg-slate-700 text-white text-xs rounded-lg px-2.5 py-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-20 leading-relaxed shadow-lg">
+            {hint}
+            <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-800 dark:border-t-slate-700" />
+          </span>
+        </span>
+      </div>
+      <input
+        type="text"
+        value={text}
+        onChange={e => setText(e.target.value)}
+        onBlur={commit}
+        placeholder={placeholder}
+        className="w-full px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+    </div>
+  )
+}
 
 export default function CatalogDetailPage() {
   const { id } = useParams()
@@ -65,13 +103,11 @@ export default function CatalogDetailPage() {
   const [bgColor, setBgColor] = useState('#f8fafc')
   const [bgTemplateId, setBgTemplateId] = useState(null)
   const [bgTemplates, setBgTemplates] = useState([])
+  const [bgModalIdx, setBgModalIdx] = useState(null)
   const [uploadingBg, setUploadingBg] = useState(false)
+  const [bgProgress, setBgProgress] = useState(null)
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
-  const [sizesEnabled, setSizesEnabled] = useState(false)
-  const [sizeOptions, setSizeOptions] = useState('')
-  const [colorsEnabled, setColorsEnabled] = useState(false)
-  const [colorOptions, setColorOptions] = useState('')
 
   useEffect(() => {
     load()
@@ -87,10 +123,6 @@ export default function CatalogDetailPage() {
       setBgType(data.backgroundType || 'NONE')
       setBgColor(data.backgroundColor || '#f8fafc')
       setBgTemplateId(data.backgroundTemplateId || null)
-      setSizesEnabled(data.sizesEnabled || false)
-      setSizeOptions(data.sizeOptions || '')
-      setColorsEnabled(data.colorsEnabled || false)
-      setColorOptions(data.colorOptions || '')
       if (data.status === 'GENERATING') startPolling()
     } catch {
       toast.error('Catálogo no encontrado')
@@ -169,6 +201,10 @@ export default function CatalogDetailPage() {
       setEditingProductId(product.id)
       let extraImages = []
       try { extraImages = product.extraImagesJson ? JSON.parse(product.extraImagesJson) : [] } catch {}
+      let productSizes = []
+      let productColors = []
+      try { productSizes = product.productSizes ? JSON.parse(product.productSizes) : [] } catch {}
+      try { productColors = product.productColors ? JSON.parse(product.productColors) : [] } catch {}
       setProductForm({
         name: product.name || '',
         description: product.description || '',
@@ -182,6 +218,8 @@ export default function CatalogDetailPage() {
         stockStatus: product.stockStatus || 'IN_STOCK',
         stockCount: product.stockCount ?? '',
         showStockQuantity: product.showStockQuantity || false,
+        productSizes,
+        productColors,
       })
     } else {
       setEditingProductId(null)
@@ -200,6 +238,8 @@ export default function CatalogDetailPage() {
       stockCount: productForm.stockCount !== '' ? parseInt(productForm.stockCount) : null,
       extraImagesJson: productForm.extraImages.length > 0 ? JSON.stringify(productForm.extraImages) : null,
       videoUrl: productForm.videoUrl || null,
+      productSizes: productForm.productSizes.length > 0 ? JSON.stringify(productForm.productSizes) : null,
+      productColors: productForm.productColors.length > 0 ? JSON.stringify(productForm.productColors) : null,
     }
     try {
       if (editingProductId) {
@@ -291,19 +331,22 @@ export default function CatalogDetailPage() {
   }
 
   async function handleExtraImageUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
+    const files = Array.from(e.target.files)
+    if (!files.length) return
+    e.target.value = ''
     setUploadingExtraImg(true)
-    try {
-      const { data } = await catalogsApi.uploadTempProductImage(id, file)
-      setProductForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
-      toast.success('Imagen agregada')
-    } catch {
-      toast.error('Error al subir imagen')
-    } finally {
-      setUploadingExtraImg(false)
-      e.target.value = ''
+    let added = 0
+    for (const file of files) {
+      try {
+        const { data } = await catalogsApi.uploadTempProductImage(id, file)
+        setProductForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
+        added++
+      } catch {
+        toast.error(`Error al subir ${file.name}`)
+      }
     }
+    if (added > 0) toast.success(`${added} imagen${added > 1 ? 'es' : ''} agregada${added > 1 ? 's' : ''}`)
+    setUploadingExtraImg(false)
   }
 
   function triggerProductImageUpload() {
@@ -314,8 +357,16 @@ export default function CatalogDetailPage() {
     const file = e.target.files[0]
     if (!file) return
     setUploadingBg(true)
+    setBgProgress(0)
     try {
-      const { data } = await catalogsApi.uploadBackground(id, file)
+      const { data } = await uploadCompressed(file, (compressed, onPct) => {
+        const fd = new FormData()
+        fd.append('file', compressed)
+        return api.post(`/catalogs/${id}/upload-background`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: e => e.total && onPct(Math.round(e.loaded / e.total * 100))
+        })
+      }, setBgProgress)
       setCatalog(c => ({ ...c, backgroundImageUrl: data.backgroundImageUrl, backgroundType: 'CUSTOM' }))
       setBgType('CUSTOM')
       toast.success('Fondo subido')
@@ -323,6 +374,7 @@ export default function CatalogDetailPage() {
       toast.error('Error al subir fondo')
     } finally {
       setUploadingBg(false)
+      setBgProgress(null)
       e.target.value = ''
     }
   }
@@ -338,13 +390,9 @@ export default function CatalogDetailPage() {
         backgroundColor: bgType === 'COLOR' ? bgColor : null,
         backgroundTemplateId: bgType === 'PREDEFINED' ? bgTemplateId : null,
         backgroundImageUrl: bgType === 'CUSTOM' ? catalog.backgroundImageUrl : null,
-        sizesEnabled,
-        sizeOptions: sizesEnabled ? sizeOptions : '',
-        colorsEnabled,
-        colorOptions: colorsEnabled ? colorOptions : '',
       }
       const { data } = await catalogsApi.update(id, payload)
-      setCatalog(c => ({ ...c, ...data }))
+      setCatalog(c => ({ ...c, ...data, products: data.products ?? c.products }))
       toast.success('Apariencia guardada')
     } catch {
       toast.error('Error al guardar apariencia')
@@ -385,7 +433,14 @@ export default function CatalogDetailPage() {
               </svg>
               Catálogos
             </button>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{catalog.name}</h1>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{catalog.name}</h1>
+              {catalog.rubro && getRubro(catalog.rubro) && (
+                <span className="text-sm px-2.5 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
+                  {getRubro(catalog.rubro).label}
+                </span>
+              )}
+            </div>
             {catalog.description && (
               <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{catalog.description}</p>
             )}
@@ -447,7 +502,7 @@ export default function CatalogDetailPage() {
 
         {/* Share link */}
         <div className="mb-6 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-2xl p-4">
-          <p className="text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wide mb-2">Enlace publico del catalogo</p>
+          <p className="text-xs font-semibold text-blue-500 dark:text-blue-400 uppercase tracking-wide mb-2">Enlace público del catálogo</p>
           <div className="flex items-center gap-2 flex-wrap">
             <a href={publicLink} target="_blank" rel="noopener noreferrer"
               className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate flex-1 min-w-0">{publicLink}</a>
@@ -461,25 +516,25 @@ export default function CatalogDetailPage() {
             </button>
           </div>
           {catalog.hasDraftChanges && catalog.publishedAt ? (
-            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Hay cambios sin publicar. El enlace publico muestra la ultima version publicada hasta que vuelvas a publicar.</p>
+            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Hay cambios sin publicar. El enlace público muestra la última versión publicada hasta que vuelvas a publicar.</p>
           ) : !catalog.publishedAt ? (
-            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Este catalogo aun no fue publicado. Publica para confirmar que el contenido es el correcto.</p>
+            <p className="text-xs text-amber-500 dark:text-amber-400 mt-1.5">Este catálogo aún no fue publicado. Publicá para confirmar que el contenido es el correcto.</p>
           ) : (
-            <p className="text-xs text-blue-400 dark:text-blue-500 mt-1.5">Este link es publico. Quien lo tenga puede ver el catalogo y exportarlo a PDF.</p>
+            <p className="text-xs text-blue-400 dark:text-blue-500 mt-1.5">Este link es público. Quien lo tenga puede ver el catálogo y exportarlo a PDF.</p>
           )}
         </div>
 
         {/* AI Content */}
         {catalog.aiContent && (
           <div className="mb-6 bg-violet-50 dark:bg-violet-900/20 border border-violet-200 dark:border-violet-700 rounded-2xl p-5">
-            <p className="text-xs font-semibold text-violet-500 dark:text-violet-400 uppercase tracking-wide mb-2">Introduccion generada por IA</p>
+            <p className="text-xs font-semibold text-violet-500 dark:text-violet-400 uppercase tracking-wide mb-2">Introducción generada por IA</p>
             <p className="text-gray-700 dark:text-slate-300 text-sm leading-relaxed">{catalog.aiContent}</p>
           </div>
         )}
 
         {/* ── Appearance section ─────────────────────────────────────────────── */}
         <div className="mb-6 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
-          <h2 className="font-semibold text-gray-900 dark:text-white text-sm mb-4">Apariencia del catalogo</h2>
+          <h2 className="font-semibold text-gray-900 dark:text-white text-sm mb-4">Apariencia del catálogo</h2>
 
           {/* View mode */}
           <div className="mb-4">
@@ -528,31 +583,60 @@ export default function CatalogDetailPage() {
           {/* Predefined templates */}
           {bgType === 'PREDEFINED' && (
             <div className="mb-4">
+              {bgModalIdx !== null && bgTemplates[bgModalIdx]?.imageUrl && (
+                <ImageModal
+                  src={bgTemplates[bgModalIdx].imageUrl}
+                  alt={bgTemplates[bgModalIdx].name}
+                  onClose={() => setBgModalIdx(null)}
+                  prev={bgModalIdx > 0 ? () => setBgModalIdx(bgModalIdx - 1) : null}
+                  next={bgModalIdx < bgTemplates.length - 1 ? () => setBgModalIdx(bgModalIdx + 1) : null}
+                >
+                  <button
+                    onClick={() => { setBgTemplateId(bgTemplates[bgModalIdx].id); setBgModalIdx(null) }}
+                    className="absolute bottom-6 left-1/2 -translate-x-1/2 px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl shadow-lg transition-colors"
+                  >
+                    Seleccionar este fondo
+                  </button>
+                </ImageModal>
+              )}
               {bgTemplates.length === 0 ? (
                 <p className="text-xs text-gray-400 dark:text-slate-500 italic">No hay fondos prediseñados disponibles todavía.</p>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                  {bgTemplates.map(t => (
-                    <button key={t.id} onClick={() => setBgTemplateId(t.id)}
-                      className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${
-                        bgTemplateId === t.id ? 'border-blue-600 ring-2 ring-blue-500' : 'border-transparent hover:border-gray-300'
-                      }`}>
-                      {t.imageUrl ? (
-                        <img src={t.imageUrl} alt={t.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full bg-gray-100 dark:bg-slate-700" />
-                      )}
-                      {bgTemplateId === t.id && (
-                        <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
+                  {bgTemplates.map((t, idx) => (
+                    <div key={t.id} className="relative group">
+                      <button onClick={() => setBgTemplateId(t.id)}
+                        className={`relative aspect-video w-full rounded-xl overflow-hidden border-2 transition-all ${
+                          bgTemplateId === t.id ? 'border-blue-600 ring-2 ring-blue-500' : 'border-transparent hover:border-gray-300'
+                        }`}>
+                        {t.imageUrl ? (
+                          <img src={t.imageUrl} alt={t.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-100 dark:bg-slate-700" />
+                        )}
+                        {bgTemplateId === t.id && (
+                          <div className="absolute inset-0 bg-blue-600/20 flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-white drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+                        )}
+                        <div className="absolute bottom-0 inset-x-0 bg-black/40 px-1 py-0.5">
+                          <p className="text-white text-[9px] truncate">{t.name}</p>
                         </div>
+                      </button>
+                      {t.imageUrl && (
+                        <button
+                          onClick={() => setBgModalIdx(idx)}
+                          className="absolute top-1 right-1 p-0.5 bg-black/50 hover:bg-black/70 rounded text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                          title="Ver en grande"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                        </button>
                       )}
-                      <div className="absolute bottom-0 inset-x-0 bg-black/40 px-1 py-0.5">
-                        <p className="text-white text-[9px] truncate">{t.name}</p>
-                      </div>
-                    </button>
+                    </div>
                   ))}
                 </div>
               )}
@@ -566,48 +650,26 @@ export default function CatalogDetailPage() {
                 <img src={catalog.backgroundImageUrl} alt="Fondo" className="w-20 h-12 rounded-xl object-cover border border-gray-200 dark:border-slate-600" />
               )}
               <button onClick={() => bgFileRef.current.click()} disabled={uploadingBg}
-                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-                {uploadingBg ? 'Subiendo...' : 'Subir imagen de fondo'}
+                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50 min-w-[160px]">
+                {uploadingBg ? (
+                  <span className="flex items-center gap-2 w-full">
+                    <span className="flex-1 bg-gray-200 dark:bg-slate-600 rounded-full h-1.5">
+                      <span className="block bg-blue-500 h-1.5 rounded-full transition-all duration-200" style={{ width: `${bgProgress ?? 0}%` }} />
+                    </span>
+                    <span className="text-xs tabular-nums">{bgProgress ?? 0}%</span>
+                  </span>
+                ) : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Subir imagen de fondo
+                  </>
+                )}
               </button>
               <input ref={bgFileRef} type="file" accept="image/*" className="hidden" onChange={handleBgImageUpload} />
             </div>
           )}
-
-          {/* Talles y colores */}
-          <div className="border-t border-gray-100 dark:border-slate-700 pt-4 mt-4">
-            <p className="text-xs text-gray-500 dark:text-slate-400 mb-3">Talles y colores (para Facturación)</p>
-            <div className="space-y-3">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <input type="checkbox" id="sizesEnabled" checked={sizesEnabled}
-                    onChange={e => setSizesEnabled(e.target.checked)} className="rounded" />
-                  <label htmlFor="sizesEnabled" className="text-sm text-gray-700 dark:text-slate-300">Habilitar talles</label>
-                </div>
-                {sizesEnabled && (
-                  <input type="text" value={sizeOptions}
-                    onChange={e => setSizeOptions(e.target.value)}
-                    placeholder="XS, S, M, L, XL, XXL"
-                    className="w-full px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                )}
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <input type="checkbox" id="colorsEnabled" checked={colorsEnabled}
-                    onChange={e => setColorsEnabled(e.target.checked)} className="rounded" />
-                  <label htmlFor="colorsEnabled" className="text-sm text-gray-700 dark:text-slate-300">Habilitar colores</label>
-                </div>
-                {colorsEnabled && (
-                  <input type="text" value={colorOptions}
-                    onChange={e => setColorOptions(e.target.value)}
-                    placeholder="Negro, Blanco, Rojo, Azul"
-                    className="w-full px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                )}
-              </div>
-            </div>
-          </div>
 
           <button onClick={handleSaveAppearance} disabled={savingAppearance}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
@@ -634,7 +696,7 @@ export default function CatalogDetailPage() {
           </button>
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcel} />
           <input ref={productImgRef} type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
-          <input ref={extraImgRef} type="file" accept="image/*" className="hidden" onChange={handleExtraImageUpload} />
+          <input ref={extraImgRef} type="file" accept="image/*" multiple className="hidden" onChange={handleExtraImageUpload} />
           <span className="text-sm text-gray-400 dark:text-slate-500 ml-auto">
             {catalog.products?.length ?? 0} productos ({catalog.products?.filter(p => p.active).length ?? 0} visibles)
           </span>
@@ -792,6 +854,31 @@ export default function CatalogDetailPage() {
               )}
             </div>
 
+            {/* Talles y colores por producto */}
+            {(() => {
+              const rubroInfo = catalog.rubro ? getRubro(catalog.rubro) : null
+              return (
+                <div className="border-t border-gray-100 dark:border-slate-700 pt-3 space-y-4">
+                  {rubroInfo && rubroInfo.atributo && (
+                    <CsvInput
+                      label={`${rubroInfo.atributo}s disponibles`}
+                      values={productForm.productSizes}
+                      onChange={v => setProductForm(f => ({ ...f, productSizes: v }))}
+                      placeholder={rubroInfo.opcionesDefault.slice(0, 4).join(', ') || `Ej: ${rubroInfo.atributo} 1, ${rubroInfo.atributo} 2`}
+                      hint={`Ingresá las opciones separadas por coma. Ej: ${rubroInfo.opcionesDefault.slice(0, 4).join(', ')}. Cada valor separado por coma será una opción individual.`}
+                    />
+                  )}
+                  <CsvInput
+                    label="Colores disponibles"
+                    values={productForm.productColors}
+                    onChange={v => setProductForm(f => ({ ...f, productColors: v }))}
+                    placeholder="Rojo, Azul, Negro, Blanco"
+                    hint="Ingresá los colores separados por coma. Ej: Rojo, Azul, Negro, Blanco. Cada color separado por coma será una opción individual."
+                  />
+                </div>
+              )
+            })()}
+
             <div className="flex gap-2">
               <button type="submit" disabled={savingProduct}
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
@@ -854,8 +941,19 @@ export default function CatalogDetailPage() {
                       )}
                     </div>
                     {product.description && (
-                      <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">{product.description}</p>
+                      <p className="text-sm text-gray-500 dark:text-slate-400 mt-1 whitespace-pre-line">{product.description}</p>
                     )}
+                    {(() => {
+                      const sizes = (() => { try { return product.productSizes ? JSON.parse(product.productSizes) : [] } catch { return [] } })()
+                      const colors = (() => { try { return product.productColors ? JSON.parse(product.productColors) : [] } catch { return [] } })()
+                      if (!sizes.length && !colors.length) return null
+                      return (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {sizes.map(s => <span key={s} className="text-xs px-1.5 py-0.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-full">{s}</span>)}
+                          {colors.map(c => <span key={c} className="text-xs px-1.5 py-0.5 bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 rounded-full">{c}</span>)}
+                        </div>
+                      )
+                    })()}
                     {product.aiDescription && (
                       <div className="mt-2 pl-3 border-l-2 border-violet-400 dark:border-violet-500">
                         <p className="text-xs text-violet-500 dark:text-violet-400 font-medium mb-0.5">IA</p>

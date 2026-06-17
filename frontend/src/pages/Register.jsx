@@ -108,6 +108,10 @@ export default function Register() {
 
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
         <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
+          <a href="/mercato/" className="flex flex-col items-center gap-2 mb-6">
+            <img src="/logo-icon.png" alt="" className="h-24 w-24 rounded-2xl object-cover shadow-lg" />
+            <span className="font-bold text-gray-900 dark:text-white text-3xl tracking-tight">Mercato</span>
+          </a>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Crear cuenta</h1>
           {!termsAccepted && (
             <p className="text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 rounded-lg px-3 py-2 mb-4">

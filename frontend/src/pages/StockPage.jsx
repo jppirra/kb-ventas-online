@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { productsApi } from '../api/products'
 import { catalogsApi } from '../api/catalogs'
+import ImageModal from '../components/ImageModal'
 
 const emptyForm = {
   name: '', description: '', price: '', offerPrice: '', sku: '', category: '', imageUrl: '',
@@ -201,6 +202,7 @@ export default function StockPage() {
 
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [assigningProduct, setAssigningProduct] = useState(null)
+  const [imgModal, setImgModal] = useState(null)
 
   useEffect(() => {
     loadAll()
@@ -374,24 +376,27 @@ export default function StockPage() {
   }
 
   async function handleGalleryImageUpload(e) {
-    const file = e.target.files[0]
-    if (!file) return
+    const files = Array.from(e.target.files)
+    if (!files.length) return
     e.target.value = ''
 
     if (editingId) {
       setUploadingGallery(true)
-      try {
-        const { data } = await productsApi.uploadGalleryImage(editingId, file)
-        setForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
-        toast.success('Imagen agregada a la galería')
-      } catch {
-        toast.error('Error al subir imagen')
-      } finally {
-        setUploadingGallery(false)
+      let added = 0
+      for (const file of files) {
+        try {
+          const { data } = await productsApi.uploadGalleryImage(editingId, file)
+          setForm(f => ({ ...f, extraImages: [...f.extraImages, data.imageUrl] }))
+          added++
+        } catch {
+          toast.error(`Error al subir ${file.name}`)
+        }
       }
+      if (added > 0) toast.success(`${added} imagen${added > 1 ? 'es' : ''} agregada${added > 1 ? 's' : ''}`)
+      setUploadingGallery(false)
     } else {
-      setPendingGalleryFiles(prev => [...prev, file])
-      setForm(f => ({ ...f, extraImages: [...f.extraImages, URL.createObjectURL(file)] }))
+      setPendingGalleryFiles(prev => [...prev, ...files])
+      setForm(f => ({ ...f, extraImages: [...f.extraImages, ...files.map(file => URL.createObjectURL(file))] }))
     }
   }
 
@@ -501,7 +506,7 @@ export default function StockPage() {
             <div className="flex items-center gap-3">
               {form.imageUrl ? (
                 <div className="relative group shrink-0">
-                  <img src={form.imageUrl} alt="img" className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600" />
+                  <img src={form.imageUrl} alt="img" className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600 cursor-zoom-in" onClick={() => setImgModal(form.imageUrl)} />
                   <button type="button" onClick={() => setForm(f => ({ ...f, imageUrl: '' }))}
                     className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                     ×
@@ -564,7 +569,7 @@ export default function StockPage() {
               <div className="flex flex-wrap gap-2 mb-2">
                 {form.extraImages.map((url, idx) => (
                   <div key={idx} className="relative group">
-                    <img src={url} alt="" className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600" />
+                    <img src={url} alt="" className="w-16 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600 cursor-zoom-in" onClick={() => setImgModal(url)} />
                     <button type="button" onClick={() => removeGalleryImage(idx)}
                       className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity">
                       ×
@@ -672,7 +677,7 @@ export default function StockPage() {
         )}
 
         <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-        <input ref={galleryImgRef} type="file" accept="image/*" className="hidden" onChange={handleGalleryImageUpload} />
+        <input ref={galleryImgRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryImageUpload} />
 
         {/* Products list */}
         {filtered.length === 0 ? (
@@ -693,7 +698,8 @@ export default function StockPage() {
                   <div className="flex items-start gap-3">
                     {product.imageUrl ? (
                       <img src={product.imageUrl} alt={product.name}
-                        className="w-14 h-14 rounded-xl object-cover shrink-0 border border-gray-100 dark:border-slate-700" />
+                        className="w-14 h-14 rounded-xl object-cover shrink-0 border border-gray-100 dark:border-slate-700 cursor-zoom-in"
+                        onClick={() => setImgModal(product.imageUrl)} />
                     ) : (
                       <div className="w-14 h-14 rounded-xl bg-gray-100 dark:bg-slate-700 flex items-center justify-center shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -839,6 +845,8 @@ export default function StockPage() {
           </div>
         </div>
       )}
+
+      {imgModal && <ImageModal src={imgModal} onClose={() => setImgModal(null)} />}
     </Layout>
   )
 }

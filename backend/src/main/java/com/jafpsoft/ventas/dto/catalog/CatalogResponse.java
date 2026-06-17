@@ -20,6 +20,7 @@ public class CatalogResponse {
     private String backgroundColor;
     private String backgroundImageUrl;
     private Long backgroundTemplateId;
+    private String rubro;
     private boolean sizesEnabled;
     private String sizeOptions;
     private boolean colorsEnabled;
@@ -46,6 +47,7 @@ public class CatalogResponse {
         r.backgroundColor = c.getBackgroundColor();
         r.backgroundImageUrl = c.getBackgroundImageUrl();
         r.backgroundTemplateId = c.getBackgroundTemplateId();
+        r.rubro = c.getRubro();
         r.sizesEnabled = c.isSizesEnabled();
         r.sizeOptions = c.getSizeOptions();
         r.colorsEnabled = c.isColorsEnabled();

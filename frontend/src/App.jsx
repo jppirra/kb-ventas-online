@@ -26,7 +26,11 @@ import AdminOrdersPage from './pages/admin/AdminOrdersPage'
 import AdminReportsPage from './pages/admin/AdminReportsPage'
 import AdminDiagnosticsPage from './pages/admin/AdminDiagnosticsPage'
 import AdminSettingsPage from './pages/admin/AdminSettingsPage'
+import AdminNpsPage from './pages/admin/AdminNpsPage'
+import AdminContactPage from './pages/admin/AdminContactPage'
+import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage'
 import SettingsPage from './pages/SettingsPage'
+import ContactPage from './pages/ContactPage'
 import TermsPage from './pages/TermsPage'
 import PublicCatalogPage from './pages/PublicCatalogPage'
 import StockPage from './pages/StockPage'
@@ -36,14 +40,16 @@ import OrdersPage from './pages/OrdersPage'
 import TicketsPage from './pages/TicketsPage'
 import TicketDetailPage from './pages/TicketDetailPage'
 import TicketConfigPage from './pages/TicketConfigPage'
-import ClientesPage from './pages/ClientesPage'
+import CustomersPage from './pages/CustomersPage'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 function RootRedirect() {
   const { isAuthenticated, loading } = useAuth()
   if (loading) return null
-  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />
+  if (isAuthenticated) return <Navigate to="/dashboard" replace />
+  window.location.replace('/mercato/')
+  return null
 }
 
 const PUBLIC_PATHS = ['/c/', '/p/', '/s/']
@@ -78,6 +84,7 @@ export default function App() {
               <Route path="/catalogs" element={
                 <ProtectedRoute><CatalogsPage /></ProtectedRoute>
               } />
+              <Route path="/catalogos" element={<Navigate to="/catalogs" replace />} />
               <Route path="/catalogs/:id" element={
                 <ProtectedRoute><CatalogDetailPage /></ProtectedRoute>
               } />
@@ -90,6 +97,9 @@ export default function App() {
               <Route path="/locales" element={
                 <ProtectedRoute><LocalesPage /></ProtectedRoute>
               } />
+              <Route path="/customers" element={
+                <ProtectedRoute><CustomersPage /></ProtectedRoute>
+              } />
               <Route path="/orders" element={
                 <ProtectedRoute><OrdersPage /></ProtectedRoute>
               } />
@@ -101,9 +111,6 @@ export default function App() {
               } />
               <Route path="/tickets/config" element={
                 <ProtectedRoute><TicketConfigPage /></ProtectedRoute>
-              } />
-              <Route path="/clientes" element={
-                <ProtectedRoute><ClientesPage /></ProtectedRoute>
               } />
               <Route path="/settings" element={
                 <ProtectedRoute><SettingsPage /></ProtectedRoute>
@@ -120,6 +127,10 @@ export default function App() {
               <Route path="/admin/reports" element={<AdminProtectedRoute><AdminReportsPage /></AdminProtectedRoute>} />
               <Route path="/admin/diagnostics" element={<AdminProtectedRoute><AdminDiagnosticsPage /></AdminProtectedRoute>} />
               <Route path="/admin/settings" element={<AdminProtectedRoute><AdminSettingsPage /></AdminProtectedRoute>} />
+              <Route path="/admin/nps" element={<AdminProtectedRoute><AdminNpsPage /></AdminProtectedRoute>} />
+              <Route path="/admin/contact" element={<AdminProtectedRoute><AdminContactPage /></AdminProtectedRoute>} />
+              <Route path="/admin/analytics" element={<AdminProtectedRoute><AdminAnalyticsPage /></AdminProtectedRoute>} />
+              <Route path="/contact" element={<ContactPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

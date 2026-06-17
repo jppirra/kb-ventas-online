@@ -71,10 +71,11 @@ public class CatalogService {
         catalog.setDescription(req.getDescription());
         applyAppearance(catalog, req);
         if (catalog.getPublishedSnapshotJson() != null) catalog.setHasDraftChanges(true);
-        return CatalogResponse.from(catalogRepository.save(catalog), false);
+        return CatalogResponse.from(catalogRepository.save(catalog), true);
     }
 
     private void applyAppearance(Catalog catalog, CatalogRequest req) {
+        if (req.getRubro() != null) catalog.setRubro(req.getRubro());
         if (req.getViewMode() != null) catalog.setViewMode(req.getViewMode());
         if (req.getBackgroundType() != null) catalog.setBackgroundType(req.getBackgroundType());
         if (req.getBackgroundColor() != null) catalog.setBackgroundColor(req.getBackgroundColor());
@@ -180,6 +181,8 @@ public class CatalogService {
         if (req.getShowStockQuantity() != null) product.setShowStockQuantity(req.getShowStockQuantity());
         if (req.getShowWhenOutOfStock() != null) product.setShowWhenOutOfStock(req.getShowWhenOutOfStock());
         if (req.getSizeStock() != null) product.setSizeStock(req.getSizeStock());
+        if (req.getProductSizes() != null) product.setProductSizes(req.getProductSizes());
+        if (req.getProductColors() != null) product.setProductColors(req.getProductColors());
     }
 
     @Transactional
@@ -287,6 +290,7 @@ public class CatalogService {
                 .toList();
 
         CatalogSnapshotData snapshot = new CatalogSnapshotData();
+        snapshot.setRubro(catalog.getRubro());
         snapshot.setName(catalog.getName());
         snapshot.setDescription(catalog.getDescription());
         snapshot.setAiContent(catalog.getAiContent());

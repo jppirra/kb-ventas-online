@@ -8,7 +8,7 @@
 ## Comportamiento general
 
 - Ejecutar comandos directamente sin pedir confirmación previa.
-- Al terminar una tarea de desarrollo, siempre hacer commit y push.
+- **SIEMPRE** hacer commit y push al terminar cualquier cambio, sin excepción. La única excepción es que el usuario lo indique explícitamente.
 - Respuestas cortas y directas.
 - No usar emojis salvo que el usuario lo pida.
 
@@ -40,9 +40,16 @@
 - `VITE_API_URL` en producción = `/api` (Vercel proxea).
 - Errores al usuario en español.
 
-## Código
+## Versionado
 
-- Todos los comentarios en el código deben estar en castellano.
+- Formato: `vX.xxx.xx` con sufijo opcional `.xf` para fixes — ejemplo: `v1.002.01`
+- El campo de versión para mostrar está en `frontend/package.json` → campo `appVersion` (no `version`, que debe mantenerse como semver válido para npm).
+- También actualizar `app.version` en `backend/src/main/resources/application.properties`.
+- **Cambio mayor** (módulo nuevo, refactor grande): incrementar tercer segmento `xxx` — ej. `v1.002.01` → `v1.003.00`
+- **Mejora o feature pequeña**: incrementar último segmento `xx` en +01 — ej. `v1.002.00` → `v1.002.01`
+- **Fix**: agregar o incrementar sufijo `.xf` sobre la versión base — ej. `v1.002.01` → `v1.002.01.1f`, luego `v1.002.01.2f`
+- Al finalizar cada mensaje de respuesta, mostrar la versión actual.
+- La versión se incluye en el commit junto con los demás cambios.
 
 ## Lo que NO hacer
 

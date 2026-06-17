@@ -6,13 +6,19 @@ export const adminApi = {
 
   // Users
   users: () => api.get('/admin/users'),
-  toggleEnabled: (id) => api.patch(`/admin/users/${id}/toggle-enabled`),
+  toggleEnabled: (id, reason) => api.patch(`/admin/users/${id}/toggle-enabled`, { reason }),
+  userModerationLog: (id) => api.get(`/admin/users/${id}/moderation-log`),
   toggleAdmin: (id) => api.patch(`/admin/users/${id}/toggle-admin`),
   updateEmail: (id, email) => api.patch(`/admin/users/${id}/email`, { email }),
   resetPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
   resendVerification: (id) => api.post(`/admin/users/${id}/resend-verification`),
   verifyEmail: (id) => api.post(`/admin/users/${id}/verify-email`),
   deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  bulkBlock: (ids, reason) => api.post('/admin/users/bulk/block', { ids, reason }),
+  bulkUnblock: (ids, reason) => api.post('/admin/users/bulk/unblock', { ids, reason }),
+  bulkResendVerification: (ids) => api.post('/admin/users/bulk/resend-verification', { ids }),
+  bulkResetPassword: (ids) => api.post('/admin/users/bulk/reset-password', { ids }),
+  bulkDelete: (ids) => api.post('/admin/users/bulk/delete', { ids }),
 
   // Orders
   orders: () => api.get('/admin/orders'),
@@ -22,8 +28,12 @@ export const adminApi = {
 
   // Catalogs
   catalogs: () => api.get('/admin/catalogs'),
-  toggleCatalogActive: (id) => api.patch(`/admin/catalogs/${id}/toggle-active`),
+  toggleCatalogActive: (id, reason) => api.patch(`/admin/catalogs/${id}/toggle-active`, { reason }),
+  catalogModerationLog: (id) => api.get(`/admin/catalogs/${id}/moderation-log`),
   deleteCatalog: (id) => api.delete(`/admin/catalogs/${id}`),
+  bulkBlockCatalogs: (ids, reason) => api.post('/admin/catalogs/bulk/block', { ids, reason }),
+  bulkUnblockCatalogs: (ids, reason) => api.post('/admin/catalogs/bulk/unblock', { ids, reason }),
+  bulkDeleteCatalogs: (ids) => api.post('/admin/catalogs/bulk/delete', { ids }),
 
   // Email
   sendEmail: (data) => api.post('/admin/email/send', data),

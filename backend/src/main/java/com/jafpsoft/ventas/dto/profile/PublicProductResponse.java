@@ -19,6 +19,8 @@ public class PublicProductResponse {
     private String extraImagesJson;
     private String videoUrl;
     private String variantsJson;
+    private String productSizes;
+    private String productColors;
     private Integer sortOrder;
     private Boolean showStock;
     private String stockStatus;
@@ -38,6 +40,8 @@ public class PublicProductResponse {
         r.extraImagesJson = p.getExtraImagesJson();
         r.videoUrl = p.getVideoUrl();
         r.variantsJson = p.getVariantsJson();
+        r.productSizes = p.getProductSizes();
+        r.productColors = p.getProductColors();
         r.sortOrder = p.getSortOrder();
         if (p.isShowStock()) {
             r.showStock = true;
