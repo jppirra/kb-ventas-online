@@ -9,14 +9,18 @@
   <link rel="apple-touch-icon" href="/logo-icon.png" />
   <link rel="icon" type="image/png" href="/logo-icon.png" />
 
-  <!-- OG tags por defecto — las páginas dinámicas las sobreescriben vía JS -->
+  <!-- OG tags por defecto (JPG sin alpha, 1200x630 — requerido por WhatsApp/redes) -->
   <meta property="og:title" content="Mercato" />
   <meta property="og:description" content="Catálogos digitales con inteligencia artificial" />
-  <meta property="og:image" content="https://mercato.jafpsoft.com/logo-icon.png" />
-  <meta property="og:image:width" content="1536" />
-  <meta property="og:image:height" content="1024" />
+  <meta property="og:image" content="https://mercato.jafpsoft.com/og-image.jpg" />
+  <meta property="og:image:type" content="image/jpeg" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Mercato" />
+  <!-- Twitter card (WhatsApp también lo lee) -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://mercato.jafpsoft.com/og-image.jpg" />
   <script>
     (function() {
       if (localStorage.getItem('theme') === 'dark') {
