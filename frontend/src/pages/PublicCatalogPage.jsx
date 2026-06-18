@@ -1060,6 +1060,72 @@ export default function PublicCatalogPage({ previewMode = false }) {
     return matchCat && matchSearch && matchSize && matchColor
   })
 
+  let sectionOrderParsed = []
+  try { sectionOrderParsed = catalog.sectionOrder ? JSON.parse(catalog.sectionOrder) : [] } catch {}
+  const hasSections = sectionOrderParsed.length > 0 && !activeCategory && !activeSize && !activeColor && !search
+
+  function groupBySection(products) {
+    const grouped = []
+    const used = new Set()
+    sectionOrderParsed.forEach(sec => {
+      const inSection = products.filter(p => productCategories(p).includes(sec))
+      if (inSection.length > 0) {
+        grouped.push({ section: sec, products: inSection })
+        inSection.forEach(p => used.add(p.id))
+      }
+    })
+    const ungrouped = products.filter(p => !used.has(p.id))
+    if (ungrouped.length > 0) grouped.push({ section: null, products: ungrouped })
+    return grouped
+  }
+
+  function renderProducts(products, extraClass = '') {
+    if (viewMode === 'LIST') return (
+      <div className={`flex flex-col gap-4 ${extraClass}`}>
+        {products.map(p => (
+          <ProductCardList key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
+            inCart={!!cart[p.id]}
+            selectedVariants={variantSelections[p.id] || {}}
+            onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
+            onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
+            onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+            rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
+          />
+        ))}
+      </div>
+    )
+    if (viewMode === 'MOSAIC') return (
+      <div className={`columns-2 sm:columns-3 gap-4 space-y-4 ${extraClass}`}>
+        {products.map(p => (
+          <div key={p.id} className="break-inside-avoid">
+            <ProductCardGrid product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
+              inCart={!!cart[p.id]}
+              selectedVariants={variantSelections[p.id] || {}}
+              onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
+              onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
+              onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+              rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
+            />
+          </div>
+        ))}
+      </div>
+    )
+    return (
+      <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 ${extraClass}`}>
+        {products.map(p => (
+          <ProductCardGrid key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
+            inCart={!!cart[p.id]}
+            selectedVariants={variantSelections[p.id] || {}}
+            onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
+            onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
+            onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+            rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
+          />
+        ))}
+      </div>
+    )
+  }
+
   return (
     <>
       <style>{`
@@ -1253,7 +1319,7 @@ export default function PublicCatalogPage({ previewMode = false }) {
                   {categories.map(cat => (
                     <button key={cat} onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
                       className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
-                      {cat} ({allProducts.filter(p => p.category === cat).length})
+                      {cat} ({allProducts.filter(p => productCategories(p).includes(cat)).length})
                     </button>
                   ))}
                 </div>
@@ -1295,48 +1361,20 @@ export default function PublicCatalogPage({ previewMode = false }) {
               <div className="text-center py-16 text-gray-400">
                 {search ? `Sin resultados para "${search}".` : 'Sin productos en este catálogo.'}
               </div>
-            ) : viewMode === 'LIST' ? (
-              <div className="flex flex-col gap-4">
-                {visibleProducts.map(p => (
-                  <ProductCardList key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
-                    inCart={!!cart[p.id]}
-                    selectedVariants={variantSelections[p.id] || {}}
-                    onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
-                    onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
-                    onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
-                    rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
-                  />
-                ))}
-              </div>
-            ) : viewMode === 'MOSAIC' ? (
-              <div className="columns-2 sm:columns-3 gap-4 space-y-4">
-                {visibleProducts.map(p => (
-                  <div key={p.id} className="break-inside-avoid">
-                    <ProductCardGrid product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
-                      inCart={!!cart[p.id]}
-                      selectedVariants={variantSelections[p.id] || {}}
-                      onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
-                      onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
-                      onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
-                      rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
-                    />
+            ) : hasSections ? (
+              <div className="space-y-8">
+                {groupBySection(visibleProducts).map(({ section, products }) => (
+                  <div key={section ?? '__ungrouped'}>
+                    {section && (
+                      <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-slate-700">
+                        {section}
+                      </h3>
+                    )}
+                    {renderProducts(products)}
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {visibleProducts.map(p => (
-                  <ProductCardGrid key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
-                    inCart={!!cart[p.id]}
-                    selectedVariants={variantSelections[p.id] || {}}
-                    onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
-                    onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
-                    onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
-                    rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
-                  />
-                ))}
-              </div>
-            )}
+            ) : renderProducts(visibleProducts)}
           </div>
         </div>
 

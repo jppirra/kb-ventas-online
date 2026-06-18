@@ -145,11 +145,15 @@ function StockMatrixInput({ sizes, sizeColorMap, flatColors, matrix, onChange, a
   )
 }
 
-function CsvInput({ label, values, onChange, placeholder, hint }) {
+function toTitleCase(str) {
+  return str.replace(/\b\w/g, c => c.toUpperCase())
+}
+
+function CsvInput({ label, values, onChange, placeholder, hint, titleCase = false }) {
   const [text, setText] = useState(() => values.join(', '))
   useEffect(() => { setText(values.join(', ')) }, [values.join(',')])
   function commit() {
-    const arr = text.split(',').map(v => v.trim()).filter(Boolean)
+    const arr = text.split(',').map(v => v.trim()).filter(Boolean).map(v => titleCase ? toTitleCase(v) : v)
     onChange(arr)
     setText(arr.join(', '))
   }
@@ -209,6 +213,15 @@ export default function CatalogDetailPage() {
   const dragOverIdx = useRef(null)
   const [draggingId, setDraggingId] = useState(null)
   const [dragOverId, setDragOverId] = useState(null)
+  const productFormRef = useRef(null)
+  const [showReorderModal, setShowReorderModal] = useState(false)
+  const [reorderDraft, setReorderDraft] = useState([])
+  const dragReorderIdx = useRef(null)
+  const dragOverReorderIdx = useRef(null)
+  const [draggingReorderId, setDraggingReorderId] = useState(null)
+  const [dragOverReorderId, setDragOverReorderId] = useState(null)
+  const [sectionOrder, setSectionOrder] = useState([])
+  const [newSectionName, setNewSectionName] = useState('')
 
   // Appearance state (synced on load, saved separately)
   const [viewMode, setViewMode] = useState('GRID')
@@ -238,6 +251,7 @@ export default function CatalogDetailPage() {
       setBgColor(data.backgroundColor || '#f8fafc')
       setBgTemplateId(data.backgroundTemplateId || null)
       setCatalogDiscount(data.discount ?? '')
+      try { setSectionOrder(data.sectionOrder ? JSON.parse(data.sectionOrder) : []) } catch { setSectionOrder([]) }
       if (data.status === 'GENERATING') startPolling()
     } catch {
       toast.error('Catálogo no encontrado')
@@ -339,6 +353,46 @@ export default function CatalogDetailPage() {
       .catch(() => toast.error('Error al guardar el orden'))
   }
 
+  function handleModalDragStart(e, index, productId) {
+    dragReorderIdx.current = index
+    setDraggingReorderId(productId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  function handleModalDragEnter(index, productId) {
+    dragOverReorderIdx.current = index
+    setDragOverReorderId(productId)
+  }
+
+  function handleModalDragEnd() {
+    const from = dragReorderIdx.current
+    const to = dragOverReorderIdx.current
+    setDraggingReorderId(null)
+    setDragOverReorderId(null)
+    dragReorderIdx.current = null
+    dragOverReorderIdx.current = null
+    if (from === null || to === null || from === to) return
+    const items = [...reorderDraft]
+    const [moved] = items.splice(from, 1)
+    items.splice(to, 0, moved)
+    setReorderDraft(items.map((p, i) => ({ ...p, sortOrder: i })))
+  }
+
+  async function handleSaveReorder() {
+    const withOrder = reorderDraft.map((p, i) => ({ ...p, sortOrder: i }))
+    setCatalog(c => ({ ...c, products: withOrder }))
+    setShowReorderModal(false)
+    try {
+      await catalogsApi.reorderProducts(id, withOrder.map(p => ({ id: p.id, sortOrder: p.sortOrder })))
+    } catch {
+      toast.error('Error al guardar el orden')
+    }
+  }
+
+  function scrollToForm() {
+    setTimeout(() => productFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60)
+  }
+
   function cloneProduct(product) {
     let extraImages = []
     try { extraImages = product.extraImagesJson ? JSON.parse(product.extraImagesJson) : [] } catch {}
@@ -374,6 +428,7 @@ export default function CatalogDetailPage() {
       stockMatrix,
     })
     setShowProductForm(true)
+    scrollToForm()
   }
 
   function openProductForm(product = null) {
@@ -417,12 +472,15 @@ export default function CatalogDetailPage() {
       setProductForm(emptyProduct)
     }
     setShowProductForm(true)
+    scrollToForm()
   }
 
   async function handleSaveProduct(e) {
     e.preventDefault()
     if (!productForm.name.trim()) return
     setSavingProduct(true)
+    const wasEditing = editingProductId
+    const prevProducts = catalog.products
     const hasMatrix = Object.keys(productForm.stockMatrix).length > 0
     const payload = {
       ...productForm,
@@ -437,15 +495,34 @@ export default function CatalogDetailPage() {
       stockMatrix: hasMatrix ? JSON.stringify(productForm.stockMatrix) : null,
     }
     try {
-      if (editingProductId) {
-        await catalogsApi.updateProduct(id, editingProductId, payload)
+      if (wasEditing) {
+        await catalogsApi.updateProduct(id, wasEditing, payload)
         toast.success('Producto actualizado')
       } else {
         await catalogsApi.addProduct(id, payload)
         toast.success('Producto agregado')
       }
       setShowProductForm(false)
-      load()
+      // Reload but preserve current drag-and-drop order
+      const { data: fresh } = await catalogsApi.get(id)
+      if (wasEditing) {
+        setCatalog(prev => ({
+          ...fresh,
+          products: prev.products.map(p => fresh.products.find(u => u.id === p.id) || p).filter(Boolean)
+        }))
+      } else {
+        const currentIds = new Set(prevProducts.map(p => p.id))
+        const newProd = fresh.products.find(p => !currentIds.has(p.id))
+        const preserved = [
+          ...prevProducts.map(p => fresh.products.find(u => u.id === p.id) || p),
+          ...(newProd ? [newProd] : [])
+        ]
+        const withOrder = preserved.map((p, i) => ({ ...p, sortOrder: i }))
+        setCatalog({ ...fresh, products: withOrder })
+        if (newProd) {
+          catalogsApi.reorderProducts(id, withOrder.map(p => ({ id: p.id, sortOrder: p.sortOrder }))).catch(() => {})
+        }
+      }
     } catch {
       toast.error('Error al guardar producto')
     } finally {
@@ -586,6 +663,7 @@ export default function CatalogDetailPage() {
         backgroundTemplateId: bgType === 'PREDEFINED' ? bgTemplateId : null,
         backgroundImageUrl: bgType === 'CUSTOM' ? catalog.backgroundImageUrl : null,
         discount: catalogDiscount !== '' ? parseInt(catalogDiscount) : 0,
+        sectionOrder: sectionOrder.length > 0 ? JSON.stringify(sectionOrder) : '',
       }
       const { data } = await catalogsApi.update(id, payload)
       setCatalog(c => ({ ...c, ...data, products: data.products ?? c.products }))
@@ -907,6 +985,67 @@ export default function CatalogDetailPage() {
             <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Si un producto tiene precio oferta, se aplica el mayor descuento de los dos.</p>
           </div>
 
+          {/* Sections / groupers */}
+          <div>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2 font-medium">Secciones (agrupadores)</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mb-3">Cuando hay secciones definidas, los productos se agrupan bajo el título de la primera categoría que coincida. Los productos sin sección quedan al final.</p>
+            {sectionOrder.length > 0 && (
+              <div className="space-y-1.5 mb-3">
+                {sectionOrder.map((sec, idx) => (
+                    <div key={sec + idx} className="flex items-center gap-2">
+                      <span className="text-gray-300 dark:text-slate-600 cursor-grab shrink-0">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                          <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+                          <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                          <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                        </svg>
+                      </span>
+                      <span className="flex-1 text-sm text-gray-700 dark:text-slate-200 px-2 py-1 bg-gray-50 dark:bg-slate-700 rounded-lg">{sec}</span>
+                      <button type="button" onClick={() => setSectionOrder(s => s.filter((_, i) => i !== idx))}
+                        className="text-gray-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors p-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-2">
+              {/* Chips de categorías existentes no agregadas */}
+              {(() => {
+                const existing = [...new Set(
+                  (catalog.products || []).flatMap(p => p.category ? p.category.split(',').map(c => c.trim()).filter(Boolean) : [])
+                )].filter(c => !sectionOrder.includes(c))
+                return existing.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5 mb-2 w-full">
+                    {existing.map(c => (
+                      <button key={c} type="button" onClick={() => setSectionOrder(s => [...s, c])}
+                        className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+                        + {c}
+                      </button>
+                    ))}
+                  </div>
+                ) : null
+              })()}
+            </div>
+            <div className="flex gap-2 mt-1">
+              <input
+                type="text"
+                value={newSectionName}
+                onChange={e => setNewSectionName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); if (newSectionName.trim() && !sectionOrder.includes(newSectionName.trim())) { setSectionOrder(s => [...s, toTitleCase(newSectionName.trim())]); setNewSectionName('') } } }}
+                placeholder="Nueva sección personalizada..."
+                className="flex-1 px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button type="button"
+                onClick={() => { if (newSectionName.trim() && !sectionOrder.includes(newSectionName.trim())) { setSectionOrder(s => [...s, toTitleCase(newSectionName.trim())]); setNewSectionName('') } }}
+                className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-sm rounded-xl transition-colors">
+                Agregar
+              </button>
+            </div>
+          </div>
+
           <button onClick={handleSaveAppearance} disabled={savingAppearance}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
             {savingAppearance ? 'Guardando...' : 'Guardar apariencia'}
@@ -933,6 +1072,15 @@ export default function CatalogDetailPage() {
           <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleExcel} />
           <input ref={productImgRef} type="file" accept="image/*" className="hidden" onChange={handleProductImageUpload} />
           <input ref={extraImgRef} type="file" accept="image/*" multiple className="hidden" onChange={handleExtraImageUpload} />
+          {(catalog.products?.length ?? 0) > 1 && (
+            <button onClick={() => { setReorderDraft([...catalog.products]); setShowReorderModal(true) }}
+              className="px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+              </svg>
+              Reordenar
+            </button>
+          )}
           <span className="text-sm text-gray-400 dark:text-slate-500 ml-auto">
             {catalog.products?.length ?? 0} productos ({catalog.products?.filter(p => p.active).length ?? 0} visibles)
           </span>
@@ -940,7 +1088,7 @@ export default function CatalogDetailPage() {
 
         {/* Product form */}
         {showProductForm && (
-          <form onSubmit={handleSaveProduct} className="mb-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 space-y-4">
+          <form ref={productFormRef} onSubmit={handleSaveProduct} className="mb-5 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5 space-y-4">
             <h3 className="font-semibold text-gray-900 dark:text-white text-sm">
               {editingProductId ? 'Editar producto' : 'Nuevo producto'}
             </h3>
@@ -1048,8 +1196,9 @@ export default function CatalogDetailPage() {
                   label="Categorías"
                   values={productForm.categories}
                   onChange={v => setProductForm(f => ({ ...f, categories: v }))}
-                  placeholder="Ej: abrigo, campera"
-                  hint="Ingresá una o más categorías separadas por coma. Ej: abrigo, campera. Cada valor será una categoría independiente para filtrar."
+                  placeholder="Ej: Abrigo, Campera"
+                  hint="Ingresá una o más categorías separadas por coma. Se guarda en formato título (primera letra mayúscula)."
+                  titleCase
                 />
               </div>
             </div>
@@ -1343,6 +1492,56 @@ export default function CatalogDetailPage() {
               className="mt-4 w-full py-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 transition-colors">
               Cancelar
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Reordenar productos */}
+      {showReorderModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowReorderModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 w-full max-w-md max-h-[80vh] flex flex-col" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Reordenar productos</h3>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mb-4">Arrastrá los productos para cambiar el orden</p>
+            <div className="overflow-y-auto space-y-1.5 flex-1">
+              {reorderDraft.map((p, index) => (
+                <div
+                  key={p.id}
+                  draggable
+                  onDragStart={e => handleModalDragStart(e, index, p.id)}
+                  onDragEnter={() => handleModalDragEnter(index, p.id)}
+                  onDragOver={e => e.preventDefault()}
+                  onDragEnd={handleModalDragEnd}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all cursor-default select-none
+                    ${draggingReorderId === p.id ? 'opacity-40 scale-95' : ''}
+                    ${dragOverReorderId === p.id && draggingReorderId !== p.id ? 'border-blue-400 dark:border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800'}`}
+                >
+                  <div className="cursor-grab active:cursor-grabbing text-gray-300 dark:text-slate-600 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                      <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+                      <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                      <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+                    </svg>
+                  </div>
+                  {p.imageUrl && (
+                    <img src={p.imageUrl} alt="" className="w-8 h-8 rounded-lg object-cover shrink-0" />
+                  )}
+                  <span className={`text-sm flex-1 truncate ${!p.active ? 'text-gray-400 dark:text-slate-500' : 'text-gray-900 dark:text-white'}`}>
+                    {p.name}
+                  </span>
+                  {!p.active && <span className="text-xs text-gray-400 dark:text-slate-500 shrink-0">oculto</span>}
+                </div>
+              ))}
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={handleSaveReorder}
+                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-xl transition-colors">
+                Guardar orden
+              </button>
+              <button onClick={() => setShowReorderModal(false)}
+                className="px-4 py-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 transition-colors">
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       )}

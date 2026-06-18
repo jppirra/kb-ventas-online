@@ -116,6 +116,7 @@ public class CatalogService {
         if (req.getColorsEnabled() != null) catalog.setColorsEnabled(req.getColorsEnabled());
         if (req.getColorOptions() != null) catalog.setColorOptions(req.getColorOptions());
         if (req.getDiscount() != null) catalog.setDiscount(req.getDiscount() > 0 ? req.getDiscount() : null);
+        if (req.getSectionOrder() != null) catalog.setSectionOrder(req.getSectionOrder().isEmpty() ? null : req.getSectionOrder());
     }
 
     @Transactional
@@ -332,6 +333,7 @@ public class CatalogService {
         snapshot.setBackgroundColor(catalog.getBackgroundColor());
         snapshot.setBackgroundImageUrl(catalog.getBackgroundImageUrl());
         snapshot.setDiscount(catalog.getDiscount());
+        snapshot.setSectionOrder(catalog.getSectionOrder());
         snapshot.setProducts(activeProducts.stream().map(PublicProductResponse::from).toList());
 
         try {

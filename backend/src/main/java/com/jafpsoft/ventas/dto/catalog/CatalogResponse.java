@@ -28,6 +28,7 @@ public class CatalogResponse {
     private Long ownerUserId;
     private Boolean collaboratorCanPublish; // null = owner/admin (always can), true/false = collaborator permission
     private Integer discount;
+    private String sectionOrder;
     private Long storeId;
     private int productCount;
     private Long viewCount;
@@ -57,6 +58,7 @@ public class CatalogResponse {
         r.colorOptions = c.getColorOptions();
         r.ownerUserId = c.getUserId();
         r.discount = c.getDiscount();
+        r.sectionOrder = c.getSectionOrder();
         r.storeId = c.getStoreId();
         r.productCount = c.getProductCount();
         r.viewCount = c.getViewCount();

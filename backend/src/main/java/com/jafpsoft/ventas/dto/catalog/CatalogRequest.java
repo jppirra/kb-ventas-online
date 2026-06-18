@@ -19,4 +19,5 @@ public class CatalogRequest {
     private Boolean colorsEnabled;
     private String colorOptions;
     private Integer discount;
+    private String sectionOrder;
 }

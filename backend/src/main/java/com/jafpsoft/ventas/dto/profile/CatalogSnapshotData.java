@@ -10,6 +10,7 @@ import java.util.List;
 public class CatalogSnapshotData {
     private String rubro;
     private Integer discount;
+    private String sectionOrder;
     private String name;
     private String description;
     private String aiContent;

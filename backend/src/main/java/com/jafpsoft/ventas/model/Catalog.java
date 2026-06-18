@@ -107,6 +107,9 @@ public class Catalog {
     @Column(name = "discount")
     private Integer discount;
 
+    @Column(name = "section_order", columnDefinition = "TEXT")
+    private String sectionOrder;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 
