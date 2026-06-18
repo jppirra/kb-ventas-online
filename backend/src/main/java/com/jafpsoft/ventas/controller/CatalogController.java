@@ -55,6 +55,18 @@ public class CatalogController {
         catalogService.delete(id, getUserId(user));
     }
 
+    @PostMapping("/from-stock")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CatalogResponse createFromStock(@RequestBody Map<String, Object> body,
+                                           @AuthenticationPrincipal CustomUserDetails user) {
+        String name = (String) body.get("name");
+        @SuppressWarnings("unchecked")
+        List<Long> productIds = ((List<?>) body.get("productIds")).stream()
+                .map(v -> Long.valueOf(v.toString()))
+                .toList();
+        return catalogService.createFromStock(name, productIds, getUserId(user));
+    }
+
     @PostMapping("/{id}/products")
     @ResponseStatus(HttpStatus.CREATED)
     public ProductResponse addProduct(@PathVariable Long id,

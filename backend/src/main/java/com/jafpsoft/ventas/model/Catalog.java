@@ -104,6 +104,9 @@ public class Catalog {
     @Builder.Default
     private boolean hasDraftChanges = true;
 
+    @Column(name = "discount")
+    private Integer discount;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

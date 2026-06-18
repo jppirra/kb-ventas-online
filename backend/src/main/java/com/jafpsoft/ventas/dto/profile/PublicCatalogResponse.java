@@ -20,6 +20,7 @@ public class PublicCatalogResponse {
     private String backgroundImageUrl;
     private Long backgroundTemplateId;
     private String rubro;
+    private Integer discount;
     private Long viewCount;
     private List<PublicProductResponse> products;
 
@@ -36,6 +37,7 @@ public class PublicCatalogResponse {
         r.backgroundColor = snap.getBackgroundColor();
         r.backgroundImageUrl = snap.getBackgroundImageUrl();
         r.rubro = snap.getRubro();
+        r.discount = snap.getDiscount();
         r.viewCount = c.getViewCount();
         r.products = snap.getProducts();
         return r;
@@ -55,6 +57,7 @@ public class PublicCatalogResponse {
         r.backgroundImageUrl = c.getBackgroundImageUrl();
         r.backgroundTemplateId = c.getBackgroundTemplateId();
         r.rubro = c.getRubro();
+        r.discount = c.getDiscount();
         r.viewCount = c.getViewCount();
         r.products = c.getProducts().stream()
                 .filter(p -> p.isActive())

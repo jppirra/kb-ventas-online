@@ -36,7 +36,7 @@ const BG_TYPES = [
 import { productsApi } from '../api/products'
 import { RUBROS, getRubro } from '../config/rubros'
 
-const emptyProduct = { name: '', description: '', price: '', sku: '', categories: [], imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: {}, stockMatrix: {} }
+const emptyProduct = { name: '', description: '', price: '', offerPrice: '', sku: '', categories: [], imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: {}, stockMatrix: {} }
 
 function SizeColorEditor({ sizes, sizeColorMap, onChange }) {
   if (sizes.length === 0) return (
@@ -213,6 +213,7 @@ export default function CatalogDetailPage() {
   const [bgModalIdx, setBgModalIdx] = useState(null)
   const [uploadingBg, setUploadingBg] = useState(false)
   const [bgProgress, setBgProgress] = useState(null)
+  const [catalogDiscount, setCatalogDiscount] = useState('')
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
 
@@ -230,6 +231,7 @@ export default function CatalogDetailPage() {
       setBgType(data.backgroundType || 'NONE')
       setBgColor(data.backgroundColor || '#f8fafc')
       setBgTemplateId(data.backgroundTemplateId || null)
+      setCatalogDiscount(data.discount ?? '')
       if (data.status === 'GENERATING') startPolling()
     } catch {
       toast.error('Catálogo no encontrado')
@@ -325,6 +327,7 @@ export default function CatalogDetailPage() {
         name: product.name || '',
         description: product.description || '',
         price: product.price ?? '',
+        offerPrice: product.offerPrice ?? '',
         sku: product.sku || '',
         categories,
         imageUrl: product.imageUrl || '',
@@ -354,6 +357,7 @@ export default function CatalogDetailPage() {
       ...productForm,
       category: productForm.categories.length > 0 ? productForm.categories.join(', ') : null,
       price: productForm.price !== '' ? parseFloat(productForm.price) : null,
+      offerPrice: productForm.offerPrice !== '' ? parseFloat(productForm.offerPrice) : null,
       stockCount: !hasMatrix && productForm.stockCount !== '' ? parseInt(productForm.stockCount) : null,
       extraImagesJson: productForm.extraImages.length > 0 ? JSON.stringify(productForm.extraImages) : null,
       videoUrl: productForm.videoUrl || null,
@@ -510,6 +514,7 @@ export default function CatalogDetailPage() {
         backgroundColor: bgType === 'COLOR' ? bgColor : null,
         backgroundTemplateId: bgType === 'PREDEFINED' ? bgTemplateId : null,
         backgroundImageUrl: bgType === 'CUSTOM' ? catalog.backgroundImageUrl : null,
+        discount: catalogDiscount !== '' ? parseInt(catalogDiscount) : 0,
       }
       const { data } = await catalogsApi.update(id, payload)
       setCatalog(c => ({ ...c, ...data, products: data.products ?? c.products }))
@@ -791,6 +796,29 @@ export default function CatalogDetailPage() {
             </div>
           )}
 
+          {/* Discount */}
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Descuento general del catálogo</p>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number" min="0" max="100" step="1"
+                  value={catalogDiscount}
+                  onChange={e => setCatalogDiscount(e.target.value)}
+                  placeholder="0"
+                  className="w-20 px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-500 dark:text-slate-400">%</span>
+              </div>
+              {catalogDiscount > 0 && (
+                <span className="text-xs px-2 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-full font-medium">
+                  -{catalogDiscount}% en todos los productos
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Si un producto tiene precio oferta, se aplica el mayor descuento de los dos.</p>
+          </div>
+
           <button onClick={handleSaveAppearance} disabled={savingAppearance}
             className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
             {savingAppearance ? 'Guardando...' : 'Guardar apariencia'}
@@ -915,6 +943,12 @@ export default function CatalogDetailPage() {
                 <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Precio</label>
                 <input type="number" step="0.01" value={productForm.price} onChange={e => setProductForm(f => ({ ...f, price: e.target.value }))}
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Precio oferta</label>
+                <input type="number" step="0.01" value={productForm.offerPrice} onChange={e => setProductForm(f => ({ ...f, offerPrice: e.target.value }))}
+                  placeholder="Opcional"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-400 dark:placeholder-slate-500" />
               </div>
               <div>
                 <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">SKU</label>

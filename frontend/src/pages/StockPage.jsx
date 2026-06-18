@@ -126,6 +126,10 @@ export default function StockPage() {
   const [showAssignModal, setShowAssignModal] = useState(false)
   const [assigningProduct, setAssigningProduct] = useState(null)
   const [imgModal, setImgModal] = useState(null)
+  const [selected, setSelected] = useState(new Set())
+  const [showNewCatalogModal, setShowNewCatalogModal] = useState(false)
+  const [newCatalogName, setNewCatalogName] = useState('')
+  const [creatingCatalog, setCreatingCatalog] = useState(false)
 
   useEffect(() => {
     loadAll()
@@ -328,6 +332,39 @@ export default function StockPage() {
       setAssigningProduct(null)
     } catch {
       toast.error('Error al asignar producto')
+    }
+  }
+
+  function toggleSelect(id) {
+    setSelected(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selected.size === filtered.length) {
+      setSelected(new Set())
+    } else {
+      setSelected(new Set(filtered.map(p => p.id)))
+    }
+  }
+
+  async function handleCreateCatalogFromSelected() {
+    if (!newCatalogName.trim() || selected.size === 0) return
+    setCreatingCatalog(true)
+    try {
+      const { data } = await catalogsApi.createFromStock({ name: newCatalogName.trim(), productIds: [...selected] })
+      toast.success(`Catálogo "${data.name}" creado con ${selected.size} productos`)
+      setSelected(new Set())
+      setShowNewCatalogModal(false)
+      setNewCatalogName('')
+      navigate(`/catalogs/${data.id}`)
+    } catch {
+      toast.error('Error al crear el catálogo')
+    } finally {
+      setCreatingCatalog(false)
     }
   }
 
@@ -585,6 +622,20 @@ export default function StockPage() {
         <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
         <input ref={galleryImgRef} type="file" accept="image/*" multiple className="hidden" onChange={handleGalleryImageUpload} />
 
+        {/* Select all bar */}
+        {filtered.length > 0 && (
+          <div className="flex items-center gap-2 mb-2">
+            <input type="checkbox" id="selectAll"
+              checked={selected.size > 0 && selected.size === filtered.length}
+              ref={el => { if (el) el.indeterminate = selected.size > 0 && selected.size < filtered.length }}
+              onChange={toggleSelectAll}
+              className="w-4 h-4 rounded accent-blue-600 cursor-pointer" />
+            <label htmlFor="selectAll" className="text-xs text-gray-500 dark:text-slate-400 cursor-pointer select-none">
+              Seleccionar todos
+            </label>
+          </div>
+        )}
+
         {/* Products list */}
         {filtered.length === 0 ? (
           <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700">
@@ -599,8 +650,10 @@ export default function StockPage() {
               const hasVideo = !!product.videoUrl
               const hasVariants = product.variantsJson && parseVariants(product.variantsJson).length > 0
               return (
-                <div key={product.id} className={`bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 ${!product.active && product.catalogId ? 'opacity-60' : ''}`}>
+                <div key={product.id} className={`bg-white dark:bg-slate-800 rounded-2xl border p-4 transition-colors ${selected.has(product.id) ? 'border-blue-400 dark:border-blue-500 bg-blue-50/30 dark:bg-blue-900/10' : 'border-gray-200 dark:border-slate-700'} ${!product.active && product.catalogId ? 'opacity-60' : ''}`}>
                   <div className="flex items-start gap-3">
+                    <input type="checkbox" checked={selected.has(product.id)} onChange={() => toggleSelect(product.id)}
+                      className="mt-1 w-4 h-4 rounded accent-blue-600 cursor-pointer shrink-0" />
                     {product.imageUrl ? (
                       <img src={product.imageUrl} alt={product.name}
                         className="w-14 h-14 rounded-xl object-cover shrink-0 border border-gray-100 dark:border-slate-700 cursor-zoom-in"
@@ -745,6 +798,52 @@ export default function StockPage() {
       )}
 
       {imgModal && <ImageModal src={imgModal} onClose={() => setImgModal(null)} />}
+
+      {/* Floating selection bar */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 bg-gray-900 dark:bg-slate-700 text-white rounded-2xl shadow-xl px-5 py-3 flex items-center gap-4">
+          <span className="text-sm font-medium">{selected.size} producto{selected.size !== 1 ? 's' : ''} seleccionado{selected.size !== 1 ? 's' : ''}</span>
+          <button
+            onClick={() => { setNewCatalogName(''); setShowNewCatalogModal(true) }}
+            className="px-4 py-1.5 bg-blue-500 hover:bg-blue-400 text-white text-sm font-medium rounded-xl transition-colors">
+            Crear catálogo
+          </button>
+          <button onClick={() => setSelected(new Set())} className="text-gray-400 hover:text-white transition-colors text-sm">
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      {/* New catalog modal */}
+      {showNewCatalogModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowNewCatalogModal(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Nuevo catálogo desde selección</h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">{selected.size} producto{selected.size !== 1 ? 's' : ''} seleccionado{selected.size !== 1 ? 's' : ''}</p>
+            <input
+              type="text"
+              autoFocus
+              value={newCatalogName}
+              onChange={e => setNewCatalogName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleCreateCatalogFromSelected()}
+              placeholder="Nombre del catálogo..."
+              className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm mb-4"
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={handleCreateCatalogFromSelected}
+                disabled={creatingCatalog || !newCatalogName.trim()}
+                className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+                {creatingCatalog ? 'Creando...' : 'Crear catálogo'}
+              </button>
+              <button onClick={() => setShowNewCatalogModal(false)}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-slate-400 border border-gray-300 dark:border-slate-600 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }

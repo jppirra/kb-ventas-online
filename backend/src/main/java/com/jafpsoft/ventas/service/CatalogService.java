@@ -85,6 +85,7 @@ public class CatalogService {
         if (req.getSizeOptions() != null) catalog.setSizeOptions(req.getSizeOptions());
         if (req.getColorsEnabled() != null) catalog.setColorsEnabled(req.getColorsEnabled());
         if (req.getColorOptions() != null) catalog.setColorOptions(req.getColorOptions());
+        if (req.getDiscount() != null) catalog.setDiscount(req.getDiscount() > 0 ? req.getDiscount() : null);
     }
 
     @Transactional
@@ -300,6 +301,7 @@ public class CatalogService {
         snapshot.setBackgroundType(catalog.getBackgroundType());
         snapshot.setBackgroundColor(catalog.getBackgroundColor());
         snapshot.setBackgroundImageUrl(catalog.getBackgroundImageUrl());
+        snapshot.setDiscount(catalog.getDiscount());
         snapshot.setProducts(activeProducts.stream().map(PublicProductResponse::from).toList());
 
         try {
@@ -310,6 +312,25 @@ public class CatalogService {
         catalog.setPublishedAt(LocalDateTime.now());
         catalog.setHasDraftChanges(false);
         return CatalogResponse.from(catalogRepository.save(catalog), false);
+    }
+
+    @Transactional
+    public CatalogResponse createFromStock(String name, List<Long> productIds, Long userId) {
+        Catalog catalog = Catalog.builder()
+                .userId(userId)
+                .publicId(UUID.randomUUID().toString())
+                .name(name)
+                .build();
+        catalogRepository.save(catalog);
+        for (Long pid : productIds) {
+            productRepository.findByIdAndUserId(pid, userId).ifPresent(p -> {
+                p.setCatalog(catalog);
+                p.setActive(true);
+                productRepository.save(p);
+            });
+        }
+        return CatalogResponse.from(catalogRepository.findById(catalog.getId())
+                .orElseThrow(), false);
     }
 
     private void markDraftChanged(Catalog catalog) {

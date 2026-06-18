@@ -25,6 +25,7 @@ public class CatalogResponse {
     private String sizeOptions;
     private boolean colorsEnabled;
     private String colorOptions;
+    private Integer discount;
     private Long storeId;
     private int productCount;
     private Long viewCount;
@@ -52,6 +53,7 @@ public class CatalogResponse {
         r.sizeOptions = c.getSizeOptions();
         r.colorsEnabled = c.isColorsEnabled();
         r.colorOptions = c.getColorOptions();
+        r.discount = c.getDiscount();
         r.storeId = c.getStoreId();
         r.productCount = c.getProductCount();
         r.viewCount = c.getViewCount();

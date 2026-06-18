@@ -9,6 +9,7 @@ import java.util.List;
 @NoArgsConstructor
 public class CatalogSnapshotData {
     private String rubro;
+    private Integer discount;
     private String name;
     private String description;
     private String aiContent;

@@ -403,7 +403,7 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
       <div className="p-4 flex flex-col flex-1 gap-2">
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{product.name}</h4>
-          <PriceDisplay price={product.price} offerPrice={product.offerPrice} />
+          <PriceDisplay price={product.price} offerPrice={effectiveOffer(product)} />
         </div>
         {product.category && (
           <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full self-start">{product.category}</span>
@@ -500,7 +500,7 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
       <div className="p-4 flex flex-col flex-1 gap-1.5">
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-semibold text-gray-900 dark:text-white text-base leading-tight">{product.name}</h4>
-          <PriceDisplay price={product.price} offerPrice={product.offerPrice} size="base" />
+          <PriceDisplay price={product.price} offerPrice={effectiveOffer(product)} size="base" />
         </div>
         {product.sku && <p className="text-xs text-gray-400">SKU: {product.sku}</p>}
         {product.category && (
@@ -696,13 +696,13 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
 
   const items = Object.values(cart)
   const total = items.reduce((sum, { product, qty }) => {
-    const price = product.offerPrice ?? product.price ?? 0
+    const price = effectiveOffer(product) ?? product.price ?? 0
     return sum + Number(price) * qty
   }, 0)
 
   function buildWhatsappMsg(name) {
     const lines = items.map(({ product, qty, variants }) => {
-      const price = product.offerPrice ?? product.price
+      const price = effectiveOffer(product) ?? product.price
       const priceStr = price != null ? ` — $${Number(price).toLocaleString('es-AR')}` : ''
       const varStr = variants && Object.keys(variants).length > 0
         ? ` (${Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})`
@@ -728,7 +728,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
         productName: product.name + (variants && Object.keys(variants).length > 0
           ? ` (${Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''),
         price: product.price,
-        offerPrice: product.offerPrice,
+        offerPrice: effectiveOffer(product),
         quantity: qty,
       })),
     }
@@ -803,7 +803,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
                     </button>
                   </div>
                   {(() => {
-                    const price = product.offerPrice ?? product.price
+                    const price = effectiveOffer(product) ?? product.price
                     return price != null ? (
                       <span className="text-xs text-gray-500 dark:text-slate-400 w-20 text-right shrink-0">
                         ${(Number(price) * qty).toLocaleString('es-AR')}
@@ -856,7 +856,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
               </div>
               <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 space-y-1.5">
                 {items.map(({ product, qty, variants }) => {
-                  const price = product.offerPrice ?? product.price
+                  const price = effectiveOffer(product) ?? product.price
                   const varStr = variants && Object.keys(variants).length > 0
                     ? ` (${Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''
                   return (
@@ -1011,7 +1011,16 @@ export default function PublicCatalogPage() {
   const pageUrl = window.location.href
 
   const rubroInfo = catalog.rubro ? getRubro(catalog.rubro) : null
+  const catalogDiscount = catalog.discount || 0
   const allProducts = catalog.products || []
+
+  function effectiveOffer(product) {
+    const base = Number(product.price)
+    const catalogOffer = catalogDiscount > 0 ? base * (1 - catalogDiscount / 100) : null
+    const prodOffer = product.offerPrice != null ? Number(product.offerPrice) : null
+    if (catalogOffer && prodOffer) return Math.min(catalogOffer, prodOffer)
+    return prodOffer ?? catalogOffer
+  }
   function parseProdArr(json) { try { return json ? JSON.parse(json) : [] } catch { return [] } }
   function productCategories(p) {
     return p.category ? p.category.split(',').map(c => c.trim()).filter(Boolean) : []
