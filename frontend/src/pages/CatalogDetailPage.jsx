@@ -203,7 +203,7 @@ function TagInput({ label, values, onChange, placeholder }) {
               style={{ width: Math.max((editText.length + 2) * 7, 50) + 'px' }}
             />
           ) : (
-            <span key={idx} className="flex items-center gap-1 pl-2 pr-1 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg text-xs">
+            <span key={idx} className="flex items-center gap-1 pl-2 pr-1 py-0.5 bg-indigo-100 dark:bg-indigo-700/60 text-indigo-800 dark:text-indigo-100 border border-indigo-300 dark:border-indigo-500 rounded-lg text-xs font-medium">
               <button type="button" onClick={() => { setEditingIdx(idx); setEditText(v) }}
                 className="hover:underline leading-none">
                 {v}

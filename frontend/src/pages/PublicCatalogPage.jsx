@@ -1313,12 +1313,12 @@ export default function PublicCatalogPage({ previewMode = false }) {
               {categories.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   <button onClick={() => setActiveCategory(null)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === null ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeCategory === null ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400'}`}>
                     Todos ({allProducts.length})
                   </button>
                   {categories.map(cat => (
                     <button key={cat} onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400'}`}>
                       {cat} ({allProducts.filter(p => productCategories(p).includes(cat)).length})
                     </button>
                   ))}
@@ -1328,12 +1328,12 @@ export default function PublicCatalogPage({ previewMode = false }) {
                 <div className="flex gap-2 flex-wrap items-center">
                   <span className="text-xs text-gray-500 dark:text-slate-400 font-medium shrink-0">{rubroInfo.atributo}:</span>
                   <button onClick={() => setActiveSize(null)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeSize === null ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeSize === null ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-indigo-400 hover:text-indigo-600 dark:hover:border-indigo-500 dark:hover:text-indigo-400'}`}>
                     Todos
                   </button>
                   {allSizes.map(s => (
                     <button key={s} onClick={() => setActiveSize(activeSize === s ? null : s)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeSize === s ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeSize === s ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-indigo-400 hover:text-indigo-600 dark:hover:border-indigo-500 dark:hover:text-indigo-400'}`}>
                       {s}
                     </button>
                   ))}
@@ -1343,12 +1343,12 @@ export default function PublicCatalogPage({ previewMode = false }) {
                 <div className="flex gap-2 flex-wrap items-center">
                   <span className="text-xs text-gray-500 dark:text-slate-400 font-medium shrink-0">Color:</span>
                   <button onClick={() => setActiveColor(null)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeColor === null ? 'bg-pink-600 border-pink-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeColor === null ? 'bg-pink-600 border-pink-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-pink-400 hover:text-pink-600 dark:hover:border-pink-500 dark:hover:text-pink-400'}`}>
                     Todos
                   </button>
                   {allColors.map(c => (
                     <button key={c} onClick={() => setActiveColor(activeColor === c ? null : c)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeColor === c ? 'bg-pink-600 border-pink-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeColor === c ? 'bg-pink-600 border-pink-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-pink-400 hover:text-pink-600 dark:hover:border-pink-500 dark:hover:text-pink-400'}`}>
                       {c}
                     </button>
                   ))}
