@@ -286,6 +286,14 @@ function parseJsonArray(json) {
   try { return JSON.parse(json) || [] } catch { return [] }
 }
 
+function parseSizeColorMap(json) {
+  try {
+    const p = JSON.parse(json)
+    if (p && !Array.isArray(p) && typeof p === 'object') return p
+    return null
+  } catch { return null }
+}
+
 function OptionChips({ label, options, selected, onSelect }) {
   if (!options.length) return null
   return (
@@ -342,14 +350,20 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
   const hasGallery = galleryItems.length > 1
   const variants = parseVariants(product.variantsJson)
   const sizes = parseJsonArray(product.productSizes)
-  const colors = parseJsonArray(product.productColors)
+  const sizeColorMap = parseSizeColorMap(product.productColors)
+  const flatColors = sizeColorMap ? [] : parseJsonArray(product.productColors)
   const sizeKey = rubroInfo?.atributo || 'Talle'
+  const selectedSize = selectedVariants?.[sizeKey] || null
+  const availableColors = sizeColorMap
+    ? (selectedSize ? (sizeColorMap[selectedSize] || []) : [])
+    : flatColors
+  const needsColor = sizeColorMap ? (selectedSize ? availableColors.length > 0 : false) : flatColors.length > 0
   const hasRequiredSelections = (
     (variants.length === 0 || variants.every(v => selectedVariants?.[v.name])) &&
-    (sizes.length === 0 || !!selectedVariants?.[sizeKey]) &&
-    (colors.length === 0 || !!selectedVariants?.['Color'])
+    (sizes.length === 0 || !!selectedSize) &&
+    (!needsColor || !!selectedVariants?.['Color'])
   )
-  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || colors.length > 0
+  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || flatColors.length > 0 || (sizeColorMap && Object.keys(sizeColorMap).length > 0)
 
   function handleWhatsapp() {
     track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
@@ -404,9 +418,18 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
         )}
         <OptionChips label={sizeKey} options={sizes} selected={selectedVariants?.[sizeKey]}
-          onSelect={v => onVariantChange({ ...(selectedVariants || {}), [sizeKey]: v })} />
-        <OptionChips label="Color" options={colors} selected={selectedVariants?.['Color']}
-          onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+          onSelect={v => {
+            const next = { ...(selectedVariants || {}), [sizeKey]: v }
+            delete next['Color']
+            onVariantChange(next)
+          }} />
+        {availableColors.length > 0 && (
+          <OptionChips label="Color" options={availableColors} selected={selectedVariants?.['Color']}
+            onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+        )}
+        {sizeColorMap && selectedSize && availableColors.length === 0 && (
+          <p className="text-xs text-gray-400 dark:text-slate-500 italic">Sin colores para este talle.</p>
+        )}
         <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove}
           hasVariants={hasAnyRequired} variantSelected={hasRequiredSelections} />
         {vendorWhatsapp && (
@@ -426,14 +449,20 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
   const hasGallery = galleryItems.length > 1
   const variants = parseVariants(product.variantsJson)
   const sizes = parseJsonArray(product.productSizes)
-  const colors = parseJsonArray(product.productColors)
+  const sizeColorMap = parseSizeColorMap(product.productColors)
+  const flatColors = sizeColorMap ? [] : parseJsonArray(product.productColors)
   const sizeKey = rubroInfo?.atributo || 'Talle'
+  const selectedSize = selectedVariants?.[sizeKey] || null
+  const availableColors = sizeColorMap
+    ? (selectedSize ? (sizeColorMap[selectedSize] || []) : [])
+    : flatColors
+  const needsColor = sizeColorMap ? (selectedSize ? availableColors.length > 0 : false) : flatColors.length > 0
   const hasRequiredSelections = (
     (variants.length === 0 || variants.every(v => selectedVariants?.[v.name])) &&
-    (sizes.length === 0 || !!selectedVariants?.[sizeKey]) &&
-    (colors.length === 0 || !!selectedVariants?.['Color'])
+    (sizes.length === 0 || !!selectedSize) &&
+    (!needsColor || !!selectedVariants?.['Color'])
   )
-  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || colors.length > 0
+  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || flatColors.length > 0 || (sizeColorMap && Object.keys(sizeColorMap).length > 0)
 
   function handleWhatsapp() {
     track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
@@ -487,9 +516,15 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
         )}
         <OptionChips label={sizeKey} options={sizes} selected={selectedVariants?.[sizeKey]}
-          onSelect={v => onVariantChange({ ...(selectedVariants || {}), [sizeKey]: v })} />
-        <OptionChips label="Color" options={colors} selected={selectedVariants?.['Color']}
-          onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+          onSelect={v => {
+            const next = { ...(selectedVariants || {}), [sizeKey]: v }
+            delete next['Color']
+            onVariantChange(next)
+          }} />
+        {availableColors.length > 0 && (
+          <OptionChips label="Color" options={availableColors} selected={selectedVariants?.['Color']}
+            onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+        )}
         <div className="flex items-center gap-2 mt-auto pt-2 flex-wrap print:hidden">
           <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove}
             hasVariants={hasAnyRequired} variantSelected={hasRequiredSelections} />
@@ -988,7 +1023,11 @@ export default function PublicCatalogPage() {
   const allSizes = rubroInfo?.atributo
     ? [...new Set(allProducts.flatMap(p => parseProdArr(p.productSizes)))]
     : []
-  const allColors = [...new Set(allProducts.flatMap(p => parseProdArr(p.productColors)))]
+  const allColors = [...new Set(allProducts.flatMap(p => {
+    const scm = parseSizeColorMap(p.productColors)
+    if (scm) return Object.values(scm).flat()
+    return parseProdArr(p.productColors)
+  }))]
 
   const visibleProducts = allProducts.filter(p => {
     const cats = productCategories(p)

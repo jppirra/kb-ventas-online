@@ -36,78 +36,111 @@ const BG_TYPES = [
 import { productsApi } from '../api/products'
 import { RUBROS, getRubro } from '../config/rubros'
 
-const emptyProduct = { name: '', description: '', price: '', sku: '', categories: [], imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: [], stockMatrix: {} }
+const emptyProduct = { name: '', description: '', price: '', sku: '', categories: [], imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: {}, stockMatrix: {} }
 
-function StockMatrixInput({ sizes, colors, matrix, onChange, atributoLabel }) {
+function SizeColorEditor({ sizes, sizeColorMap, onChange }) {
+  if (sizes.length === 0) return (
+    <p className="text-xs text-gray-400 dark:text-slate-500 italic">Agregá talles primero para definir los colores por talle.</p>
+  )
+  return (
+    <div className="space-y-2">
+      {sizes.map(size => (
+        <div key={size} className="flex items-start gap-2">
+          <span className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-1.5 rounded-lg min-w-[2.5rem] text-center shrink-0 mt-0.5">{size}</span>
+          <CsvInput
+            label=""
+            values={sizeColorMap[size] || []}
+            onChange={colors => onChange({ ...sizeColorMap, [size]: colors })}
+            placeholder="Rojo, Azul, Negro"
+            hint={`Colores disponibles para talle ${size}. Separados por coma.`}
+          />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function StockMatrixInput({ sizes, sizeColorMap, flatColors, matrix, onChange, atributoLabel }) {
   const hasSizes = sizes.length > 0
-  const hasColors = colors.length > 0
-  const rows = hasSizes ? sizes : ['']
-  const cols = hasColors ? colors : ['']
+  const hasSCM = sizeColorMap && Object.keys(sizeColorMap).length > 0
 
-  function getKey(row, col) {
-    if (!hasSizes) return col
-    if (!hasColors) return row
-    return `${row}|${col}`
+  function getKey(size, color) {
+    if (!hasSizes && !hasSCM) return color
+    if (!color) return size
+    return `${size}|${color}`
   }
-
-  function getVal(row, col) {
-    const v = matrix[getKey(row, col)]
+  function getVal(size, color) {
+    const v = matrix[getKey(size, color)]
     return v != null ? v : ''
   }
-
-  function setVal(row, col, val) {
-    const key = getKey(row, col)
+  function setVal(size, color, val) {
+    const key = getKey(size, color)
     const qty = val === '' ? null : parseInt(val) || 0
     const next = { ...matrix }
-    if (qty === null || qty === 0) { delete next[key] } else { next[key] = qty }
+    if (!qty) delete next[key]; else next[key] = qty
     onChange(next)
   }
 
-  const colHeader = hasSizes && hasColors
-  const rowHeader = hasSizes
+  if (hasSizes && hasSCM) {
+    return (
+      <div className="space-y-3">
+        {sizes.map(size => {
+          const colors = sizeColorMap[size] || []
+          return (
+            <div key={size}>
+              <p className="text-xs font-semibold text-gray-600 dark:text-slate-400 mb-1.5">
+                {atributoLabel || 'Talle'} <span className="text-indigo-600 dark:text-indigo-400">{size}</span>
+              </p>
+              {colors.length === 0 ? (
+                <p className="text-xs text-gray-400 dark:text-slate-500 italic ml-2">Sin colores definidos para este talle.</p>
+              ) : (
+                <div className="flex flex-wrap gap-2 ml-2">
+                  {colors.map(color => (
+                    <div key={color} className="flex items-center gap-1.5">
+                      <span className="text-xs text-gray-600 dark:text-slate-300 whitespace-nowrap">{color}</span>
+                      <input type="number" min="0" value={getVal(size, color)}
+                        onChange={e => setVal(size, color, e.target.value)}
+                        placeholder="0"
+                        className="w-14 text-center px-1.5 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    )
+  }
+
+  if (hasSizes) {
+    return (
+      <div className="flex flex-wrap gap-2">
+        {sizes.map(size => (
+          <div key={size} className="flex items-center gap-1.5">
+            <span className="text-xs text-gray-600 dark:text-slate-300">{size}</span>
+            <input type="number" min="0" value={getVal(size, null)}
+              onChange={e => setVal(size, null, e.target.value)} placeholder="0"
+              className="w-14 text-center px-1.5 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+            />
+          </div>
+        ))}
+      </div>
+    )
+  }
 
   return (
-    <div className="overflow-x-auto">
-      <table className="text-xs border-collapse w-auto">
-        {colHeader && (
-          <thead>
-            <tr>
-              {rowHeader && <th className="px-2 py-1" />}
-              {cols.map(c => (
-                <th key={c} className="px-3 py-1 text-gray-500 dark:text-slate-400 font-medium text-center whitespace-nowrap">{c}</th>
-              ))}
-            </tr>
-          </thead>
-        )}
-        <tbody>
-          {rows.map(row => (
-            <tr key={row}>
-              {rowHeader && (
-                <td className="pr-3 py-1 text-gray-700 dark:text-slate-300 font-medium whitespace-nowrap align-middle">
-                  {row}
-                </td>
-              )}
-              {cols.map(col => (
-                <td key={col} className="px-1 py-1">
-                  <input
-                    type="number" min="0"
-                    value={getVal(row, col)}
-                    onChange={e => setVal(row, col, e.target.value)}
-                    placeholder="0"
-                    title={[row, col].filter(Boolean).join(' / ')}
-                    className="w-16 text-center px-1.5 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
-                  />
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5">
-        {hasSizes && hasColors ? `Filas: ${atributoLabel || 'Talle'} — Columnas: Color. Dejá en 0 si no tenés esa combinación.` :
-         hasSizes ? `Ingresá el stock disponible por ${atributoLabel || 'Talle'}.` :
-         'Ingresá el stock disponible por color.'}
-      </p>
+    <div className="flex flex-wrap gap-2">
+      {flatColors.map(color => (
+        <div key={color} className="flex items-center gap-1.5">
+          <span className="text-xs text-gray-600 dark:text-slate-300">{color}</span>
+          <input type="number" min="0" value={getVal(null, color)}
+            onChange={e => setVal(null, color, e.target.value)} placeholder="0"
+            className="w-14 text-center px-1.5 py-1 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+          />
+        </div>
+      ))}
     </div>
   )
 }
@@ -276,10 +309,14 @@ export default function CatalogDetailPage() {
       let extraImages = []
       try { extraImages = product.extraImagesJson ? JSON.parse(product.extraImagesJson) : [] } catch {}
       let productSizes = []
-      let productColors = []
+      let productColors = {}
       let stockMatrix = {}
       try { productSizes = product.productSizes ? JSON.parse(product.productSizes) : [] } catch {}
-      try { productColors = product.productColors ? JSON.parse(product.productColors) : [] } catch {}
+      try {
+        const pc = product.productColors ? JSON.parse(product.productColors) : null
+        if (pc && !Array.isArray(pc)) productColors = pc  // per-size map
+        // legacy flat array: ignore (treated as empty map, user re-enters per-size)
+      } catch {}
       try { stockMatrix = product.stockMatrix ? JSON.parse(product.stockMatrix) : {} } catch {}
       const categories = product.category
         ? product.category.split(',').map(c => c.trim()).filter(Boolean)
@@ -321,7 +358,7 @@ export default function CatalogDetailPage() {
       extraImagesJson: productForm.extraImages.length > 0 ? JSON.stringify(productForm.extraImages) : null,
       videoUrl: productForm.videoUrl || null,
       productSizes: productForm.productSizes.length > 0 ? JSON.stringify(productForm.productSizes) : null,
-      productColors: productForm.productColors.length > 0 ? JSON.stringify(productForm.productColors) : null,
+      productColors: Object.keys(productForm.productColors).length > 0 ? JSON.stringify(productForm.productColors) : null,
       stockMatrix: hasMatrix ? JSON.stringify(productForm.stockMatrix) : null,
     }
     try {
@@ -899,8 +936,9 @@ export default function CatalogDetailPage() {
             {(() => {
               const rubroInfo = catalog.rubro ? getRubro(catalog.rubro) : null
               const hasSizes = productForm.productSizes.length > 0
-              const hasColors = productForm.productColors.length > 0
-              const useMatrix = productForm.showStock && productForm.stockStatus === 'IN_STOCK' && (hasSizes || hasColors)
+              const hasColorMap = !Array.isArray(productForm.productColors) && Object.keys(productForm.productColors).length > 0
+              const hasColors = Array.isArray(productForm.productColors) && productForm.productColors.length > 0
+              const useMatrix = productForm.showStock && productForm.stockStatus === 'IN_STOCK' && (hasSizes || hasColors || hasColorMap)
               return (
                 <div className="border-t border-gray-100 dark:border-slate-700 pt-3">
                   <div className="flex items-center gap-2 mb-3">
@@ -926,11 +964,12 @@ export default function CatalogDetailPage() {
                         useMatrix ? (
                           <div>
                             <p className="text-xs text-gray-500 dark:text-slate-400 mb-2 font-medium">
-                              Stock por {rubroInfo?.atributo && hasSizes ? `${rubroInfo.atributo.toLowerCase()} y color` : hasSizes ? 'talle' : 'color'}
+                              Stock por {hasSizes && hasColorMap ? `${rubroInfo?.atributo?.toLowerCase() || 'talle'} y color` : hasSizes ? (rubroInfo?.atributo?.toLowerCase() || 'talle') : 'color'}
                             </p>
                             <StockMatrixInput
                               sizes={productForm.productSizes}
-                              colors={productForm.productColors}
+                              sizeColorMap={hasColorMap ? productForm.productColors : null}
+                              flatColors={hasColors ? productForm.productColors : []}
                               matrix={productForm.stockMatrix}
                               onChange={m => setProductForm(f => ({ ...f, stockMatrix: m }))}
                               atributoLabel={rubroInfo?.atributo || 'Talle'}
@@ -970,13 +1009,24 @@ export default function CatalogDetailPage() {
                       hint={`Ingresá las opciones separadas por coma. Ej: ${rubroInfo.opcionesDefault.slice(0, 4).join(', ')}. Cada valor separado por coma será una opción individual.`}
                     />
                   )}
-                  <CsvInput
-                    label="Colores disponibles"
-                    values={productForm.productColors}
-                    onChange={v => setProductForm(f => ({ ...f, productColors: v }))}
-                    placeholder="Rojo, Azul, Negro, Blanco"
-                    hint="Ingresá los colores separados por coma. Ej: Rojo, Azul, Negro, Blanco. Cada color separado por coma será una opción individual."
-                  />
+                  {rubroInfo && rubroInfo.atributo ? (
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Colores por {rubroInfo.atributo.toLowerCase()}</p>
+                      <SizeColorEditor
+                        sizes={productForm.productSizes}
+                        sizeColorMap={productForm.productColors}
+                        onChange={v => setProductForm(f => ({ ...f, productColors: v }))}
+                      />
+                    </div>
+                  ) : (
+                    <CsvInput
+                      label="Colores disponibles"
+                      values={Array.isArray(productForm.productColors) ? productForm.productColors : []}
+                      onChange={v => setProductForm(f => ({ ...f, productColors: v }))}
+                      placeholder="Rojo, Azul, Negro, Blanco"
+                      hint="Ingresá los colores separados por coma. Ej: Rojo, Azul, Negro, Blanco. Cada color separado por coma será una opción individual."
+                    />
+                  )}
                 </div>
               )
             })()}
