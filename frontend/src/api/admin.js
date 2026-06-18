@@ -10,6 +10,7 @@ export const adminApi = {
   userModerationLog: (id) => api.get(`/admin/users/${id}/moderation-log`),
   toggleAdmin: (id) => api.patch(`/admin/users/${id}/toggle-admin`),
   updateEmail: (id, email) => api.patch(`/admin/users/${id}/email`, { email }),
+  updateProfile: (id, data) => api.patch(`/admin/users/${id}/profile`, data),
   resetPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
   resendVerification: (id) => api.post(`/admin/users/${id}/resend-verification`),
   verifyEmail: (id) => api.post(`/admin/users/${id}/verify-email`),

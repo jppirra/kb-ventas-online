@@ -158,6 +158,9 @@ export default function AdminUsersPage() {
   const [savingEmail, setSavingEmail] = useState(false)
   const [tempPwdModal, setTempPwdModal] = useState(null)
   const [pwdCopied, setPwdCopied] = useState(false)
+  const [profileModal, setProfileModal] = useState(null)
+  const [profileForm, setProfileForm] = useState({})
+  const [savingProfile, setSavingProfile] = useState(false)
 
   useEffect(() => { load() }, [])
 
@@ -313,6 +316,31 @@ export default function AdminUsersPage() {
   function openEditEmail(u) {
     setEditModal({ id: u.id, name: u.name })
     setEditEmailValue(u.email)
+  }
+
+  function openEditProfile(u) {
+    setProfileModal({ id: u.id, name: u.name })
+    setProfileForm({
+      name: u.name || '',
+      slug: u.slug || '',
+      bio: u.bio || '',
+      whatsappNumber: u.whatsappNumber || '',
+      brandColorPrimary: u.brandColorPrimary || '#2563eb',
+      brandColorSecondary: u.brandColorSecondary || '#7c3aed',
+    })
+  }
+
+  async function handleSaveProfile(e) {
+    e.preventDefault()
+    setSavingProfile(true)
+    try {
+      const { data } = await adminApi.updateProfile(profileModal.id, profileForm)
+      setUsers(prev => prev.map(x => x.id === profileModal.id ? { ...x, ...data } : x))
+      toast.success('Perfil actualizado')
+      setProfileModal(null)
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Error al actualizar perfil')
+    } finally { setSavingProfile(false) }
   }
 
   async function handleUpdateEmail(e) {
@@ -572,6 +600,12 @@ export default function AdminUsersPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                           </svg>
                         </button>
+                        <button onClick={() => openEditProfile(u)} title="Editar perfil"
+                          className="p-1.5 text-gray-400 hover:text-purple-500 dark:text-slate-500 dark:hover:text-purple-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                          </svg>
+                        </button>
                         <button onClick={() => confirmResetPassword(u)} title="Blanquear contraseña"
                           className="p-1.5 text-gray-400 hover:text-amber-500 dark:text-slate-500 dark:hover:text-amber-400 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 transition-colors">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -669,6 +703,78 @@ export default function AdminUsersPage() {
 
       {logUserId && (
         <UserModerationLogPanel userId={logUserId} onClose={() => setLogUserId(null)} />
+      )}
+
+      {/* Modal editar perfil */}
+      {profileModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setProfileModal(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Editar perfil</h3>
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-5">{profileModal.name}</p>
+            <form onSubmit={handleSaveProfile} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Nombre</label>
+                <input type="text" required value={profileForm.name}
+                  onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Slug (URL del perfil público)</label>
+                <div className="flex items-center rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 overflow-hidden focus-within:ring-2 focus-within:ring-purple-500">
+                  <span className="px-3 py-2 text-xs text-gray-400 dark:text-slate-500 border-r border-gray-200 dark:border-slate-700 bg-gray-50 dark:bg-slate-800 shrink-0">/p/</span>
+                  <input type="text" value={profileForm.slug}
+                    onChange={e => setProfileForm(f => ({ ...f, slug: e.target.value }))}
+                    placeholder="mi-tienda"
+                    className="flex-1 px-3 py-2 bg-transparent text-gray-900 dark:text-white focus:outline-none text-sm" />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Bio</label>
+                <textarea value={profileForm.bio}
+                  onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))}
+                  rows={3} placeholder="Descripción del negocio..."
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm resize-none" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">WhatsApp</label>
+                <input type="text" value={profileForm.whatsappNumber}
+                  onChange={e => setProfileForm(f => ({ ...f, whatsappNumber: e.target.value }))}
+                  placeholder="+54 9 11 1234-5678"
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm" />
+              </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Color primario</label>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                    <input type="color" value={profileForm.brandColorPrimary}
+                      onChange={e => setProfileForm(f => ({ ...f, brandColorPrimary: e.target.value }))}
+                      className="w-7 h-7 rounded-lg border-0 bg-transparent cursor-pointer p-0" />
+                    <span className="text-xs font-mono text-gray-600 dark:text-slate-400">{profileForm.brandColorPrimary}</span>
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-medium text-gray-700 dark:text-slate-300 mb-1">Color secundario</label>
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900">
+                    <input type="color" value={profileForm.brandColorSecondary}
+                      onChange={e => setProfileForm(f => ({ ...f, brandColorSecondary: e.target.value }))}
+                      className="w-7 h-7 rounded-lg border-0 bg-transparent cursor-pointer p-0" />
+                    <span className="text-xs font-mono text-gray-600 dark:text-slate-400">{profileForm.brandColorSecondary}</span>
+                  </div>
+                </div>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <button type="submit" disabled={savingProfile}
+                  className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white font-semibold rounded-xl text-sm transition-colors">
+                  {savingProfile ? 'Guardando...' : 'Guardar cambios'}
+                </button>
+                <button type="button" onClick={() => setProfileModal(null)}
+                  className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-semibold rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </AdminLayout>
   )

@@ -83,6 +83,11 @@ public class AdminController {
         return adminService.updateUserEmail(id, body.get("email"));
     }
 
+    @PatchMapping("/users/{id}/profile")
+    public AdminUserResponse updateUserProfile(@PathVariable Long id, @RequestBody AdminUpdateProfileRequest req) {
+        return adminService.updateUserProfile(id, req);
+    }
+
     @PostMapping("/users/{id}/reset-password")
     public ResponseEntity<Map<String, String>> resetUserPassword(@PathVariable Long id) {
         String tempPassword = adminService.resetUserPassword(id);
