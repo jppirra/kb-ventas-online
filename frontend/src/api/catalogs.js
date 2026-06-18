@@ -14,6 +14,7 @@ export const catalogsApi = {
   toggleProductActive: (catalogId, productId) => api.put(`/catalogs/${catalogId}/products/${productId}/toggle-active`),
   unlinkProduct: (catalogId, productId) => api.put(`/catalogs/${catalogId}/products/${productId}/unlink`),
   assignProduct: (catalogId, productId) => api.put(`/catalogs/${catalogId}/assign/${productId}`),
+  ownerStock: (catalogId) => api.get(`/catalogs/${catalogId}/owner-stock`),
 
   uploadTempProductImage: (catalogId, file) => {
     const form = new FormData()

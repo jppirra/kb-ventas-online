@@ -505,6 +505,12 @@ public class CatalogService {
         findAccessible(id, userId, false);
     }
 
+    public Long getCatalogOwnerId(Long catalogId, Long userId) {
+        Catalog catalog = findAccessible(catalogId, userId, false);
+        if (catalog.getUserId() == null) throw new EntityNotFoundException("Catálogo sin propietario");
+        return catalog.getUserId();
+    }
+
     private boolean isAdmin(Long userId) {
         return userRepository.findById(userId).map(u -> u.isAppAdmin()).orElse(false);
     }

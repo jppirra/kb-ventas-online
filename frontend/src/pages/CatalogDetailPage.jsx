@@ -725,7 +725,7 @@ export default function CatalogDetailPage() {
     setShowRepoModal(true)
     setLoadingRepo(true)
     try {
-      const { data } = await productsApi.list()
+      const { data } = await catalogsApi.ownerStock(id)
       const catalogProductIds = new Set(catalog.products.map(p => p.id))
       setRepoProducts(data.filter(p => p.catalogId == null || !catalogProductIds.has(p.id)))
     } catch {

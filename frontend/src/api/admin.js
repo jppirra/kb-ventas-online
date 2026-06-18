@@ -11,6 +11,8 @@ export const adminApi = {
   toggleAdmin: (id) => api.patch(`/admin/users/${id}/toggle-admin`),
   updateEmail: (id, email) => api.patch(`/admin/users/${id}/email`, { email }),
   updateProfile: (id, data) => api.patch(`/admin/users/${id}/profile`, data),
+  uploadAvatar: (id, file) => { const f = new FormData(); f.append('file', file); return api.post(`/admin/users/${id}/upload-avatar`, f, { headers: { 'Content-Type': 'multipart/form-data' } }) },
+  uploadBanner: (id, file) => { const f = new FormData(); f.append('file', file); return api.post(`/admin/users/${id}/upload-banner`, f, { headers: { 'Content-Type': 'multipart/form-data' } }) },
   resetPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
   resendVerification: (id) => api.post(`/admin/users/${id}/resend-verification`),
   verifyEmail: (id) => api.post(`/admin/users/${id}/verify-email`),

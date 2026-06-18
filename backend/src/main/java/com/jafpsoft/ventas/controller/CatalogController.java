@@ -6,6 +6,7 @@ import com.jafpsoft.ventas.dto.catalog.ProductRequest;
 import com.jafpsoft.ventas.dto.catalog.ProductResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.service.CatalogService;
+import com.jafpsoft.ventas.service.ProductService;
 import com.jafpsoft.ventas.service.PublicProfileService;
 import com.jafpsoft.ventas.security.CustomUserDetails;
 import jakarta.validation.Valid;
@@ -26,6 +27,7 @@ import java.util.Map;
 public class CatalogController {
 
     private final CatalogService catalogService;
+    private final ProductService productService;
     private final PublicProfileService publicProfileService;
 
     @GetMapping
@@ -188,6 +190,13 @@ public class CatalogController {
                                @RequestBody Map<String, String> body,
                                @AuthenticationPrincipal CustomUserDetails user) {
         catalogService.renameCategory(id, body.get("from"), body.get("to"), getUserId(user));
+    }
+
+    @GetMapping("/{id}/owner-stock")
+    public List<ProductResponse> ownerStock(@PathVariable Long id,
+                                            @AuthenticationPrincipal CustomUserDetails user) {
+        Long ownerId = catalogService.getCatalogOwnerId(id, getUserId(user));
+        return productService.listByUser(ownerId);
     }
 
     @GetMapping("/{id}/preview")
