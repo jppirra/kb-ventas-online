@@ -655,6 +655,19 @@ export default function CatalogDetailPage() {
                 </span>
               )
             })()}
+            <a
+              href={`/catalogs/${id}/preview`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-700 dark:text-slate-200 text-sm font-medium rounded-xl transition-colors"
+              title="Ver cómo lo verá el cliente"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              Vista previa
+            </a>
             {catalog.collaboratorCanPublish === false ? (
               <span className="text-xs text-gray-400 dark:text-slate-500 px-2">Sin permiso para publicar</span>
             ) : (

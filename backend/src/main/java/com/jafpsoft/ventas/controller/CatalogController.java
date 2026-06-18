@@ -4,7 +4,9 @@ import com.jafpsoft.ventas.dto.catalog.CatalogRequest;
 import com.jafpsoft.ventas.dto.catalog.CatalogResponse;
 import com.jafpsoft.ventas.dto.catalog.ProductRequest;
 import com.jafpsoft.ventas.dto.catalog.ProductResponse;
+import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.service.CatalogService;
+import com.jafpsoft.ventas.service.PublicProfileService;
 import com.jafpsoft.ventas.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +26,7 @@ import java.util.Map;
 public class CatalogController {
 
     private final CatalogService catalogService;
+    private final PublicProfileService publicProfileService;
 
     @GetMapping
     public List<CatalogResponse> list(@AuthenticationPrincipal CustomUserDetails user) {
@@ -164,6 +167,13 @@ public class CatalogController {
                                 @RequestBody List<Map<String, Object>> order,
                                 @AuthenticationPrincipal CustomUserDetails user) {
         catalogService.reorderProducts(id, order, getUserId(user));
+    }
+
+    @GetMapping("/{id}/preview")
+    public PublicCatalogPageResponse previewCatalog(@PathVariable Long id,
+                                                    @AuthenticationPrincipal CustomUserDetails user) {
+        catalogService.checkAccess(id, getUserId(user));
+        return publicProfileService.getCatalogPreviewById(id);
     }
 
     private Long getUserId(CustomUserDetails user) { return user.getUserId(); }

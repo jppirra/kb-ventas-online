@@ -402,6 +402,10 @@ public class CatalogService {
         throw new EntityNotFoundException("Catálogo no encontrado");
     }
 
+    public void checkAccess(Long id, Long userId) {
+        findAccessible(id, userId, false);
+    }
+
     private boolean isAdmin(Long userId) {
         return userRepository.findById(userId).map(u -> u.isAppAdmin()).orElse(false);
     }

@@ -123,6 +123,7 @@ export default function App() {
               } />
               <Route path="/p/:slug" element={<PublicProfilePage />} />
               <Route path="/c/:catalogId" element={<PublicCatalogPage />} />
+              <Route path="/catalogs/:id/preview" element={<ProtectedRoute><PublicCatalogPage previewMode /></ProtectedRoute>} />
               <Route path="/s/:storeSlug" element={<StorePage />} />
               <Route path="/admin" element={<AdminProtectedRoute><AdminDashboardPage /></AdminProtectedRoute>} />
               <Route path="/admin/users" element={<AdminProtectedRoute><AdminUsersPage /></AdminProtectedRoute>} />

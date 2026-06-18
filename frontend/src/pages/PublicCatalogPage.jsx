@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
+import { catalogsApi } from '../api/catalogs'
 import { reportsApi } from '../api/reports'
 import { useAuth } from '../context/AuthContext'
 import ImageModal from '../components/ImageModal'
@@ -695,7 +696,7 @@ function ShareButton({ url, catalogName }) {
 }
 
 // Cart floating panel
-function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRemove, onClear }) {
+function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRemove, onClear, previewMode = false }) {
   const [showModal, setShowModal] = useState(false)
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
@@ -884,11 +885,17 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
                   </div>
                 )}
               </div>
-              <button type="submit" disabled={submitting}
-                className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors">
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                {submitting ? 'Enviando...' : 'Enviar y abrir WhatsApp'}
-              </button>
+              {previewMode ? (
+                <div className="w-full py-3 bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 font-semibold rounded-xl text-center text-sm">
+                  Envío de pedidos no disponible en vista previa
+                </div>
+              ) : (
+                <button type="submit" disabled={submitting}
+                  className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                  {submitting ? 'Enviando...' : 'Enviar y abrir WhatsApp'}
+                </button>
+              )}
               <button type="button" onClick={() => setShowModal(false)}
                 className="w-full py-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">
                 Cancelar
@@ -901,9 +908,10 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
   )
 }
 
-export default function PublicCatalogPage() {
+export default function PublicCatalogPage({ previewMode = false }) {
   const { isAuthenticated } = useAuth()
-  const { catalogId } = useParams()
+  const { catalogId, id } = useParams()
+  const paramId = previewMode ? id : catalogId
   const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -916,7 +924,7 @@ export default function PublicCatalogPage() {
   const [lightbox, setLightbox] = useState(null) // { items, startIndex, productName }
   const [imgModal, setImgModal] = useState(null)
   // cart: { [productId]: { product, qty, variants } }
-  const [cart, setCart] = useState(() => loadCart(catalogId))
+  const [cart, setCart] = useState(() => loadCart(paramId))
   // variants selection per product: { [productId]: { VariantName: option } }
   const [variantSelections, setVariantSelections] = useState({})
   const viewedRef = useRef(false)
@@ -927,9 +935,12 @@ export default function PublicCatalogPage() {
   const [reportDone, setReportDone] = useState(false)
 
   useEffect(() => {
-    publicApi.getCatalog(catalogId)
+    const fetchFn = previewMode
+      ? catalogsApi.previewCatalog(paramId)
+      : publicApi.getCatalog(paramId)
+    fetchFn
       .then(({ data: d }) => {
-        if (d.available === false) {
+        if (!previewMode && d.available === false) {
           navigate(d.vendorSlug ? `/p/${d.vendorSlug}` : '/', {
             replace: true,
             state: { catalogNotFound: true, catalogName: d.catalog?.name }
@@ -937,14 +948,13 @@ export default function PublicCatalogPage() {
           return
         }
         setData(d)
-        // SEO meta tags
         document.title = `${d.catalog.name} — ${d.vendorName}`
         setOrUpdateMeta('og:title', `${d.catalog.name} — ${d.vendorName}`)
         setOrUpdateMeta('og:description', d.catalog.description || d.catalog.aiContent || `Catálogo de ${d.vendorName}`)
         setOrUpdateMeta('og:image', d.catalog.coverImageUrl || d.vendorProfileImageUrl || 'https://mercato.jafpsoft.com/og-image.jpg')
         setOrUpdateMeta('og:url', window.location.href)
         setOrUpdateMeta('og:type', 'website')
-        if (!viewedRef.current) {
+        if (!previewMode && !viewedRef.current) {
           viewedRef.current = true
           publicApi.trackCatalogView(d.catalog.id).catch(() => {})
           track('PAGE_VIEW')
@@ -952,7 +962,7 @@ export default function PublicCatalogPage() {
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
-  }, [catalogId])
+  }, [paramId])
 
   function setOrUpdateMeta(property, content) {
     if (!content) return
@@ -966,7 +976,7 @@ export default function PublicCatalogPage() {
   }
 
   // Persiste el carrito en localStorage al cambiar
-  useEffect(() => { saveCart(catalogId, cart) }, [cart, catalogId])
+  useEffect(() => { saveCart(paramId, cart) }, [cart, paramId])
 
   function addToCart(product) {
     track('CART_ADD', { metadata: JSON.stringify({ product: product.name }) })
@@ -985,7 +995,7 @@ export default function PublicCatalogPage() {
   }
   function clearCart() {
     setCart({})
-    localStorage.removeItem(cartKey(catalogId))
+    localStorage.removeItem(cartKey(paramId))
   }
 
   function openLightbox(items, idx, productName) {
@@ -1062,6 +1072,13 @@ export default function PublicCatalogPage() {
       `}</style>
 
       <div className="min-h-screen flex flex-col bg-gray-50">
+        {previewMode && (
+          <div className="sticky top-0 z-50 bg-amber-400 text-amber-900 text-sm font-semibold text-center py-2 px-4 flex items-center justify-center gap-3 print:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            Vista previa — este catálogo no está visible para el público todavía
+            <a href={`/catalogs/${id}`} className="underline underline-offset-2 hover:opacity-80 ml-2">Volver a editar</a>
+          </div>
+        )}
         {/* Mercato brand bar */}
         <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3 print:hidden">
           <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
@@ -1330,10 +1347,11 @@ export default function PublicCatalogPage() {
               cart={cart}
               catalog={catalog}
               vendorWhatsapp={vendorWhatsapp}
-              catalogId={catalogId}
+              catalogId={paramId}
               onUpdateQty={updateQty}
               onRemove={removeFromCart}
               onClear={clearCart}
+              previewMode={previewMode}
             />
           </div>
         )}
@@ -1425,7 +1443,7 @@ export default function PublicCatalogPage() {
                       if (!reportReason) return
                       setReportLoading(true)
                       try {
-                        await reportsApi.report(catalogId, { reason: reportReason, details: reportDetails })
+                        await reportsApi.report(paramId, { reason: reportReason, details: reportDetails })
                         setReportDone(true)
                       } catch {
                         // silent

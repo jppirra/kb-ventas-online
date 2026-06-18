@@ -115,6 +115,22 @@ public class PublicProfileService {
         return response;
     }
 
+    @Transactional(readOnly = true)
+    public PublicCatalogPageResponse getCatalogPreviewById(Long id) {
+        Catalog catalog = catalogRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
+        User owner = userRepository.findById(catalog.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("Catálogo no disponible"));
+        List<SocialLink> socialLinks = socialLinkRepository.findByUserIdOrderBySortOrderAsc(owner.getId());
+        PublicCatalogPageResponse response = PublicCatalogPageResponse.from(catalog, owner, socialLinks);
+        if ("PREDEFINED".equals(catalog.getBackgroundType()) && catalog.getBackgroundTemplateId() != null) {
+            backgroundTemplateRepository.findById(catalog.getBackgroundTemplateId()).ifPresent(t ->
+                    response.getCatalog().setBackgroundImageUrl(t.getImageUrl())
+            );
+        }
+        return response;
+    }
+
     @Transactional
     public void registerWhatsappClick(Long productId) {
         productRepository.findById(productId).ifPresent(p -> {
