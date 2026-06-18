@@ -36,7 +36,7 @@ const NAV_LINKS = [
   { to: '/orders',    label: 'Pedidos',            icon: IC.orders    },
   { to: '/customers', label: 'Clientes',           icon: IC.customers },
   { to: '/tickets',   label: 'Facturación',        icon: IC.tickets   },
-  { to: '/explorar',  label: 'Explorar catálogos', icon: IC.explorar  },
+  { to: '/explorer',  label: 'Explorar catálogos', icon: IC.explorar  },
   { to: '/collaborators', label: 'Colaboradores',  icon: IC.collaborators },
   { to: '/profile',       label: 'Mi perfil',     icon: IC.profile       },
   { to: '/settings',      label: 'Configuración', icon: IC.settings      },

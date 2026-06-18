@@ -55,7 +55,7 @@ function RootRedirect() {
   return null
 }
 
-const PUBLIC_PATHS = ['/c/', '/p/', '/s/', '/explorar']
+const PUBLIC_PATHS = ['/c/', '/p/', '/s/', '/explorer']
 
 function TermsGate({ children }) {
   const { isAuthenticated, user, loading } = useAuth()
@@ -138,6 +138,7 @@ export default function App() {
               <Route path="/admin/nps" element={<AdminProtectedRoute><AdminNpsPage /></AdminProtectedRoute>} />
               <Route path="/admin/contact" element={<AdminProtectedRoute><AdminContactPage /></AdminProtectedRoute>} />
               <Route path="/admin/analytics" element={<AdminProtectedRoute><AdminAnalyticsPage /></AdminProtectedRoute>} />
+              <Route path="/explorer" element={<ExplorarPage />} />
               <Route path="/explorar" element={<ExplorarPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/terms" element={<TermsPage />} />
