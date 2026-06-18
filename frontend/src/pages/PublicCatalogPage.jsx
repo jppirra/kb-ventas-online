@@ -164,7 +164,7 @@ function LightboxModal({ items, startIndex, productName, onClose }) {
   const item = items[current]
 
   return (
-    <div className="fixed inset-0 bg-black/95 z-50 flex flex-col" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/95 z-[70] flex flex-col" onClick={onClose}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 shrink-0" onClick={e => e.stopPropagation()}>
         <span className="text-white font-medium text-sm truncate">{productName}</span>
@@ -354,7 +354,7 @@ function AddToCartButton({ inCart, onAdd, onRemove, hasVariants, variantSelected
   )
 }
 
-function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, rubroInfo, catalogDiscount = 0 }) {
+function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, onOpenDetail, rubroInfo, catalogDiscount = 0 }) {
   const galleryItems = getGalleryItems(product)
   const hasGallery = galleryItems.length > 1
   const variants = parseVariants(product.variantsJson)
@@ -417,11 +417,17 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
         {product.category && (
           <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full self-start">{product.category}</span>
         )}
-        {product.aiDescription ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.aiDescription}</p>
-        ) : product.description ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.description}</p>
-        ) : null}
+        {(product.aiDescription || product.description) && (
+          <div>
+            <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed line-clamp-3 whitespace-pre-line">
+              {product.aiDescription || product.description}
+            </p>
+            <button onClick={() => onOpenDetail(product)}
+              className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium mt-0.5 print:hidden">
+              ver más
+            </button>
+          </div>
+        )}
         {product.showStock && <StockBadge product={product} />}
         {variants.length > 0 && (
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
@@ -453,7 +459,7 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
   )
 }
 
-function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, rubroInfo, catalogDiscount = 0 }) {
+function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, onOpenDetail, rubroInfo, catalogDiscount = 0 }) {
   const galleryItems = getGalleryItems(product)
   const hasGallery = galleryItems.length > 1
   const variants = parseVariants(product.variantsJson)
@@ -515,11 +521,17 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
         {product.category && (
           <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full self-start">{product.category}</span>
         )}
-        {product.aiDescription ? (
-          <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{product.aiDescription}</p>
-        ) : product.description ? (
-          <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{product.description}</p>
-        ) : null}
+        {(product.aiDescription || product.description) && (
+          <div>
+            <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed line-clamp-3 whitespace-pre-line">
+              {product.aiDescription || product.description}
+            </p>
+            <button onClick={() => onOpenDetail(product)}
+              className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium mt-0.5 print:hidden">
+              ver más
+            </button>
+          </div>
+        )}
         {product.showStock && <StockBadge product={product} />}
         {variants.length > 0 && (
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
@@ -544,6 +556,187 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
               Consultar
             </button>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProductDetailModal({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onClose, rubroInfo, catalogDiscount = 0, onOpenLightbox }) {
+  const [currentImg, setCurrentImg] = useState(0)
+  const galleryItems = getGalleryItems(product)
+  const item = galleryItems[currentImg] || null
+
+  const variants = parseVariants(product.variantsJson)
+  const sizes = parseJsonArray(product.productSizes)
+  const sizeColorMap = parseSizeColorMap(product.productColors)
+  const flatColors = sizeColorMap ? [] : parseJsonArray(product.productColors)
+  const sizeKey = rubroInfo?.atributo || 'Talle'
+  const selectedSize = selectedVariants?.[sizeKey] || null
+  const availableColors = sizeColorMap
+    ? (selectedSize ? (sizeColorMap[selectedSize] || []) : [])
+    : flatColors
+  const needsColor = sizeColorMap ? (selectedSize ? availableColors.length > 0 : false) : flatColors.length > 0
+  const hasRequiredSelections = (
+    (variants.length === 0 || variants.every(v => selectedVariants?.[v.name])) &&
+    (sizes.length === 0 || !!selectedSize) &&
+    (!needsColor || !!selectedVariants?.['Color'])
+  )
+  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || flatColors.length > 0 || (sizeColorMap && Object.keys(sizeColorMap).length > 0)
+  const description = product.aiDescription || product.description
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowLeft' && currentImg > 0) setCurrentImg(c => c - 1)
+      if (e.key === 'ArrowRight' && currentImg < galleryItems.length - 1) setCurrentImg(c => c + 1)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose, currentImg, galleryItems.length])
+
+  function handleWhatsapp() {
+    track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
+    const extras = []
+    if (selectedVariants?.[sizeKey]) extras.push(`${sizeKey}: ${selectedVariants[sizeKey]}`)
+    if (selectedVariants?.['Color']) extras.push(`Color: ${selectedVariants['Color']}`)
+    const extraStr = extras.length ? ` (${extras.join(', ')})` : ''
+    const msg = encodeURIComponent(`Hola, vi el producto "${product.name}"${extraStr} en el catálogo "${catalogName}" y me interesa.`)
+    window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
+  }
+
+  return (
+    <div className="fixed inset-0 z-[55] bg-black/75 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden w-full max-w-4xl max-h-[92vh] flex flex-col md:flex-row relative" onClick={e => e.stopPropagation()}>
+        {/* Close */}
+        <button onClick={onClose}
+          className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* LEFT: carousel */}
+        <div className="md:w-[52%] bg-black flex flex-col shrink-0">
+          <div className="relative flex items-center justify-center aspect-square md:aspect-auto md:flex-1 md:min-h-0 overflow-hidden">
+            {item?.type === 'image' && (
+              <img src={item.url} alt={product.name}
+                className="w-full h-full object-contain cursor-zoom-in"
+                onClick={() => onOpenLightbox(galleryItems, currentImg)} />
+            )}
+            {item?.type === 'youtube' && (
+              <div className="w-full aspect-video">
+                <iframe src={`https://www.youtube.com/embed/${getYouTubeId(item.url)}`}
+                  title={product.name}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen className="w-full h-full" />
+              </div>
+            )}
+            {item?.type === 'video' && (
+              <video src={item.url} controls className="w-full h-full object-contain">
+                Tu navegador no soporta video.
+              </video>
+            )}
+            {!item && (
+              <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-slate-800 min-h-[200px]">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )}
+            {currentImg > 0 && (
+              <button onClick={e => { e.stopPropagation(); setCurrentImg(c => c - 1) }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+            {currentImg < galleryItems.length - 1 && (
+              <button onClick={e => { e.stopPropagation(); setCurrentImg(c => c + 1) }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+            {item?.type === 'image' && galleryItems.length > 0 && (
+              <div className="absolute bottom-2 right-2 bg-black/40 text-white text-xs px-2 py-0.5 rounded-lg flex items-center gap-1 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                </svg>
+                Zoom
+              </div>
+            )}
+            {galleryItems.length > 1 && (
+              <div className="absolute bottom-2 left-2 bg-black/40 text-white text-xs px-2 py-0.5 rounded-lg pointer-events-none">
+                {currentImg + 1} / {galleryItems.length}
+              </div>
+            )}
+          </div>
+          {/* Thumbnail strip */}
+          {galleryItems.length > 1 && (
+            <div className="flex gap-1.5 p-2 justify-center overflow-x-auto bg-black/90 shrink-0">
+              {galleryItems.map((it, i) => (
+                <button key={i} onClick={() => setCurrentImg(i)}
+                  className={`w-12 h-12 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${i === currentImg ? 'border-white' : 'border-transparent opacity-50 hover:opacity-80'}`}>
+                  {it.type === 'image' ? (
+                    <img src={it.url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: details */}
+        <div className="md:w-[48%] overflow-y-auto flex flex-col">
+          <div className="p-5 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-2 pr-8">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{product.name}</h3>
+              <div className="shrink-0">
+                <PriceDisplay price={product.price} offerPrice={effectiveOffer(product, catalogDiscount)} size="base" />
+              </div>
+            </div>
+            {product.sku && <p className="text-xs text-gray-400">SKU: {product.sku}</p>}
+            {product.category && (
+              <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full self-start">{product.category}</span>
+            )}
+            {product.showStock && <StockBadge product={product} />}
+            {description && (
+              <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">{description}</p>
+            )}
+            {variants.length > 0 && (
+              <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
+            )}
+            <OptionChips label={sizeKey} options={sizes} selected={selectedVariants?.[sizeKey]}
+              onSelect={v => { const next = { ...(selectedVariants || {}), [sizeKey]: v }; delete next['Color']; onVariantChange(next) }} />
+            {availableColors.length > 0 && (
+              <OptionChips label="Color" options={availableColors} selected={selectedVariants?.['Color']}
+                onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+            )}
+            {sizeColorMap && selectedSize && availableColors.length === 0 && (
+              <p className="text-xs text-gray-400 dark:text-slate-500 italic">Sin colores para este talle.</p>
+            )}
+            <div className="pt-2 flex flex-col gap-2">
+              <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove}
+                hasVariants={hasAnyRequired} variantSelected={hasRequiredSelections} />
+              {vendorWhatsapp && (
+                <button onClick={handleWhatsapp}
+                  className="w-full py-2 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                  Consultar individualmente
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -928,6 +1121,7 @@ export default function PublicCatalogPage({ previewMode = false }) {
   // variants selection per product: { [productId]: { VariantName: option } }
   const [variantSelections, setVariantSelections] = useState({})
   const viewedRef = useRef(false)
+  const [detailProduct, setDetailProduct] = useState(null)
   const [showReportModal, setShowReportModal] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDetails, setReportDetails] = useState('')
@@ -1089,6 +1283,7 @@ export default function PublicCatalogPage({ previewMode = false }) {
             onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
             onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
             onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+            onOpenDetail={setDetailProduct}
             rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
           />
         ))}
@@ -1104,6 +1299,7 @@ export default function PublicCatalogPage({ previewMode = false }) {
               onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
               onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
               onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+              onOpenDetail={setDetailProduct}
               rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
             />
           </div>
@@ -1119,6 +1315,7 @@ export default function PublicCatalogPage({ previewMode = false }) {
             onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
             onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
             onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+            onOpenDetail={setDetailProduct}
             rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
           />
         ))}
@@ -1366,9 +1563,12 @@ export default function PublicCatalogPage({ previewMode = false }) {
                 {groupBySection(visibleProducts).map(({ section, products }) => (
                   <div key={section ?? '__ungrouped'}>
                     {section && (
-                      <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-4 pb-2 border-b border-gray-200 dark:border-slate-700">
-                        {section}
-                      </h3>
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="px-4 py-1.5 rounded-full text-sm font-bold bg-blue-600 text-white shadow-sm">
+                          {section}
+                        </span>
+                        <div className="flex-1 h-px bg-blue-200 dark:bg-blue-900/50" />
+                      </div>
                     )}
                     {renderProducts(products)}
                   </div>
@@ -1412,6 +1612,23 @@ export default function PublicCatalogPage({ previewMode = false }) {
           </button>
         </footer>
       </div>
+
+      {detailProduct && (
+        <ProductDetailModal
+          product={detailProduct}
+          catalogName={catalog.name}
+          vendorWhatsapp={vendorWhatsapp}
+          inCart={!!cart[detailProduct.id]}
+          selectedVariants={variantSelections[detailProduct.id] || {}}
+          onVariantChange={vs => setVariantSelections(s => ({ ...s, [detailProduct.id]: vs }))}
+          onAdd={() => addToCart(detailProduct)}
+          onRemove={() => removeFromCart(detailProduct.id)}
+          onClose={() => setDetailProduct(null)}
+          onOpenLightbox={(items, idx) => openLightbox(items, idx, detailProduct.name)}
+          rubroInfo={rubroInfo}
+          catalogDiscount={catalogDiscount}
+        />
+      )}
 
       {showQR && <QRModal url={pageUrl} catalogName={catalog.name} onClose={() => setShowQR(false)} />}
 
