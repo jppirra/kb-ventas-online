@@ -1039,6 +1039,22 @@ export default function CatalogDetailPage() {
                   </>
                 )}
               </button>
+              <div className="relative group">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 dark:text-slate-500 cursor-help" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 bg-gray-900 dark:bg-slate-700 text-white text-xs rounded-xl px-3 py-2.5 shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10">
+                  <p className="font-semibold mb-1">Recomendaciones</p>
+                  <ul className="space-y-0.5 text-gray-300 dark:text-slate-300">
+                    <li>· Relación: <span className="text-white font-medium">4:3</span> (horizontal)</li>
+                    <li>· Ideal: <span className="text-white font-medium">1200×900 px</span></li>
+                    <li>· Mínimo: <span className="text-white font-medium">800×600 px</span></li>
+                    <li>· Formato: <span className="text-white font-medium">JPG o PNG</span></li>
+                    <li>· Máx: <span className="text-white font-medium">10 MB</span></li>
+                  </ul>
+                  <div className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-900 dark:border-t-slate-700" />
+                </div>
+              </div>
               <input ref={coverFileRef} type="file" accept="image/*" className="hidden" onChange={handleCoverImageUpload} />
             </div>
           </div>
