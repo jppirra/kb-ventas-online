@@ -584,6 +584,9 @@ export default function CatalogDetailPage() {
                 </span>
               )
             })()}
+            {catalog.collaboratorCanPublish === false ? (
+              <span className="text-xs text-gray-400 dark:text-slate-500 px-2">Sin permiso para publicar</span>
+            ) : (
             <button onClick={handlePublish} disabled={publishing || catalog.products?.length === 0 || (!catalog.hasDraftChanges && catalog.publishedAt)}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white text-sm font-medium rounded-xl transition-colors">
               {publishing ? (
@@ -603,6 +606,7 @@ export default function CatalogDetailPage() {
                 </>
               )}
             </button>
+            )}
             <button onClick={handleGenerate} disabled={generating || catalog.products?.length === 0}
               className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
               {generating ? (

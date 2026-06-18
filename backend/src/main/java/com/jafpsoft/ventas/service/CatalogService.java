@@ -11,20 +11,27 @@ import com.jafpsoft.ventas.dto.profile.PublicProductResponse;
 import com.jafpsoft.ventas.model.Catalog;
 import com.jafpsoft.ventas.model.CatalogStatus;
 import com.jafpsoft.ventas.model.Product;
+import com.jafpsoft.ventas.model.CatalogCollaborator;
 import com.jafpsoft.ventas.repository.CatalogRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
+import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +39,8 @@ public class CatalogService {
 
     private final CatalogRepository catalogRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
+    private final CollaboratorService collaboratorService;
     private final ExcelService excelService;
     private final AiService aiService;
     private final StorageService storageService;
@@ -39,17 +48,38 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public List<CatalogResponse> listByUser(Long userId) {
-        return catalogRepository.findByUserIdOrderByCreatedAtDesc(userId)
+        List<CatalogResponse> own = catalogRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
                 .filter(Catalog::isActive)
                 .map(c -> CatalogResponse.from(c, false))
                 .toList();
+
+        List<Long> collabIds = collaboratorService.getAccessibleCatalogIds(userId);
+        List<CatalogResponse> collab = collabIds.stream()
+                .map(cid -> catalogRepository.findById(cid).orElse(null))
+                .filter(Objects::nonNull)
+                .filter(Catalog::isActive)
+                .filter(c -> !c.getUserId().equals(userId))
+                .map(c -> {
+                    CatalogResponse r = CatalogResponse.from(c, false);
+                    CatalogCollaborator cc = collaboratorService.getActiveCollaboratorForCatalog(c.getId(), userId);
+                    r.setCollaboratorCanPublish(cc != null && cc.isCanPublish());
+                    return r;
+                })
+                .toList();
+
+        return Stream.concat(own.stream(), collab.stream()).toList();
     }
 
     @Transactional(readOnly = true)
     public CatalogResponse getById(Long id, Long userId) {
-        Catalog catalog = findOwned(id, userId);
-        return CatalogResponse.from(catalog, true);
+        Catalog catalog = findAccessible(id, userId, false);
+        CatalogResponse r = CatalogResponse.from(catalog, true);
+        if (!catalog.getUserId().equals(userId) && !isAdmin(userId)) {
+            CatalogCollaborator cc = collaboratorService.getActiveCollaboratorForCatalog(id, userId);
+            r.setCollaboratorCanPublish(cc != null && cc.isCanPublish());
+        }
+        return r;
     }
 
     @Transactional
@@ -98,7 +128,7 @@ public class CatalogService {
 
     @Transactional
     public ProductResponse addProduct(Long catalogId, ProductRequest req, Long userId) {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         Product product = Product.builder()
                 .userId(userId)
                 .catalog(catalog)
@@ -121,7 +151,7 @@ public class CatalogService {
 
     @Transactional
     public ProductResponse updateProduct(Long catalogId, Long productId, ProductRequest req, Long userId) {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setName(req.getName());
@@ -142,7 +172,7 @@ public class CatalogService {
 
     @Transactional
     public ProductResponse toggleProductActive(Long catalogId, Long productId, Long userId) {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setActive(!product.isActive());
@@ -153,7 +183,7 @@ public class CatalogService {
 
     @Transactional
     public ProductResponse unlinkProduct(Long catalogId, Long productId, Long userId) {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setCatalog(null);
@@ -165,7 +195,7 @@ public class CatalogService {
 
     @Transactional
     public ProductResponse assignProductToCatalog(Long catalogId, Long productId, Long userId) {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         Product product = productRepository.findByIdAndUserId(productId, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setCatalog(catalog);
@@ -189,7 +219,7 @@ public class CatalogService {
 
     @Transactional
     public void deleteProduct(Long catalogId, Long productId, Long userId) {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         productRepository.delete(product);
@@ -198,7 +228,7 @@ public class CatalogService {
 
     @Transactional
     public List<ProductResponse> importFromExcel(Long catalogId, MultipartFile file, Long userId) throws IOException {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         List<ProductRequest> parsed = excelService.parseProducts(file);
 
         List<Product> products = parsed.stream().map(req -> Product.builder()
@@ -222,7 +252,7 @@ public class CatalogService {
     @Async
     @Transactional
     public void generateAiContent(Long catalogId, Long userId) {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         catalog.setStatus(CatalogStatus.GENERATING);
         catalogRepository.save(catalog);
 
@@ -251,14 +281,14 @@ public class CatalogService {
 
     @Transactional
     public Map<String, String> uploadTempProductImage(Long catalogId, MultipartFile file, Long userId) throws IOException {
-        findOwned(catalogId, userId);
+        findAccessible(catalogId, userId, false);
         String url = storageService.uploadImage(file, "products");
         return Map.of("imageUrl", url);
     }
 
     @Transactional
     public Map<String, String> uploadProductImage(Long catalogId, Long productId, MultipartFile file, Long userId) throws IOException {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         Product product = productRepository.findByIdAndCatalogId(productId, catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         String url = storageService.uploadImage(file, "products");
@@ -270,7 +300,7 @@ public class CatalogService {
 
     @Transactional
     public Map<String, String> uploadCatalogBackground(Long catalogId, MultipartFile file, Long userId) throws IOException {
-        Catalog catalog = findOwned(catalogId, userId);
+        Catalog catalog = findAccessible(catalogId, userId, false);
         String url = storageService.uploadImage(file, "catalog-backgrounds");
         catalog.setBackgroundImageUrl(url);
         catalog.setBackgroundType("CUSTOM");
@@ -281,7 +311,7 @@ public class CatalogService {
 
     @Transactional
     public CatalogResponse publish(Long id, Long userId) {
-        Catalog catalog = findOwned(id, userId);
+        Catalog catalog = findAccessible(id, userId, true);
         List<Product> activeProducts = productRepository
                 .findByCatalogIdOrderBySortOrderAscCreatedAtAsc(id)
                 .stream()
@@ -343,5 +373,23 @@ public class CatalogService {
     private Catalog findOwned(Long id, Long userId) {
         return catalogRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
+    }
+
+    private Catalog findAccessible(Long id, Long userId, boolean requirePublishPerm) {
+        Optional<Catalog> owned = catalogRepository.findByIdAndUserId(id, userId);
+        if (owned.isPresent()) return owned.get();
+        if (isAdmin(userId)) return catalogRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
+        if (collaboratorService.hasAccessToCatalog(id, userId)) {
+            if (requirePublishPerm && !collaboratorService.canPublishCatalog(id, userId))
+                throw new AccessDeniedException("Sin permiso para publicar");
+            return catalogRepository.findById(id)
+                    .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
+        }
+        throw new EntityNotFoundException("Catálogo no encontrado");
+    }
+
+    private boolean isAdmin(Long userId) {
+        return userRepository.findById(userId).map(u -> u.isAppAdmin()).orElse(false);
     }
 }

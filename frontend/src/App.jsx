@@ -41,6 +41,8 @@ import TicketsPage from './pages/TicketsPage'
 import TicketDetailPage from './pages/TicketDetailPage'
 import TicketConfigPage from './pages/TicketConfigPage'
 import CustomersPage from './pages/CustomersPage'
+import CollaboratorsPage from './pages/CollaboratorsPage'
+import InviteAcceptPage from './pages/InviteAcceptPage'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
@@ -100,6 +102,10 @@ export default function App() {
               <Route path="/customers" element={
                 <ProtectedRoute><CustomersPage /></ProtectedRoute>
               } />
+              <Route path="/collaborators" element={
+                <ProtectedRoute><CollaboratorsPage /></ProtectedRoute>
+              } />
+              <Route path="/invite" element={<InviteAcceptPage />} />
               <Route path="/orders" element={
                 <ProtectedRoute><OrdersPage /></ProtectedRoute>
               } />

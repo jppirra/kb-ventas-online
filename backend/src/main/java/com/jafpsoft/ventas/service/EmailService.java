@@ -218,6 +218,55 @@ public class EmailService {
         send(toEmail, "ORDER", "Nueva solicitud — " + catalogName, html);
     }
 
+    @Async
+    public void sendCollaboratorInviteEmail(String toEmail, String ownerName, String ownerPhotoUrl, String token) {
+        String acceptUrl = baseUrl + "/invite?token=" + token;
+        String color = primaryColor();
+
+        String avatarBlock;
+        if (ownerPhotoUrl != null && !ownerPhotoUrl.isBlank()) {
+            avatarBlock = "<img src=\"" + ownerPhotoUrl + "\" alt=\"" + ownerName + "\" style=\"width:72px;height:72px;border-radius:50%;object-fit:cover;border:3px solid " + color + ";display:block;margin:0 auto 16px;\">";
+        } else {
+            String initials = ownerName != null && !ownerName.isBlank()
+                    ? String.valueOf(ownerName.charAt(0)).toUpperCase() : "?";
+            avatarBlock = "<div style=\"width:72px;height:72px;border-radius:50%;background:" + color + ";color:#fff;font-size:28px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;line-height:72px;text-align:center;\">" + initials + "</div>";
+        }
+
+        String html = """
+            <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#f5f3ff;font-family:'Segoe UI',Arial,sans-serif;">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="padding:48px 20px;">
+                <tr><td align="center">
+                  <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%%;">
+                    <tr><td style="text-align:center;padding-bottom:20px;">
+                      <span style="font-size:24px;font-weight:800;color:%s;letter-spacing:-0.5px;">%s</span>
+                    </td></tr>
+                    <tr><td style="background:#fff;border-radius:20px;padding:44px 48px;box-shadow:0 2px 20px rgba(99,102,241,0.10);">
+                      <div style="text-align:center;margin-bottom:24px;">
+                        %s
+                        <p style="margin:0;font-size:17px;font-weight:700;color:#1e1b4b;">%s</p>
+                        <p style="margin:4px 0 0;font-size:14px;color:#6b7280;">te invita a colaborar en sus catálogos</p>
+                      </div>
+                      <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.7;text-align:center;">
+                        Aceptá la invitación para acceder y editar los catálogos asignados.
+                      </p>
+                      <table cellpadding="0" cellspacing="0" style="margin:0 auto 28px;"><tr>
+                        <td style="background:%s;border-radius:12px;">
+                          <a href="%s" style="display:block;padding:14px 36px;font-size:16px;font-weight:700;color:#fff;text-decoration:none;letter-spacing:0.2px;">Aceptar invitación →</a>
+                        </td>
+                      </tr></table>
+                      <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;text-align:center;">Si no esperabas esta invitación, podés ignorar este mensaje.</p>
+                      <p style="margin:0;font-size:12px;color:#c4b5fd;text-align:center;font-weight:600;">%s · jafpsoft</p>
+                    </td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body></html>
+            """.formatted(color, fromName(), avatarBlock, ownerName, color, acceptUrl, fromName());
+
+        send(toEmail, "COLLABORATOR_INVITE", "Te invitaron a colaborar en " + fromName(), html);
+    }
+
     // ── HTML builder ──────────────────────────────────────────────────────────
 
     private String buildActionEmail(String heading, String body, String ctaUrl, String ctaText, String footer) {

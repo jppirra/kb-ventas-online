@@ -228,6 +228,9 @@ export default function CatalogsPage() {
                     {catalog.status === 'GENERATING' && (
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">Generando IA...</span>
                     )}
+                    {catalog.collaboratorCanPublish !== null && catalog.collaboratorCanPublish !== undefined && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">Colaborador</span>
+                    )}
                     {catalog.rubro && getRubro(catalog.rubro) && (
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">
                         {getRubro(catalog.rubro).label}
