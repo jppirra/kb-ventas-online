@@ -96,7 +96,7 @@ public class CatalogService {
 
     @Transactional
     public CatalogResponse update(Long id, CatalogRequest req, Long userId) {
-        Catalog catalog = findOwned(id, userId);
+        Catalog catalog = findAccessible(id, userId, false);
         catalog.setName(req.getName());
         catalog.setDescription(req.getDescription());
         applyAppearance(catalog, req);
