@@ -158,6 +158,30 @@ export default function StockPage() {
     try { return JSON.parse(json) || [] } catch { return [] }
   }
 
+  function cloneProduct(product) {
+    setPendingImageFile(null)
+    setPendingGalleryFiles([])
+    setEditingId(null)
+    setForm({
+      name: product.name + ' (copia)',
+      description: product.description || '',
+      price: product.price ?? '',
+      offerPrice: product.offerPrice ?? '',
+      sku: product.sku || '',
+      category: product.category || '',
+      imageUrl: product.imageUrl || '',
+      showStock: product.showStock || false,
+      stockStatus: product.stockStatus || 'IN_STOCK',
+      stockCount: product.stockCount ?? '',
+      showStockQuantity: product.showStockQuantity || false,
+      showWhenOutOfStock: product.showWhenOutOfStock || false,
+      extraImages: parseExtraImages(product.extraImagesJson),
+      videoUrl: product.videoUrl || '',
+      variants: parseVariants(product.variantsJson),
+    })
+    setShowForm(true)
+  }
+
   function openForm(product = null) {
     setPendingImageFile(null)
     setPendingGalleryFiles([])
@@ -750,9 +774,15 @@ export default function StockPage() {
                         </button>
                       )}
                       <button onClick={() => openForm(product)}
-                        className="p-1.5 text-gray-400 hover:text-blue-500 dark:text-slate-500 dark:hover:text-blue-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                        className="p-1.5 text-gray-400 hover:text-blue-500 dark:text-slate-500 dark:hover:text-blue-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" title="Editar">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      <button onClick={() => cloneProduct(product)}
+                        className="p-1.5 text-gray-400 hover:text-green-500 dark:text-slate-500 dark:hover:text-green-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors" title="Clonar producto">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
                       </button>
                       <button onClick={() => handleDelete(product.id)}
