@@ -48,7 +48,7 @@ function CatalogCard({ catalog }) {
           )}
           <span className="text-xs text-gray-500 dark:text-slate-400 truncate">{catalog.vendorName}</span>
           {catalog.viewCount > 0 && (
-            <span className="ml-auto text-xs text-gray-400 dark:text-slate-500 shrink-0">{catalog.viewCount} vistas</span>
+            <span className="ml-auto text-xs text-gray-400 dark:text-slate-500 shrink-0">{catalog.viewCount} views</span>
           )}
         </div>
       </div>
@@ -115,12 +115,12 @@ export default function ExplorarPage() {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 17l-5-5m0 0l5-5m-5 5h12" />
             </svg>
-            Volver a la app
+            Back to app
           </Link>
         ) : (
           <div className="flex items-center gap-2 ml-auto">
-            <Link to="/login" className="text-xs font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 transition-colors">Iniciar sesión</Link>
-            <Link to="/register" className="text-xs font-semibold px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">Registrarse</Link>
+            <Link to="/login" className="text-xs font-medium text-gray-600 dark:text-slate-300 hover:text-blue-600 transition-colors">Sign in</Link>
+            <Link to="/register" className="text-xs font-semibold px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-colors">Sign up</Link>
           </div>
         )}
       </div>
@@ -128,8 +128,8 @@ export default function ExplorarPage() {
       <div className="max-w-5xl mx-auto w-full px-4 py-8 flex-1">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Explorar catálogos</h1>
-          <p className="text-sm text-gray-500 dark:text-slate-400">Descubrí catálogos publicados de vendedores de todo tipo.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Explore catalogs</h1>
+          <p className="text-sm text-gray-500 dark:text-slate-400">Discover published catalogs from all kinds of sellers.</p>
         </div>
 
         {/* Search bar */}
@@ -138,11 +138,11 @@ export default function ExplorarPage() {
             type="text"
             value={inputValue}
             onChange={e => setInputValue(e.target.value)}
-            placeholder="Buscar por nombre o descripción..."
+            placeholder="Search by name or description..."
             className="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold rounded-xl transition-colors">
-            Buscar
+            Search
           </button>
           {(q || rubro) && (
             <button
@@ -150,7 +150,7 @@ export default function ExplorarPage() {
               onClick={() => { setQ(''); setRubro(''); setInputValue(''); setSearchParams({}) }}
               className="px-3 py-2 border border-gray-200 dark:border-slate-700 text-gray-500 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors"
             >
-              Limpiar
+              Clear
             </button>
           )}
         </form>
@@ -173,14 +173,14 @@ export default function ExplorarPage() {
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center py-20 text-gray-400 dark:text-slate-500 text-sm">Cargando...</div>
+          <div className="flex items-center justify-center py-20 text-gray-400 dark:text-slate-500 text-sm">Loading...</div>
         ) : (
           <>
             {/* Featured (only when no filters active) */}
             {showFeatured && data?.featured?.length > 0 && (
               <div className="mb-10">
                 <div className="flex items-center gap-3 mb-4">
-                  <span className="px-4 py-1.5 rounded-full text-sm font-bold bg-amber-500 text-white shadow-sm">Destacados</span>
+                  <span className="px-4 py-1.5 rounded-full text-sm font-bold bg-amber-500 text-white shadow-sm">Featured</span>
                   <div className="flex-1 h-px bg-amber-200 dark:bg-amber-900/50" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
@@ -192,21 +192,21 @@ export default function ExplorarPage() {
             {/* Results */}
             {data?.results?.length === 0 ? (
               <div className="text-center py-16 text-gray-400 dark:text-slate-500 text-sm">
-                No se encontraron catálogos{rubro || q ? ' con esos filtros' : ''}.
+                No catalogs found{rubro || q ? ' matching those filters' : ''}.
               </div>
             ) : (
               <div>
                 {(rubro || q) && (
                   <div className="flex items-center gap-3 mb-4">
                     <span className="px-4 py-1.5 rounded-full text-sm font-bold bg-blue-600 text-white shadow-sm">
-                      {data.results.length} resultado{data.results.length !== 1 ? 's' : ''}
+                      {data.results.length} result{data.results.length !== 1 ? 's' : ''}
                     </span>
                     <div className="flex-1 h-px bg-blue-200 dark:bg-blue-900/50" />
                   </div>
                 )}
                 {!rubro && !q && data?.results?.length > 0 && (
                   <div className="flex items-center gap-3 mb-4">
-                    <span className="px-4 py-1.5 rounded-full text-sm font-bold bg-blue-600 text-white shadow-sm">Todos los catálogos</span>
+                    <span className="px-4 py-1.5 rounded-full text-sm font-bold bg-blue-600 text-white shadow-sm">All catalogs</span>
                     <div className="flex-1 h-px bg-blue-200 dark:bg-blue-900/50" />
                   </div>
                 )}

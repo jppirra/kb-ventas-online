@@ -20,6 +20,7 @@ import com.jafpsoft.ventas.repository.StoreRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -146,7 +147,8 @@ public class PublicProfileService {
         String rubroParam = (rubro == null || rubro.isBlank()) ? null : rubro.trim();
         String qParam = (q == null || q.isBlank()) ? null : q.trim();
 
-        List<CatalogSearchResultResponse> results = catalogRepository.searchPublished(rubroParam, qParam)
+        List<CatalogSearchResultResponse> results = catalogRepository
+                .searchPublished(rubroParam, qParam, PageRequest.of(0, 60))
                 .stream()
                 .map(c -> {
                     User owner = userRepository.findById(c.getUserId()).orElse(null);
@@ -156,7 +158,8 @@ public class PublicProfileService {
                 .filter(r -> r != null)
                 .toList();
 
-        List<CatalogSearchResultResponse> featured = catalogRepository.findTopFeatured()
+        List<CatalogSearchResultResponse> featured = catalogRepository
+                .findTopFeatured(PageRequest.of(0, 5))
                 .stream()
                 .map(c -> {
                     User owner = userRepository.findById(c.getUserId()).orElse(null);
