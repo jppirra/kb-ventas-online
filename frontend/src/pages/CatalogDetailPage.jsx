@@ -36,7 +36,81 @@ const BG_TYPES = [
 import { productsApi } from '../api/products'
 import { RUBROS, getRubro } from '../config/rubros'
 
-const emptyProduct = { name: '', description: '', price: '', sku: '', category: '', imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: [] }
+const emptyProduct = { name: '', description: '', price: '', sku: '', categories: [], imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: [], stockMatrix: {} }
+
+function StockMatrixInput({ sizes, colors, matrix, onChange, atributoLabel }) {
+  const hasSizes = sizes.length > 0
+  const hasColors = colors.length > 0
+  const rows = hasSizes ? sizes : ['']
+  const cols = hasColors ? colors : ['']
+
+  function getKey(row, col) {
+    if (!hasSizes) return col
+    if (!hasColors) return row
+    return `${row}|${col}`
+  }
+
+  function getVal(row, col) {
+    const v = matrix[getKey(row, col)]
+    return v != null ? v : ''
+  }
+
+  function setVal(row, col, val) {
+    const key = getKey(row, col)
+    const qty = val === '' ? null : parseInt(val) || 0
+    const next = { ...matrix }
+    if (qty === null || qty === 0) { delete next[key] } else { next[key] = qty }
+    onChange(next)
+  }
+
+  const colHeader = hasSizes && hasColors
+  const rowHeader = hasSizes
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="text-xs border-collapse w-auto">
+        {colHeader && (
+          <thead>
+            <tr>
+              {rowHeader && <th className="px-2 py-1" />}
+              {cols.map(c => (
+                <th key={c} className="px-3 py-1 text-gray-500 dark:text-slate-400 font-medium text-center whitespace-nowrap">{c}</th>
+              ))}
+            </tr>
+          </thead>
+        )}
+        <tbody>
+          {rows.map(row => (
+            <tr key={row}>
+              {rowHeader && (
+                <td className="pr-3 py-1 text-gray-700 dark:text-slate-300 font-medium whitespace-nowrap align-middle">
+                  {row}
+                </td>
+              )}
+              {cols.map(col => (
+                <td key={col} className="px-1 py-1">
+                  <input
+                    type="number" min="0"
+                    value={getVal(row, col)}
+                    onChange={e => setVal(row, col, e.target.value)}
+                    placeholder="0"
+                    title={[row, col].filter(Boolean).join(' / ')}
+                    className="w-16 text-center px-1.5 py-1.5 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs"
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="text-xs text-gray-400 dark:text-slate-500 mt-1.5">
+        {hasSizes && hasColors ? `Filas: ${atributoLabel || 'Talle'} — Columnas: Color. Dejá en 0 si no tenés esa combinación.` :
+         hasSizes ? `Ingresá el stock disponible por ${atributoLabel || 'Talle'}.` :
+         'Ingresá el stock disponible por color.'}
+      </p>
+    </div>
+  )
+}
 
 function CsvInput({ label, values, onChange, placeholder, hint }) {
   const [text, setText] = useState(() => values.join(', '))
@@ -203,14 +277,19 @@ export default function CatalogDetailPage() {
       try { extraImages = product.extraImagesJson ? JSON.parse(product.extraImagesJson) : [] } catch {}
       let productSizes = []
       let productColors = []
+      let stockMatrix = {}
       try { productSizes = product.productSizes ? JSON.parse(product.productSizes) : [] } catch {}
       try { productColors = product.productColors ? JSON.parse(product.productColors) : [] } catch {}
+      try { stockMatrix = product.stockMatrix ? JSON.parse(product.stockMatrix) : {} } catch {}
+      const categories = product.category
+        ? product.category.split(',').map(c => c.trim()).filter(Boolean)
+        : []
       setProductForm({
         name: product.name || '',
         description: product.description || '',
         price: product.price ?? '',
         sku: product.sku || '',
-        category: product.category || '',
+        categories,
         imageUrl: product.imageUrl || '',
         extraImages,
         videoUrl: product.videoUrl || '',
@@ -220,6 +299,7 @@ export default function CatalogDetailPage() {
         showStockQuantity: product.showStockQuantity || false,
         productSizes,
         productColors,
+        stockMatrix,
       })
     } else {
       setEditingProductId(null)
@@ -232,14 +312,17 @@ export default function CatalogDetailPage() {
     e.preventDefault()
     if (!productForm.name.trim()) return
     setSavingProduct(true)
+    const hasMatrix = Object.keys(productForm.stockMatrix).length > 0
     const payload = {
       ...productForm,
+      category: productForm.categories.length > 0 ? productForm.categories.join(', ') : null,
       price: productForm.price !== '' ? parseFloat(productForm.price) : null,
-      stockCount: productForm.stockCount !== '' ? parseInt(productForm.stockCount) : null,
+      stockCount: !hasMatrix && productForm.stockCount !== '' ? parseInt(productForm.stockCount) : null,
       extraImagesJson: productForm.extraImages.length > 0 ? JSON.stringify(productForm.extraImages) : null,
       videoUrl: productForm.videoUrl || null,
       productSizes: productForm.productSizes.length > 0 ? JSON.stringify(productForm.productSizes) : null,
       productColors: productForm.productColors.length > 0 ? JSON.stringify(productForm.productColors) : null,
+      stockMatrix: hasMatrix ? JSON.stringify(productForm.stockMatrix) : null,
     }
     try {
       if (editingProductId) {
@@ -802,57 +885,76 @@ export default function CatalogDetailPage() {
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Categoria</label>
-                <input type="text" value={productForm.category} onChange={e => setProductForm(f => ({ ...f, category: e.target.value }))}
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <CsvInput
+                  label="Categorías"
+                  values={productForm.categories}
+                  onChange={v => setProductForm(f => ({ ...f, categories: v }))}
+                  placeholder="Ej: abrigo, campera"
+                  hint="Ingresá una o más categorías separadas por coma. Ej: abrigo, campera. Cada valor será una categoría independiente para filtrar."
+                />
               </div>
             </div>
 
             {/* Stock section */}
-            <div className="border-t border-gray-100 dark:border-slate-700 pt-3">
-              <div className="flex items-center gap-2 mb-3">
-                <input type="checkbox" id="showStock" checked={productForm.showStock}
-                  onChange={e => setProductForm(f => ({ ...f, showStock: e.target.checked }))} className="rounded" />
-                <label htmlFor="showStock" className="text-sm text-gray-700 dark:text-slate-300 font-medium">
-                  Mostrar disponibilidad de stock
-                </label>
-              </div>
-              {productForm.showStock && (
-                <div className="ml-6 space-y-3">
-                  <div className="flex gap-2">
-                    <button type="button" onClick={() => setProductForm(f => ({ ...f, stockStatus: 'IN_STOCK' }))}
-                      className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${
-                        productForm.stockStatus === 'IN_STOCK'
-                          ? 'bg-green-600 border-green-600 text-white'
-                          : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
-                      }`}>
-                      En stock
-                    </button>
-                    <button type="button" onClick={() => setProductForm(f => ({ ...f, stockStatus: 'ON_DEMAND' }))}
-                      className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${
-                        productForm.stockStatus === 'ON_DEMAND'
-                          ? 'bg-yellow-500 border-yellow-500 text-white'
-                          : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
-                      }`}>
-                      A pedido
-                    </button>
+            {(() => {
+              const rubroInfo = catalog.rubro ? getRubro(catalog.rubro) : null
+              const hasSizes = productForm.productSizes.length > 0
+              const hasColors = productForm.productColors.length > 0
+              const useMatrix = productForm.showStock && productForm.stockStatus === 'IN_STOCK' && (hasSizes || hasColors)
+              return (
+                <div className="border-t border-gray-100 dark:border-slate-700 pt-3">
+                  <div className="flex items-center gap-2 mb-3">
+                    <input type="checkbox" id="showStock" checked={productForm.showStock}
+                      onChange={e => setProductForm(f => ({ ...f, showStock: e.target.checked }))} className="rounded" />
+                    <label htmlFor="showStock" className="text-sm text-gray-700 dark:text-slate-300 font-medium">
+                      Registrar stock
+                    </label>
                   </div>
-                  {productForm.stockStatus === 'IN_STOCK' && (
-                    <div className="flex items-center gap-2">
-                      <input type="checkbox" id="showQty" checked={productForm.showStockQuantity}
-                        onChange={e => setProductForm(f => ({ ...f, showStockQuantity: e.target.checked }))} className="rounded" />
-                      <label htmlFor="showQty" className="text-sm text-gray-600 dark:text-slate-400">Mostrar cantidad</label>
-                      {productForm.showStockQuantity && (
-                        <input type="number" min="0" value={productForm.stockCount}
-                          onChange={e => setProductForm(f => ({ ...f, stockCount: e.target.value }))}
-                          placeholder="0"
-                          className="ml-2 w-20 px-2 py-1 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  {productForm.showStock && (
+                    <div className="ml-6 space-y-3">
+                      <div className="flex gap-2">
+                        <button type="button" onClick={() => setProductForm(f => ({ ...f, stockStatus: 'IN_STOCK' }))}
+                          className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${productForm.stockStatus === 'IN_STOCK' ? 'bg-green-600 border-green-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                          En stock
+                        </button>
+                        <button type="button" onClick={() => setProductForm(f => ({ ...f, stockStatus: 'ON_DEMAND' }))}
+                          className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${productForm.stockStatus === 'ON_DEMAND' ? 'bg-yellow-500 border-yellow-500 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                          A pedido
+                        </button>
+                      </div>
+                      {productForm.stockStatus === 'IN_STOCK' && (
+                        useMatrix ? (
+                          <div>
+                            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2 font-medium">
+                              Stock por {rubroInfo?.atributo && hasSizes ? `${rubroInfo.atributo.toLowerCase()} y color` : hasSizes ? 'talle' : 'color'}
+                            </p>
+                            <StockMatrixInput
+                              sizes={productForm.productSizes}
+                              colors={productForm.productColors}
+                              matrix={productForm.stockMatrix}
+                              onChange={m => setProductForm(f => ({ ...f, stockMatrix: m }))}
+                              atributoLabel={rubroInfo?.atributo || 'Talle'}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <input type="checkbox" id="showQty" checked={productForm.showStockQuantity}
+                              onChange={e => setProductForm(f => ({ ...f, showStockQuantity: e.target.checked }))} className="rounded" />
+                            <label htmlFor="showQty" className="text-sm text-gray-600 dark:text-slate-400">Mostrar cantidad</label>
+                            {productForm.showStockQuantity && (
+                              <input type="number" min="0" value={productForm.stockCount}
+                                onChange={e => setProductForm(f => ({ ...f, stockCount: e.target.value }))}
+                                placeholder="0"
+                                className="ml-2 w-20 px-2 py-1 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                            )}
+                          </div>
+                        )
                       )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              )
+            })()}
 
             {/* Talles y colores por producto */}
             {(() => {
@@ -919,11 +1021,9 @@ export default function CatalogDetailPage() {
                       {!product.active && (
                         <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full">Oculto</span>
                       )}
-                      {product.category && (
-                        <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full">
-                          {product.category}
-                        </span>
-                      )}
+                      {product.category && product.category.split(',').map(c => c.trim()).filter(Boolean).map(c => (
+                        <span key={c} className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full">{c}</span>
+                      ))}
                       {product.price != null && (
                         <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
                           ${Number(product.price).toLocaleString('es-AR')}

@@ -21,6 +21,7 @@ public class PublicProductResponse {
     private String variantsJson;
     private String productSizes;
     private String productColors;
+    private String stockMatrix;
     private Integer sortOrder;
     private Boolean showStock;
     private String stockStatus;
@@ -42,6 +43,7 @@ public class PublicProductResponse {
         r.variantsJson = p.getVariantsJson();
         r.productSizes = p.getProductSizes();
         r.productColors = p.getProductColors();
+        r.stockMatrix = p.getStockMatrix();
         r.sortOrder = p.getSortOrder();
         if (p.isShowStock()) {
             r.showStock = true;

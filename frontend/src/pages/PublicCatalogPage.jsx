@@ -57,12 +57,24 @@ const STOCK_COLORS = {
   ON_DEMAND: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
-function StockBadge({ stockStatus, stockCount }) {
-  if (!stockStatus) return null
+function calcStockTotal(product) {
+  if (product.stockMatrix) {
+    try {
+      const m = JSON.parse(product.stockMatrix)
+      return Object.values(m).reduce((sum, v) =>
+        sum + (typeof v === 'number' ? v : Object.values(v).reduce((s, n) => s + n, 0)), 0)
+    } catch { return null }
+  }
+  return product.stockCount ?? null
+}
+
+function StockBadge({ product }) {
+  if (!product?.showStock || !product?.stockStatus) return null
+  const count = calcStockTotal(product)
   return (
-    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${STOCK_COLORS[stockStatus] || 'bg-gray-100 text-gray-600'}`}>
-      {STOCK_LABELS[stockStatus] || stockStatus}
-      {stockCount != null && <span>({stockCount})</span>}
+    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${STOCK_COLORS[product.stockStatus] || 'bg-gray-100 text-gray-600'}`}>
+      {STOCK_LABELS[product.stockStatus] || product.stockStatus}
+      {count != null && <span>({count})</span>}
     </span>
   )
 }
@@ -387,7 +399,7 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
         ) : product.description ? (
           <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.description}</p>
         ) : null}
-        {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
+        {product.showStock && <StockBadge product={product} />}
         {variants.length > 0 && (
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
         )}
@@ -470,7 +482,7 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
         ) : product.description ? (
           <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{product.description}</p>
         ) : null}
-        {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
+        {product.showStock && <StockBadge product={product} />}
         {variants.length > 0 && (
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
         )}
@@ -965,9 +977,13 @@ export default function PublicCatalogPage() {
 
   const rubroInfo = catalog.rubro ? getRubro(catalog.rubro) : null
   const allProducts = catalog.products || []
-  const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
-
   function parseProdArr(json) { try { return json ? JSON.parse(json) : [] } catch { return [] } }
+  function productCategories(p) {
+    return p.category ? p.category.split(',').map(c => c.trim()).filter(Boolean) : []
+  }
+
+  const categories = [...new Set(allProducts.flatMap(productCategories))]
+
 
   const allSizes = rubroInfo?.atributo
     ? [...new Set(allProducts.flatMap(p => parseProdArr(p.productSizes)))]
@@ -975,9 +991,10 @@ export default function PublicCatalogPage() {
   const allColors = [...new Set(allProducts.flatMap(p => parseProdArr(p.productColors)))]
 
   const visibleProducts = allProducts.filter(p => {
-    const matchCat = !activeCategory || p.category === activeCategory
+    const cats = productCategories(p)
+    const matchCat = !activeCategory || cats.includes(activeCategory)
     const q = search.toLowerCase()
-    const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q)
+    const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q) || cats.some(c => c.toLowerCase().includes(q))
     const matchSize = !activeSize || parseProdArr(p.productSizes).includes(activeSize)
     const matchColor = !activeColor || parseProdArr(p.productColors).includes(activeColor)
     return matchCat && matchSearch && matchSize && matchColor

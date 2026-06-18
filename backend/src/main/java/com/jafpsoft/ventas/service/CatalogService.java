@@ -183,6 +183,7 @@ public class CatalogService {
         if (req.getSizeStock() != null) product.setSizeStock(req.getSizeStock());
         if (req.getProductSizes() != null) product.setProductSizes(req.getProductSizes());
         if (req.getProductColors() != null) product.setProductColors(req.getProductColors());
+        if (req.getStockMatrix() != null) product.setStockMatrix(req.getStockMatrix());
     }
 
     @Transactional

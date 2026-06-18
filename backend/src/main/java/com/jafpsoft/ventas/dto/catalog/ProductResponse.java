@@ -33,6 +33,7 @@ public class ProductResponse {
     private String sizeStock;
     private String productSizes;
     private String productColors;
+    private String stockMatrix;
     private LocalDateTime createdAt;
 
     public static ProductResponse from(Product p) {
@@ -62,6 +63,7 @@ public class ProductResponse {
         r.sizeStock = p.getSizeStock();
         r.productSizes = p.getProductSizes();
         r.productColors = p.getProductColors();
+        r.stockMatrix = p.getStockMatrix();
         r.createdAt = p.getCreatedAt();
         return r;
     }

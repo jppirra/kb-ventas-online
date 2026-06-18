@@ -28,4 +28,5 @@ public class ProductRequest {
     private String sizeStock;
     private String productSizes;
     private String productColors;
+    private String stockMatrix;
 }
