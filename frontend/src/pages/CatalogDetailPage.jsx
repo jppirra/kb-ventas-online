@@ -318,6 +318,7 @@ export default function CatalogDetailPage() {
   const [uploadingBg, setUploadingBg] = useState(false)
   const [bgProgress, setBgProgress] = useState(null)
   const [uploadingCover, setUploadingCover] = useState(false)
+  const [selectedRubro, setSelectedRubro] = useState('')
   const [catalogDiscount, setCatalogDiscount] = useState('')
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
@@ -336,6 +337,7 @@ export default function CatalogDetailPage() {
       setBgType(data.backgroundType || 'NONE')
       setBgColor(data.backgroundColor || '#f8fafc')
       setBgTemplateId(data.backgroundTemplateId || null)
+      setSelectedRubro(data.rubro || '')
       setCatalogDiscount(data.discount ?? '')
       try { setSectionOrder(data.sectionOrder ? JSON.parse(data.sectionOrder) : []) } catch { setSectionOrder([]) }
       if (data.status === 'GENERATING') startPolling()
@@ -789,6 +791,7 @@ export default function CatalogDetailPage() {
         name: catalog.name,
         description: catalog.description,
         viewMode,
+        rubro: selectedRubro || null,
         backgroundType: bgType,
         backgroundColor: bgType === 'COLOR' ? bgColor : null,
         backgroundTemplateId: bgType === 'PREDEFINED' ? bgTemplateId : null,
@@ -970,6 +973,36 @@ export default function CatalogDetailPage() {
                       : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
                   }`}>
                   {m.icon}{m.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Rubro */}
+          <div className="mb-5">
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Rubro</p>
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedRubro('')}
+                className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${
+                  !selectedRubro
+                    ? 'bg-blue-600 border-blue-600 text-white'
+                    : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                Sin rubro
+              </button>
+              {RUBROS.map(r => (
+                <button
+                  key={r.value}
+                  onClick={() => setSelectedRubro(r.value)}
+                  className={`px-3 py-1.5 rounded-xl border text-sm font-medium transition-colors ${
+                    selectedRubro === r.value
+                      ? 'bg-blue-600 border-blue-600 text-white'
+                      : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
+                  }`}
+                >
+                  {r.label}
                 </button>
               ))}
             </div>

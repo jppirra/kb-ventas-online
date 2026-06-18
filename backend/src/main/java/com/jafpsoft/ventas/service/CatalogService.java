@@ -105,7 +105,7 @@ public class CatalogService {
     }
 
     private void applyAppearance(Catalog catalog, CatalogRequest req) {
-        if (req.getRubro() != null) catalog.setRubro(req.getRubro());
+        if (req.getRubro() != null) catalog.setRubro(req.getRubro().isBlank() ? null : req.getRubro());
         if (req.getViewMode() != null) catalog.setViewMode(req.getViewMode());
         if (req.getBackgroundType() != null) catalog.setBackgroundType(req.getBackgroundType());
         if (req.getBackgroundColor() != null) catalog.setBackgroundColor(req.getBackgroundColor());
