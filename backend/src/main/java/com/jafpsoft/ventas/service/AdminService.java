@@ -136,6 +136,11 @@ public class AdminService {
         ratingRepository.deleteByUser(user);
     }
 
+    private void purgeCatalogDependencies(Long catalogId) {
+        productRepository.unlinkAllFromCatalog(catalogId);
+        catalogReportRepository.deleteAllByCatalogId(catalogId);
+    }
+
     @Transactional
     public AdminUserResponse updateUserEmail(Long userId, String newEmail) {
         if (newEmail == null || newEmail.isBlank()) throw new IllegalArgumentException("Email inválido");
@@ -285,6 +290,7 @@ public class AdminService {
     public void deleteCatalog(Long catalogId) {
         Catalog catalog = catalogRepository.findById(catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
+        purgeCatalogDependencies(catalogId);
         catalogRepository.delete(catalog);
     }
 
@@ -326,6 +332,7 @@ public class AdminService {
         for (Long id : ids) {
             Catalog catalog = catalogRepository.findById(id).orElse(null);
             if (catalog == null) { skipped++; continue; }
+            purgeCatalogDependencies(id);
             catalogRepository.delete(catalog);
             processed++;
         }
