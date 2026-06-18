@@ -131,7 +131,7 @@ public class CatalogService {
     public ProductResponse addProduct(Long catalogId, ProductRequest req, Long userId) {
         Catalog catalog = findAccessible(catalogId, userId, false);
         Product product = Product.builder()
-                .userId(userId)
+                .userId(catalog.getUserId())
                 .catalog(catalog)
                 .name(req.getName())
                 .description(req.getDescription())
@@ -197,7 +197,7 @@ public class CatalogService {
     @Transactional
     public ProductResponse assignProductToCatalog(Long catalogId, Long productId, Long userId) {
         Catalog catalog = findAccessible(catalogId, userId, false);
-        Product product = productRepository.findByIdAndUserId(productId, userId)
+        Product product = productRepository.findByIdAndUserId(productId, catalog.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setCatalog(catalog);
         product.setActive(true);
@@ -233,7 +233,7 @@ public class CatalogService {
         List<ProductRequest> parsed = excelService.parseProducts(file);
 
         List<Product> products = parsed.stream().map(req -> Product.builder()
-                .userId(userId)
+                .userId(catalog.getUserId())
                 .catalog(catalog)
                 .name(req.getName())
                 .description(req.getDescription())
