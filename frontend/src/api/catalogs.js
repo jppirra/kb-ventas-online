@@ -47,6 +47,7 @@ export const catalogsApi = {
     })
   },
 
+  reorderProducts: (catalogId, order) => api.put(`/catalogs/${catalogId}/products/reorder`, order),
   createFromStock: (data) => api.post('/catalogs/from-stock', data).then(r => { track('CATALOG_CREATED'); return r }),
   generate: (catalogId) => api.post(`/catalogs/${catalogId}/generate`).then(r => { track('CATALOG_AI_GENERATED'); return r }),
   publish: (catalogId) => api.post(`/catalogs/${catalogId}/publish`).then(r => { track('CATALOG_PUBLISHED'); return r }),

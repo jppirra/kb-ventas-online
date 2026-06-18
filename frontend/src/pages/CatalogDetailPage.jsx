@@ -204,6 +204,12 @@ export default function CatalogDetailPage() {
   const [loadingRepo, setLoadingRepo] = useState(false)
   const [publishing, setPublishing] = useState(false)
 
+  // Drag-and-drop reorder
+  const dragIdx = useRef(null)
+  const dragOverIdx = useRef(null)
+  const [draggingId, setDraggingId] = useState(null)
+  const [dragOverId, setDragOverId] = useState(null)
+
   // Appearance state (synced on load, saved separately)
   const [viewMode, setViewMode] = useState('GRID')
   const [bgType, setBgType] = useState('NONE')
@@ -303,6 +309,34 @@ export default function CatalogDetailPage() {
       setUploadingExcel(false)
       e.target.value = ''
     }
+  }
+
+  function handleDragStart(e, index, productId) {
+    dragIdx.current = index
+    setDraggingId(productId)
+    e.dataTransfer.effectAllowed = 'move'
+  }
+
+  function handleDragEnter(index, productId) {
+    dragOverIdx.current = index
+    setDragOverId(productId)
+  }
+
+  function handleDragEnd() {
+    const from = dragIdx.current
+    const to = dragOverIdx.current
+    setDraggingId(null)
+    setDragOverId(null)
+    dragIdx.current = null
+    dragOverIdx.current = null
+    if (from === null || to === null || from === to) return
+    const items = [...catalog.products]
+    const [moved] = items.splice(from, 1)
+    items.splice(to, 0, moved)
+    const reordered = items.map((p, i) => ({ ...p, sortOrder: i }))
+    setCatalog(c => ({ ...c, products: reordered }))
+    catalogsApi.reorderProducts(id, reordered.map((p, i) => ({ id: p.id, sortOrder: i })))
+      .catch(() => toast.error('Error al guardar el orden'))
   }
 
   function cloneProduct(product) {
@@ -1127,9 +1161,26 @@ export default function CatalogDetailPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {catalog.products.map(product => (
-              <div key={product.id} className={`bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 transition-opacity ${!product.active ? 'opacity-60' : ''}`}>
+            {catalog.products.map((product, index) => (
+              <div
+                key={product.id}
+                draggable
+                onDragStart={e => handleDragStart(e, index, product.id)}
+                onDragEnter={() => handleDragEnter(index, product.id)}
+                onDragOver={e => e.preventDefault()}
+                onDragEnd={handleDragEnd}
+                className={`bg-white dark:bg-slate-800 rounded-2xl border p-4 transition-all cursor-default select-none
+                  ${draggingId === product.id ? 'opacity-40 scale-95' : ''}
+                  ${dragOverId === product.id && draggingId !== product.id ? 'border-blue-400 dark:border-blue-500 shadow-md' : 'border-gray-200 dark:border-slate-700'}
+                  ${!product.active && draggingId !== product.id ? 'opacity-60' : ''}`}>
                 <div className="flex items-start gap-3">
+                  <div className="cursor-grab active:cursor-grabbing shrink-0 mt-1 text-gray-300 dark:text-slate-600 hover:text-gray-400 dark:hover:text-slate-400 transition-colors" title="Arrastrar para reordenar">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
+                      <circle cx="5" cy="4" r="1.2"/><circle cx="11" cy="4" r="1.2"/>
+                      <circle cx="5" cy="8" r="1.2"/><circle cx="11" cy="8" r="1.2"/>
+                      <circle cx="5" cy="12" r="1.2"/><circle cx="11" cy="12" r="1.2"/>
+                    </svg>
+                  </div>
                   {product.imageUrl ? (
                     <img src={product.imageUrl} alt={product.name}
                       className="w-14 h-14 rounded-xl object-cover shrink-0 border border-gray-100 dark:border-slate-700" />

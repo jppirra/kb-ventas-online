@@ -363,6 +363,19 @@ public class CatalogService {
                 .orElseThrow(), false);
     }
 
+    @Transactional
+    public void reorderProducts(Long catalogId, List<Map<String, Object>> order, Long userId) {
+        findAccessible(catalogId, userId, false);
+        for (Map<String, Object> item : order) {
+            Long productId = Long.valueOf(item.get("id").toString());
+            Integer sortOrder = Integer.valueOf(item.get("sortOrder").toString());
+            productRepository.findByIdAndCatalogId(productId, catalogId).ifPresent(p -> {
+                p.setSortOrder(sortOrder);
+                productRepository.save(p);
+            });
+        }
+    }
+
     private void markDraftChanged(Catalog catalog) {
         if (catalog.getPublishedSnapshotJson() != null && !catalog.isHasDraftChanges()) {
             catalog.setHasDraftChanges(true);

@@ -158,6 +158,14 @@ public class CatalogController {
         return ResponseEntity.ok(catalogService.uploadCatalogBackground(id, file, getUserId(user)));
     }
 
+    @PutMapping("/{id}/products/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorderProducts(@PathVariable Long id,
+                                @RequestBody List<Map<String, Object>> order,
+                                @AuthenticationPrincipal CustomUserDetails user) {
+        catalogService.reorderProducts(id, order, getUserId(user));
+    }
+
     private Long getUserId(CustomUserDetails user) { return user.getUserId(); }
 }
 
