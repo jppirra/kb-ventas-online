@@ -149,6 +149,89 @@ function toTitleCase(str) {
   return str.replace(/\b\w/g, c => c.toUpperCase())
 }
 
+function TagInput({ label, values, onChange, placeholder }) {
+  const [editingIdx, setEditingIdx] = useState(null)
+  const [editText, setEditText] = useState('')
+  const [newText, setNewText] = useState('')
+
+  function commitEdit(idx) {
+    const v = toTitleCase(editText.trim())
+    if (v) {
+      const next = [...values]
+      next[idx] = v
+      onChange(next)
+    } else {
+      onChange(values.filter((_, i) => i !== idx))
+    }
+    setEditingIdx(null)
+    setEditText('')
+  }
+
+  function addTag(raw) {
+    raw.split(',').map(t => toTitleCase(t.trim())).filter(Boolean).forEach(v => {
+      if (!values.includes(v)) onChange([...values, v])
+    })
+    setNewText('')
+  }
+
+  function handleNewKeyDown(e) {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault()
+      if (newText.trim()) addTag(newText)
+    } else if (e.key === 'Backspace' && !newText && values.length > 0) {
+      onChange(values.slice(0, -1))
+    }
+  }
+
+  return (
+    <div>
+      <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">{label}</label>
+      <div className="flex flex-wrap gap-1.5 px-2.5 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 focus-within:ring-2 focus-within:ring-blue-500 min-h-[2.5rem] cursor-text">
+        {values.map((v, idx) => (
+          editingIdx === idx ? (
+            <input
+              key={idx}
+              autoFocus
+              value={editText}
+              onChange={e => setEditText(e.target.value)}
+              onBlur={() => commitEdit(idx)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitEdit(idx) }
+                else if (e.key === 'Escape') { setEditingIdx(null); setEditText('') }
+              }}
+              className="text-xs px-1 rounded bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 outline-none border border-blue-400"
+              style={{ width: Math.max((editText.length + 2) * 7, 50) + 'px' }}
+            />
+          ) : (
+            <span key={idx} className="flex items-center gap-1 pl-2 pr-1 py-0.5 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-lg text-xs">
+              <button type="button" onClick={() => { setEditingIdx(idx); setEditText(v) }}
+                className="hover:underline leading-none">
+                {v}
+              </button>
+              <button type="button" onClick={() => onChange(values.filter((_, i) => i !== idx))}
+                className="text-blue-400 hover:text-red-500 dark:text-blue-500 dark:hover:text-red-400 leading-none p-0.5">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          )
+        ))}
+        <input
+          type="text"
+          value={newText}
+          onChange={e => setNewText(e.target.value)}
+          onKeyDown={handleNewKeyDown}
+          onBlur={() => { if (newText.trim()) addTag(newText) }}
+          placeholder={values.length === 0 ? placeholder : '+ agregar'}
+          className="flex-1 min-w-[70px] text-xs bg-transparent text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-slate-500 outline-none py-0.5"
+        />
+      </div>
+      <p className="text-xs text-gray-400 dark:text-slate-500 mt-1">Clic en una categoría para editar · Enter o coma para agregar · Backspace para eliminar la última</p>
+    </div>
+  )
+}
+
 function CsvInput({ label, values, onChange, placeholder, hint, titleCase = false }) {
   const [text, setText] = useState(() => values.join(', '))
   useEffect(() => { setText(values.join(', ')) }, [values.join(',')])
@@ -1192,13 +1275,11 @@ export default function CatalogDetailPage() {
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <CsvInput
+                <TagInput
                   label="Categorías"
                   values={productForm.categories}
                   onChange={v => setProductForm(f => ({ ...f, categories: v }))}
-                  placeholder="Ej: Abrigo, Campera"
-                  hint="Ingresá una o más categorías separadas por coma. Se guarda en formato título (primera letra mayúscula)."
-                  titleCase
+                  placeholder="Ej: Abrigo, Campera..."
                 />
               </div>
             </div>
