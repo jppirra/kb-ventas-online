@@ -421,6 +421,60 @@ public class CatalogService {
         }
     }
 
+    @Transactional
+    public CatalogResponse revertToPublished(Long catalogId, Long userId) {
+        Catalog catalog = findAccessible(catalogId, userId, false);
+        if (catalog.getPublishedSnapshotJson() == null) {
+            throw new IllegalStateException("El catálogo no tiene una versión publicada a la que revertir");
+        }
+        CatalogSnapshotData snapshot;
+        try {
+            snapshot = objectMapper.readValue(catalog.getPublishedSnapshotJson(), CatalogSnapshotData.class);
+        } catch (Exception e) {
+            throw new RuntimeException("Error al leer snapshot publicado", e);
+        }
+        // Restore catalog metadata from snapshot
+        catalog.setName(snapshot.getName());
+        catalog.setDescription(snapshot.getDescription());
+        catalog.setAiContent(snapshot.getAiContent());
+        catalog.setCoverImageUrl(snapshot.getCoverImageUrl());
+        catalog.setRubro(snapshot.getRubro());
+        catalog.setViewMode(snapshot.getViewMode());
+        catalog.setBackgroundType(snapshot.getBackgroundType());
+        catalog.setBackgroundColor(snapshot.getBackgroundColor());
+        catalog.setBackgroundImageUrl(snapshot.getBackgroundImageUrl());
+        catalog.setDiscount(snapshot.getDiscount());
+        catalog.setSectionOrder(snapshot.getSectionOrder());
+
+        // Restore product visibility based on snapshot
+        if (snapshot.getProducts() != null) {
+            var snapshotIds = snapshot.getProducts().stream()
+                    .map(PublicProductResponse::getId).collect(java.util.stream.Collectors.toSet());
+            List<Product> current = productRepository.findByCatalogIdOrderBySortOrderAscCreatedAtAsc(catalogId);
+            // Products added after publish → hide
+            current.forEach(p -> {
+                boolean wasPublished = snapshotIds.contains(p.getId());
+                if (p.isActive() != wasPublished) {
+                    p.setActive(wasPublished);
+                    productRepository.save(p);
+                }
+            });
+            // Products in snapshot missing from catalog → relink if still in DB
+            var currentIds = current.stream().map(Product::getId).collect(java.util.stream.Collectors.toSet());
+            snapshot.getProducts().forEach(sp -> {
+                if (!currentIds.contains(sp.getId())) {
+                    productRepository.findById(sp.getId()).ifPresent(p -> {
+                        p.setCatalog(catalog);
+                        p.setActive(true);
+                        productRepository.save(p);
+                    });
+                }
+            });
+        }
+        catalog.setHasDraftChanges(false);
+        return CatalogResponse.from(catalogRepository.save(catalog), true);
+    }
+
     private void markDraftChanged(Catalog catalog) {
         if (catalog.getPublishedSnapshotJson() != null && !catalog.isHasDraftChanges()) {
             catalog.setHasDraftChanges(true);

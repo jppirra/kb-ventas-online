@@ -129,6 +129,11 @@ public class CatalogController {
         return catalogService.publish(id, getUserId(user));
     }
 
+    @PostMapping("/{id}/revert")
+    public CatalogResponse revert(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails user) {
+        return catalogService.revertToPublished(id, getUserId(user));
+    }
+
     @PostMapping("/{id}/generate")
     public ResponseEntity<Map<String, String>> generate(@PathVariable Long id,
                                                         @AuthenticationPrincipal CustomUserDetails user) {

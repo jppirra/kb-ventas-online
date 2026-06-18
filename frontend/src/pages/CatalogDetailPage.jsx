@@ -292,6 +292,8 @@ export default function CatalogDetailPage() {
   const [repoProducts, setRepoProducts] = useState([])
   const [loadingRepo, setLoadingRepo] = useState(false)
   const [publishing, setPublishing] = useState(false)
+  const [reverting, setReverting] = useState(false)
+  const [confirmModal, setConfirmModal] = useState(null)
 
   // Drag-and-drop reorder
   const dragIdx = useRef(null)
@@ -621,35 +623,102 @@ export default function CatalogDetailPage() {
     }
   }
 
-  async function handleDeleteProduct(productId) {
-    if (!confirm('¿Eliminar este producto definitivamente?')) return
-    try {
-      await catalogsApi.deleteProduct(id, productId)
-      setCatalog(c => ({ ...c, products: c.products.filter(p => p.id !== productId) }))
-      toast.success('Producto eliminado')
-    } catch {
-      toast.error('Error al eliminar producto')
+  function handleDeleteProduct(productId) {
+    const prod = catalog.products.find(p => p.id === productId)
+    setConfirmModal({
+      title: 'Eliminar producto',
+      description: `"${prod?.name}" se eliminará permanentemente. Esta acción no se puede deshacer.`,
+      confirmLabel: 'Eliminar',
+      danger: true,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          await catalogsApi.deleteProduct(id, productId)
+          setCatalog(c => ({ ...c, products: c.products.filter(p => p.id !== productId) }))
+          toast.success('Producto eliminado')
+        } catch { toast.error('Error al eliminar producto') }
+      },
+    })
+  }
+
+  function handleToggleActive(productId) {
+    const prod = catalog.products.find(p => p.id === productId)
+    if (prod?.active) {
+      setConfirmModal({
+        title: 'Ocultar producto',
+        description: `"${prod.name}" dejará de mostrarse en el catálogo. Podés volver a activarlo cuando quieras.`,
+        confirmLabel: 'Ocultar',
+        danger: false,
+        onConfirm: async () => {
+          setConfirmModal(null)
+          try {
+            const { data } = await catalogsApi.toggleProductActive(id, productId)
+            setCatalog(c => ({ ...c, products: c.products.map(p => p.id === productId ? { ...p, active: data.active } : p) }))
+            toast.success('Producto oculto')
+          } catch { toast.error('Error al cambiar visibilidad') }
+        },
+      })
+    } else {
+      catalogsApi.toggleProductActive(id, productId)
+        .then(({ data }) => {
+          setCatalog(c => ({ ...c, products: c.products.map(p => p.id === productId ? { ...p, active: data.active } : p) }))
+          toast.success('Producto visible en el catálogo')
+        })
+        .catch(() => toast.error('Error al cambiar visibilidad'))
     }
   }
 
-  async function handleToggleActive(productId) {
-    try {
-      const { data } = await catalogsApi.toggleProductActive(id, productId)
-      setCatalog(c => ({ ...c, products: c.products.map(p => p.id === productId ? { ...p, active: data.active } : p) }))
-      toast.success(data.active ? 'Producto visible en el catálogo' : 'Producto oculto (queda en repositorio)')
-    } catch {
-      toast.error('Error al cambiar visibilidad')
-    }
+  function handleUnlinkProduct(productId) {
+    const prod = catalog.products.find(p => p.id === productId)
+    setConfirmModal({
+      title: 'Mover al repositorio',
+      description: `"${prod?.name}" se desvinculará del catálogo pero quedará guardado en tu repositorio de productos.`,
+      confirmLabel: 'Mover al repositorio',
+      danger: false,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        try {
+          await catalogsApi.unlinkProduct(id, productId)
+          setCatalog(c => ({ ...c, products: c.products.filter(p => p.id !== productId) }))
+          toast.success('Producto movido al repositorio')
+        } catch { toast.error('Error al mover al repositorio') }
+      },
+    })
   }
 
-  async function handleUnlinkProduct(productId) {
-    try {
-      await catalogsApi.unlinkProduct(id, productId)
-      setCatalog(c => ({ ...c, products: c.products.filter(p => p.id !== productId) }))
-      toast.success('Producto movido al repositorio')
-    } catch {
-      toast.error('Error al mover al repositorio')
-    }
+  function confirmRevert() {
+    setConfirmModal({
+      title: 'Revertir a versión publicada',
+      description: 'Se restaurará la apariencia, nombre, descripción y lista de productos a como estaban en la última publicación. Los cambios no publicados se perderán.',
+      confirmLabel: 'Revertir',
+      danger: true,
+      onConfirm: async () => {
+        setConfirmModal(null)
+        setReverting(true)
+        try {
+          const { data } = await catalogsApi.revert(id)
+          setCatalog(c => ({
+            ...c,
+            name: data.name,
+            description: data.description,
+            hasDraftChanges: false,
+            viewMode: data.viewMode,
+            backgroundType: data.backgroundType,
+            backgroundColor: data.backgroundColor,
+            backgroundImageUrl: data.backgroundImageUrl,
+            coverImageUrl: data.coverImageUrl,
+            rubro: data.rubro,
+            discount: data.discount,
+            sectionOrder: data.sectionOrder,
+            aiContent: data.aiContent,
+          }))
+          toast.success('Catálogo revertido a la última versión publicada')
+          load()
+        } catch (err) {
+          toast.error(err.response?.data?.message || 'Error al revertir')
+        } finally { setReverting(false) }
+      },
+    })
   }
 
   async function openRepoModal() {
@@ -883,6 +952,22 @@ export default function CatalogDetailPage() {
               </svg>
               Vista previa
             </a>
+            {catalog.hasDraftChanges && catalog.publishedAt && (
+              <button onClick={confirmRevert} disabled={reverting}
+                className="flex items-center gap-2 px-4 py-2 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-400 text-sm font-medium rounded-xl transition-colors disabled:opacity-40">
+                {reverting ? (
+                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                )}
+                Revertir
+              </button>
+            )}
             {catalog.collaboratorCanPublish === false ? (
               <span className="text-xs text-gray-400 dark:text-slate-500 px-2">Sin permiso para publicar</span>
             ) : (
@@ -1789,6 +1874,34 @@ export default function CatalogDetailPage() {
               </button>
               <button onClick={() => setShowReorderModal(false)}
                 className="px-4 py-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200 transition-colors">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Confirm modal */}
+      {confirmModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setConfirmModal(null)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${confirmModal.danger ? 'bg-red-100 dark:bg-red-900/30' : 'bg-amber-100 dark:bg-amber-900/30'}`}>
+                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${confirmModal.danger ? 'text-red-600 dark:text-red-400' : 'text-amber-600 dark:text-amber-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900 dark:text-white text-sm">{confirmModal.title}</h3>
+                <p className="text-xs text-gray-500 dark:text-slate-400 mt-1 leading-relaxed">{confirmModal.description}</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={confirmModal.onConfirm}
+                className={`flex-1 py-2 text-white font-semibold rounded-xl text-sm transition-colors ${confirmModal.danger ? 'bg-red-600 hover:bg-red-700' : 'bg-amber-500 hover:bg-amber-600'}`}>
+                {confirmModal.confirmLabel}
+              </button>
+              <button onClick={() => setConfirmModal(null)}
+                className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 font-semibold rounded-xl text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
                 Cancelar
               </button>
             </div>
