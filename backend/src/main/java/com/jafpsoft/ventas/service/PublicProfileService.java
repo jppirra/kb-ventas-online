@@ -85,7 +85,7 @@ public class PublicProfileService {
         User owner = userRepository.findById(catalog.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no disponible"));
 
-        if (!catalog.isActive() || !owner.isEnabled()) {
+        if (!catalog.isActive() || !owner.isEnabled() || catalog.getPublishedSnapshotJson() == null) {
             return PublicCatalogPageResponse.unavailable(catalog, owner);
         }
 

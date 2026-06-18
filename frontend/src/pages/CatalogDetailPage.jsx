@@ -305,6 +305,7 @@ export default function CatalogDetailPage() {
   const [dragOverReorderId, setDragOverReorderId] = useState(null)
   const [sectionOrder, setSectionOrder] = useState([])
   const [newSectionName, setNewSectionName] = useState('')
+  const [renamingSection, setRenamingSection] = useState(null) // { idx, value }
 
   // Appearance state (synced on load, saved separately)
   const [viewMode, setViewMode] = useState('GRID')
@@ -734,6 +735,28 @@ export default function CatalogDetailPage() {
     }
   }
 
+  async function handleRenameSection(idx, newName) {
+    const oldName = sectionOrder[idx]
+    if (!newName.trim() || newName.trim() === oldName) { setRenamingSection(null); return }
+    const trimmed = toTitleCase(newName.trim())
+    try {
+      await catalogsApi.renameCategory(id, oldName, trimmed)
+      setSectionOrder(s => s.map((v, i) => i === idx ? trimmed : v))
+      setCatalog(prev => ({
+        ...prev,
+        products: prev.products.map(p => {
+          if (!p.category) return p
+          const updated = p.category.split(',').map(c => c.trim()).map(c => c === oldName ? trimmed : c).filter(Boolean).join(', ')
+          return { ...p, category: updated }
+        })
+      }))
+      toast.success(`Categoría renombrada a "${trimmed}"`)
+    } catch {
+      toast.error('Error al renombrar categoría')
+    }
+    setRenamingSection(null)
+  }
+
   async function handleSaveAppearance() {
     setSavingAppearance(true)
     try {
@@ -1083,7 +1106,27 @@ export default function CatalogDetailPage() {
                           <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
                         </svg>
                       </span>
-                      <span className="flex-1 text-sm text-gray-700 dark:text-slate-200 px-2 py-1 bg-gray-50 dark:bg-slate-700 rounded-lg">{sec}</span>
+                      {renamingSection?.idx === idx ? (
+                        <input
+                          autoFocus
+                          value={renamingSection.value}
+                          onChange={e => setRenamingSection(r => ({ ...r, value: e.target.value }))}
+                          onBlur={() => handleRenameSection(idx, renamingSection.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') { e.preventDefault(); handleRenameSection(idx, renamingSection.value) }
+                            if (e.key === 'Escape') setRenamingSection(null)
+                          }}
+                          className="flex-1 px-2 py-1 text-sm rounded-lg border border-blue-400 dark:border-blue-500 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                      ) : (
+                        <span className="flex-1 text-sm text-gray-700 dark:text-slate-200 px-2 py-1 bg-gray-50 dark:bg-slate-700 rounded-lg">{sec}</span>
+                      )}
+                      <button type="button" title="Renombrar" onClick={() => setRenamingSection({ idx, value: sec })}
+                        className="text-gray-400 hover:text-blue-500 dark:text-slate-500 dark:hover:text-blue-400 transition-colors p-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
                       <button type="button" onClick={() => setSectionOrder(s => s.filter((_, i) => i !== idx))}
                         className="text-gray-400 hover:text-red-500 dark:text-slate-500 dark:hover:text-red-400 transition-colors p-1">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">

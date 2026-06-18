@@ -366,6 +366,39 @@ public class CatalogService {
     }
 
     @Transactional
+    public void renameCategory(Long catalogId, String from, String to, Long userId) {
+        if (from == null || from.isBlank() || to == null || to.isBlank() || from.trim().equals(to.trim())) return;
+        String oldName = from.trim();
+        String newName = to.trim();
+        Catalog catalog = findAccessible(catalogId, userId, false);
+
+        productRepository.findByCatalogIdOrderBySortOrderAscCreatedAtAsc(catalogId).forEach(p -> {
+            if (p.getCategory() == null) return;
+            String updated = java.util.Arrays.stream(p.getCategory().split(","))
+                .map(String::trim)
+                .map(c -> c.equals(oldName) ? newName : c)
+                .filter(c -> !c.isEmpty())
+                .collect(java.util.stream.Collectors.joining(", "));
+            if (!updated.equals(p.getCategory())) {
+                p.setCategory(updated);
+                productRepository.save(p);
+            }
+        });
+
+        if (catalog.getSectionOrder() != null) {
+            try {
+                List<String> sections = objectMapper.readValue(catalog.getSectionOrder(),
+                    new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+                List<String> updated = sections.stream()
+                    .map(s -> s.equals(oldName) ? newName : s)
+                    .collect(java.util.stream.Collectors.toList());
+                catalog.setSectionOrder(objectMapper.writeValueAsString(updated));
+                catalogRepository.save(catalog);
+            } catch (Exception ignored) {}
+        }
+    }
+
+    @Transactional
     public void reorderProducts(Long catalogId, List<Map<String, Object>> order, Long userId) {
         findAccessible(catalogId, userId, false);
         for (Map<String, Object> item : order) {

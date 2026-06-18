@@ -169,6 +169,14 @@ public class CatalogController {
         catalogService.reorderProducts(id, order, getUserId(user));
     }
 
+    @PutMapping("/{id}/categories/rename")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void renameCategory(@PathVariable Long id,
+                               @RequestBody Map<String, String> body,
+                               @AuthenticationPrincipal CustomUserDetails user) {
+        catalogService.renameCategory(id, body.get("from"), body.get("to"), getUserId(user));
+    }
+
     @GetMapping("/{id}/preview")
     public PublicCatalogPageResponse previewCatalog(@PathVariable Long id,
                                                     @AuthenticationPrincipal CustomUserDetails user) {
