@@ -63,7 +63,7 @@ public class CatalogService {
                 .map(c -> {
                     CatalogResponse r = CatalogResponse.from(c, false);
                     CatalogCollaborator cc = collaboratorService.getActiveCollaboratorForCatalog(c.getId(), userId);
-                    r.setCollaboratorCanPublish(cc != null && cc.isCanPublish());
+                    r.setCollaboratorCanPublish(cc != null ? cc.isCanPublish() : null);
                     return r;
                 })
                 .toList();
@@ -77,7 +77,7 @@ public class CatalogService {
         CatalogResponse r = CatalogResponse.from(catalog, true);
         if (!catalog.getUserId().equals(userId) && !isAdmin(userId)) {
             CatalogCollaborator cc = collaboratorService.getActiveCollaboratorForCatalog(id, userId);
-            r.setCollaboratorCanPublish(cc != null && cc.isCanPublish());
+            r.setCollaboratorCanPublish(cc != null ? cc.isCanPublish() : null);
         }
         return r;
     }
