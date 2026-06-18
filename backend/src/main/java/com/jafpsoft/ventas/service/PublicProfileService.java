@@ -144,12 +144,17 @@ public class PublicProfileService {
 
     @Transactional(readOnly = true)
     public ExplorarResponse searchCatalogs(String rubro, String q) {
-        String rubroParam = (rubro == null || rubro.isBlank()) ? null : rubro.trim();
-        String qParam = (q == null || q.isBlank()) ? null : q.trim();
+        final String rubroFilter = (rubro == null || rubro.isBlank()) ? null : rubro.trim();
+        final String qFilter = (q == null || q.isBlank()) ? null : q.trim().toLowerCase();
 
         List<CatalogSearchResultResponse> results = catalogRepository
-                .searchPublished(rubroParam, qParam, PageRequest.of(0, 60))
+                .findAllPublished(PageRequest.of(0, 200))
                 .stream()
+                .filter(c -> rubroFilter == null || rubroFilter.equals(c.getRubro()))
+                .filter(c -> qFilter == null
+                        || (c.getName() != null && c.getName().toLowerCase().contains(qFilter))
+                        || (c.getDescription() != null && c.getDescription().toLowerCase().contains(qFilter)))
+                .limit(60)
                 .map(c -> {
                     User owner = userRepository.findById(c.getUserId()).orElse(null);
                     if (owner == null) return null;

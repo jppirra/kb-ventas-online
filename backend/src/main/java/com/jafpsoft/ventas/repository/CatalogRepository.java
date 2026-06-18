@@ -20,10 +20,8 @@ public interface CatalogRepository extends JpaRepository<Catalog, Long> {
 
     @Query("SELECT c FROM Catalog c WHERE c.active = true AND c.publishedSnapshotJson IS NOT NULL " +
            "AND c.userId IN (SELECT u.id FROM User u WHERE u.enabled = true) " +
-           "AND (:rubro IS NULL OR c.rubro = :rubro) " +
-           "AND (:q IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(c.description) LIKE LOWER(CONCAT('%', :q, '%'))) " +
            "ORDER BY c.viewCount DESC")
-    List<Catalog> searchPublished(@Param("rubro") String rubro, @Param("q") String q, Pageable pageable);
+    List<Catalog> findAllPublished(Pageable pageable);
 
     @Query("SELECT c FROM Catalog c WHERE c.active = true AND c.publishedSnapshotJson IS NOT NULL " +
            "AND c.userId IN (SELECT u.id FROM User u WHERE u.enabled = true) " +
