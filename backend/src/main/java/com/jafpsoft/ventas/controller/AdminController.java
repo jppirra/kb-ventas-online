@@ -1,6 +1,8 @@
 package com.jafpsoft.ventas.controller;
 
 import com.jafpsoft.ventas.dto.admin.*;
+import com.jafpsoft.ventas.dto.rubro.RubroRequest;
+import com.jafpsoft.ventas.dto.rubro.RubroResponse;
 import com.jafpsoft.ventas.model.EmailLog;
 import com.jafpsoft.ventas.repository.EmailLogRepository;
 import com.jafpsoft.ventas.security.CustomUserDetails;
@@ -8,6 +10,7 @@ import com.jafpsoft.ventas.service.AdminService;
 import com.jafpsoft.ventas.service.AiService;
 import com.jafpsoft.ventas.service.AppSettingService;
 import com.jafpsoft.ventas.service.EmailService;
+import com.jafpsoft.ventas.service.RubroService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +37,7 @@ public class AdminController {
     private final AppSettingService appSettingService;
     private final EmailService emailService;
     private final EmailLogRepository emailLogRepository;
+    private final RubroService rubroService;
 
     @Value("${gemini.api-key:}")
     private String geminiApiKey;
@@ -340,5 +344,28 @@ public class AdminController {
             }
         });
         return ResponseEntity.ok(Map.of("message", "Configuración guardada"));
+    }
+
+    // ── Rubros ────────────────────────────────────────────────────────────────
+    @GetMapping("/rubros")
+    public List<RubroResponse> listRubros() {
+        return rubroService.listAll();
+    }
+
+    @PostMapping("/rubros")
+    @ResponseStatus(HttpStatus.CREATED)
+    public RubroResponse createRubro(@RequestBody RubroRequest req) {
+        return rubroService.create(req);
+    }
+
+    @PutMapping("/rubros/{id}")
+    public RubroResponse updateRubro(@PathVariable Long id, @RequestBody RubroRequest req) {
+        return rubroService.update(id, req);
+    }
+
+    @DeleteMapping("/rubros/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteRubro(@PathVariable Long id) {
+        rubroService.delete(id);
     }
 }

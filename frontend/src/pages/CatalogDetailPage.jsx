@@ -35,6 +35,7 @@ const BG_TYPES = [
 
 import { productsApi } from '../api/products'
 import { RUBROS, getRubro } from '../config/rubros'
+import { useRubros } from '../hooks/useRubros'
 
 const emptyProduct = { name: '', description: '', price: '', offerPrice: '', sku: '', categories: [], imageUrl: '', extraImages: [], videoUrl: '', showStock: false, stockStatus: 'IN_STOCK', stockCount: '', showStockQuantity: false, productSizes: [], productColors: {}, stockMatrix: {} }
 
@@ -307,6 +308,8 @@ export default function CatalogDetailPage() {
   const [sectionOrder, setSectionOrder] = useState([])
   const [newSectionName, setNewSectionName] = useState('')
   const [renamingSection, setRenamingSection] = useState(null) // { idx, value }
+
+  const rubros = useRubros()
 
   // Appearance state (synced on load, saved separately)
   const [viewMode, setViewMode] = useState('GRID')
@@ -992,7 +995,7 @@ export default function CatalogDetailPage() {
               >
                 Sin rubro
               </button>
-              {RUBROS.map(r => (
+              {rubros.map(r => (
                 <button
                   key={r.value}
                   onClick={() => setSelectedRubro(r.value)}

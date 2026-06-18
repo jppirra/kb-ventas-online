@@ -68,4 +68,6 @@ export const catalogsApi = {
     if (q) params.set('q', q)
     return api.get(`/public/catalogs/search?${params.toString()}`)
   },
+
+  listPublicRubros: () => api.get('/public/rubros'),
 }

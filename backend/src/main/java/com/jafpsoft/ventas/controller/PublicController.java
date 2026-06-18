@@ -6,11 +6,13 @@ import com.jafpsoft.ventas.dto.profile.ExplorarResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.dto.profile.PublicProfileResponse;
 import com.jafpsoft.ventas.dto.report.ReportRequest;
+import com.jafpsoft.ventas.dto.rubro.RubroResponse;
 import com.jafpsoft.ventas.dto.store.PublicStoreResponse;
 import com.jafpsoft.ventas.service.BackgroundTemplateService;
 import com.jafpsoft.ventas.service.OrderRequestService;
 import com.jafpsoft.ventas.service.PublicProfileService;
 import com.jafpsoft.ventas.service.ReportService;
+import com.jafpsoft.ventas.service.RubroService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +29,7 @@ public class PublicController {
     private final BackgroundTemplateService backgroundTemplateService;
     private final OrderRequestService orderRequestService;
     private final ReportService reportService;
+    private final RubroService rubroService;
 
     @GetMapping("/p/{slug}")
     public PublicProfileResponse getProfile(@PathVariable String slug) {
@@ -72,6 +75,11 @@ public class PublicController {
             @RequestBody OrderRequestPayload payload) {
         var order = orderRequestService.submit(catalogId, payload);
         return ResponseEntity.ok(Map.of("orderId", order.getId()));
+    }
+
+    @GetMapping("/rubros")
+    public List<RubroResponse> listRubros() {
+        return rubroService.listActive();
     }
 
     @GetMapping("/catalogs/search")

@@ -29,6 +29,7 @@ import AdminSettingsPage from './pages/admin/AdminSettingsPage'
 import AdminNpsPage from './pages/admin/AdminNpsPage'
 import AdminContactPage from './pages/admin/AdminContactPage'
 import AdminAnalyticsPage from './pages/admin/AdminAnalyticsPage'
+import AdminRubrosPage from './pages/admin/AdminRubrosPage'
 import SettingsPage from './pages/SettingsPage'
 import ContactPage from './pages/ContactPage'
 import TermsPage from './pages/TermsPage'
@@ -138,6 +139,7 @@ export default function App() {
               <Route path="/admin/nps" element={<AdminProtectedRoute><AdminNpsPage /></AdminProtectedRoute>} />
               <Route path="/admin/contact" element={<AdminProtectedRoute><AdminContactPage /></AdminProtectedRoute>} />
               <Route path="/admin/analytics" element={<AdminProtectedRoute><AdminAnalyticsPage /></AdminProtectedRoute>} />
+              <Route path="/admin/rubros" element={<AdminProtectedRoute><AdminRubrosPage /></AdminProtectedRoute>} />
               <Route path="/explorer" element={<ExplorarPage />} />
               <Route path="/explorar" element={<ExplorarPage />} />
               <Route path="/contact" element={<ContactPage />} />

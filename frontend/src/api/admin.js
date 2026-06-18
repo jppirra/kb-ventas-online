@@ -58,4 +58,10 @@ export const adminApi = {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
   },
+
+  // Rubros
+  listRubros: () => api.get('/admin/rubros'),
+  createRubro: (data) => api.post('/admin/rubros', data),
+  updateRubro: (id, data) => api.put(`/admin/rubros/${id}`, data),
+  deleteRubro: (id) => api.delete(`/admin/rubros/${id}`),
 }

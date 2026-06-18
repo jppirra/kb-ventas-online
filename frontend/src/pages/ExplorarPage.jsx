@@ -4,6 +4,7 @@ import { catalogsApi } from '../api/catalogs'
 import { RUBROS } from '../config/rubros'
 import Footer from '../components/Footer'
 import { useAuth } from '../context/AuthContext'
+import { useRubros } from '../hooks/useRubros'
 
 const LANGS = [
   { code: 'es', label: 'ES' },
@@ -107,7 +108,7 @@ function CatalogCard({ catalog, lang }) {
           <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug line-clamp-2">{catalog.name}</h3>
           {catalog.rubro && (
             <span className="shrink-0 text-xs px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
-              {rubroLabel(lang, catalog.rubro, RUBROS.find(r => r.value === catalog.rubro)?.label || catalog.rubro)}
+              {rubroLabel(lang, catalog.rubro, catalog.rubro)}
             </span>
           )}
         </div>
@@ -143,6 +144,7 @@ export default function ExplorarPage() {
   const [lang, setLang] = useState(() => localStorage.getItem('explorer_lang') || 'es')
 
   const t = T[lang]
+  const rubros = useRubros()
 
   function changeLang(code) {
     setLang(code)
@@ -260,7 +262,7 @@ export default function ExplorarPage() {
 
         {/* Rubro pills */}
         <div className="flex flex-wrap gap-2 mb-7">
-          {RUBROS.map(r => (
+          {rubros.map(r => (
             <button
               key={r.value}
               onClick={() => selectRubro(r.value)}
