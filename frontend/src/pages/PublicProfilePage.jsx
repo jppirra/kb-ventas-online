@@ -72,9 +72,9 @@ function ProductCard({ product, catalogName, vendorWhatsapp, onWhatsappClick }) 
           )}
         </div>
         {product.aiDescription ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1">{product.aiDescription}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.aiDescription}</p>
         ) : product.description ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1">{product.description}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.description}</p>
         ) : null}
         {product.showStock && product.stockStatus && (
           <span className={`self-start text-xs px-2 py-0.5 rounded-full font-medium ${STOCK_COLORS[product.stockStatus] || 'bg-gray-100 text-gray-600'}`}>
