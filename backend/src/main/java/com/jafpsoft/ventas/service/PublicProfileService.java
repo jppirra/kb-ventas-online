@@ -1,7 +1,9 @@
 package com.jafpsoft.ventas.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jafpsoft.ventas.dto.profile.CatalogSearchResultResponse;
 import com.jafpsoft.ventas.dto.profile.CatalogSnapshotData;
+import com.jafpsoft.ventas.dto.profile.ExplorarResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogResponse;
 import com.jafpsoft.ventas.dto.profile.PublicProfileResponse;
@@ -137,6 +139,34 @@ public class PublicProfileService {
             p.setWhatsappClicks(p.getWhatsappClicks() + 1);
             productRepository.save(p);
         });
+    }
+
+    @Transactional(readOnly = true)
+    public ExplorarResponse searchCatalogs(String rubro, String q) {
+        String rubroParam = (rubro == null || rubro.isBlank()) ? null : rubro.trim();
+        String qParam = (q == null || q.isBlank()) ? null : q.trim();
+
+        List<CatalogSearchResultResponse> results = catalogRepository.searchPublished(rubroParam, qParam)
+                .stream()
+                .map(c -> {
+                    User owner = userRepository.findById(c.getUserId()).orElse(null);
+                    if (owner == null) return null;
+                    return CatalogSearchResultResponse.from(c, owner);
+                })
+                .filter(r -> r != null)
+                .toList();
+
+        List<CatalogSearchResultResponse> featured = catalogRepository.findTopFeatured()
+                .stream()
+                .map(c -> {
+                    User owner = userRepository.findById(c.getUserId()).orElse(null);
+                    if (owner == null) return null;
+                    return CatalogSearchResultResponse.from(c, owner);
+                })
+                .filter(r -> r != null)
+                .toList();
+
+        return new ExplorarResponse(featured, results);
     }
 
     @Transactional

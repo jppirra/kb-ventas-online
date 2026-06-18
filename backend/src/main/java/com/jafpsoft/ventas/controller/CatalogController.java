@@ -161,6 +161,14 @@ public class CatalogController {
         return ResponseEntity.ok(catalogService.uploadCatalogBackground(id, file, getUserId(user)));
     }
 
+    @PostMapping("/{id}/upload-cover")
+    public ResponseEntity<Map<String, String>> uploadCover(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails user) throws IOException {
+        return ResponseEntity.ok(catalogService.uploadCoverImage(id, file, getUserId(user)));
+    }
+
     @PutMapping("/{id}/products/reorder")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void reorderProducts(@PathVariable Long id,

@@ -311,6 +311,16 @@ public class CatalogService {
     }
 
     @Transactional
+    public Map<String, String> uploadCoverImage(Long catalogId, MultipartFile file, Long userId) throws IOException {
+        Catalog catalog = findAccessible(catalogId, userId, false);
+        String url = storageService.uploadImage(file, "catalog-covers");
+        catalog.setCoverImageUrl(url);
+        if (catalog.getPublishedSnapshotJson() != null) catalog.setHasDraftChanges(true);
+        catalogRepository.save(catalog);
+        return Map.of("coverImageUrl", url);
+    }
+
+    @Transactional
     public CatalogResponse publish(Long id, Long userId) {
         Catalog catalog = findAccessible(id, userId, true);
         List<Product> activeProducts = productRepository

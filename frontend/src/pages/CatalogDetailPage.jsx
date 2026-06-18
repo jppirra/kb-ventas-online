@@ -271,6 +271,7 @@ export default function CatalogDetailPage() {
   const navigate = useNavigate()
   const fileRef = useRef()
   const bgFileRef = useRef()
+  const coverFileRef = useRef()
   const productImgRef = useRef()
   const extraImgRef = useRef()
 
@@ -316,6 +317,7 @@ export default function CatalogDetailPage() {
   const [bgModalIdx, setBgModalIdx] = useState(null)
   const [uploadingBg, setUploadingBg] = useState(false)
   const [bgProgress, setBgProgress] = useState(null)
+  const [uploadingCover, setUploadingCover] = useState(false)
   const [catalogDiscount, setCatalogDiscount] = useState('')
   const [savingAppearance, setSavingAppearance] = useState(false)
   const [copiedLink, setCopiedLink] = useState(false)
@@ -735,6 +737,29 @@ export default function CatalogDetailPage() {
     }
   }
 
+  async function handleCoverImageUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploadingCover(true)
+    try {
+      const { data } = await uploadCompressed(file, (compressed, onPct) => {
+        const fd = new FormData()
+        fd.append('file', compressed)
+        return api.post(`/catalogs/${id}/upload-cover`, fd, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          onUploadProgress: ev => ev.total && onPct(Math.round(ev.loaded / ev.total * 100))
+        })
+      }, () => {})
+      setCatalog(c => ({ ...c, coverImageUrl: data.coverImageUrl }))
+      toast.success('Imagen de portada subida')
+    } catch {
+      toast.error('Error al subir portada')
+    } finally {
+      setUploadingCover(false)
+      e.target.value = ''
+    }
+  }
+
   async function handleRenameSection(idx, newName) {
     const oldName = sectionOrder[idx]
     if (!newName.trim() || newName.trim() === oldName) { setRenamingSection(null); return }
@@ -947,6 +972,38 @@ export default function CatalogDetailPage() {
                   {m.icon}{m.label}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Cover image */}
+          <div className="mb-5">
+            <p className="text-xs text-gray-500 dark:text-slate-400 mb-2">Imagen de portada</p>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mb-3">Se muestra en el explorador de catálogos y en el perfil público del vendedor.</p>
+            <div className="flex items-center gap-3">
+              {catalog.coverImageUrl ? (
+                <img src={catalog.coverImageUrl} alt="Portada" className="w-24 h-16 rounded-xl object-cover border border-gray-200 dark:border-slate-600" />
+              ) : (
+                <div className="w-24 h-16 rounded-xl border-2 border-dashed border-gray-300 dark:border-slate-600 flex items-center justify-center bg-gray-50 dark:bg-slate-800">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              )}
+              <button
+                onClick={() => coverFileRef.current.click()}
+                disabled={uploadingCover}
+                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors disabled:opacity-50"
+              >
+                {uploadingCover ? 'Subiendo...' : (
+                  <>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    {catalog.coverImageUrl ? 'Cambiar portada' : 'Subir portada'}
+                  </>
+                )}
+              </button>
+              <input ref={coverFileRef} type="file" accept="image/*" className="hidden" onChange={handleCoverImageUpload} />
             </div>
           </div>
 

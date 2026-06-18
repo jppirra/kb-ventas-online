@@ -53,4 +53,19 @@ export const catalogsApi = {
   createFromStock: (data) => api.post('/catalogs/from-stock', data).then(r => { track('CATALOG_CREATED'); return r }),
   generate: (catalogId) => api.post(`/catalogs/${catalogId}/generate`).then(r => { track('CATALOG_AI_GENERATED'); return r }),
   publish: (catalogId) => api.post(`/catalogs/${catalogId}/publish`).then(r => { track('CATALOG_PUBLISHED'); return r }),
+
+  uploadCoverImage: (catalogId, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/catalogs/${catalogId}/upload-cover`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
+  searchCatalogs: (rubro, q) => {
+    const params = new URLSearchParams()
+    if (rubro) params.set('rubro', rubro)
+    if (q) params.set('q', q)
+    return api.get(`/public/catalogs/search?${params.toString()}`)
+  },
 }

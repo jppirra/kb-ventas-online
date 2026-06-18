@@ -43,6 +43,7 @@ import TicketConfigPage from './pages/TicketConfigPage'
 import CustomersPage from './pages/CustomersPage'
 import CollaboratorsPage from './pages/CollaboratorsPage'
 import InviteAcceptPage from './pages/InviteAcceptPage'
+import ExplorarPage from './pages/ExplorarPage'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
@@ -54,7 +55,7 @@ function RootRedirect() {
   return null
 }
 
-const PUBLIC_PATHS = ['/c/', '/p/', '/s/']
+const PUBLIC_PATHS = ['/c/', '/p/', '/s/', '/explorar']
 
 function TermsGate({ children }) {
   const { isAuthenticated, user, loading } = useAuth()
@@ -137,6 +138,7 @@ export default function App() {
               <Route path="/admin/nps" element={<AdminProtectedRoute><AdminNpsPage /></AdminProtectedRoute>} />
               <Route path="/admin/contact" element={<AdminProtectedRoute><AdminContactPage /></AdminProtectedRoute>} />
               <Route path="/admin/analytics" element={<AdminProtectedRoute><AdminAnalyticsPage /></AdminProtectedRoute>} />
+              <Route path="/explorar" element={<ExplorarPage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/terms" element={<TermsPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />

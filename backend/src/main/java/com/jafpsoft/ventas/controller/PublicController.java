@@ -2,6 +2,7 @@ package com.jafpsoft.ventas.controller;
 
 import com.jafpsoft.ventas.dto.admin.BackgroundTemplateResponse;
 import com.jafpsoft.ventas.dto.order.OrderRequestPayload;
+import com.jafpsoft.ventas.dto.profile.ExplorarResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.dto.profile.PublicProfileResponse;
 import com.jafpsoft.ventas.dto.report.ReportRequest;
@@ -71,6 +72,13 @@ public class PublicController {
             @RequestBody OrderRequestPayload payload) {
         var order = orderRequestService.submit(catalogId, payload);
         return ResponseEntity.ok(Map.of("orderId", order.getId()));
+    }
+
+    @GetMapping("/catalogs/search")
+    public ExplorarResponse searchCatalogs(
+            @RequestParam(required = false) String rubro,
+            @RequestParam(required = false) String q) {
+        return publicProfileService.searchCatalogs(rubro, q);
     }
 
     @PostMapping("/catalog/{publicId}/report")
