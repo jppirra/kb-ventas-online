@@ -1095,7 +1095,7 @@ export default function CatalogDetailPage() {
                     )}
                     {(() => {
                       const sizes = (() => { try { return product.productSizes ? JSON.parse(product.productSizes) : [] } catch { return [] } })()
-                      const colors = (() => { try { return product.productColors ? JSON.parse(product.productColors) : [] } catch { return [] } })()
+                      const colors = (() => { try { const _p = product.productColors ? JSON.parse(product.productColors) : []; return Array.isArray(_p) ? _p : [...new Set(Object.values(_p).flat())] } catch { return [] } })()
                       if (!sizes.length && !colors.length) return null
                       return (
                         <div className="flex flex-wrap gap-1 mt-1">

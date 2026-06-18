@@ -1035,7 +1035,7 @@ export default function PublicCatalogPage() {
     const q = search.toLowerCase()
     const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q) || cats.some(c => c.toLowerCase().includes(q))
     const matchSize = !activeSize || parseProdArr(p.productSizes).includes(activeSize)
-    const matchColor = !activeColor || parseProdArr(p.productColors).includes(activeColor)
+    const matchColor = !activeColor || (() => { const scm = parseSizeColorMap(p.productColors); return scm ? Object.values(scm).flat().includes(activeColor) : parseProdArr(p.productColors).includes(activeColor) })()
     return matchCat && matchSearch && matchSize && matchColor
   })
 
