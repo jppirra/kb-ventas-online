@@ -25,6 +25,8 @@ public class CatalogResponse {
     private String sizeOptions;
     private boolean colorsEnabled;
     private String colorOptions;
+    private Long ownerUserId;
+    private Boolean collaboratorCanPublish; // null = owner/admin (always can), true/false = collaborator permission
     private Integer discount;
     private Long storeId;
     private int productCount;
@@ -53,6 +55,7 @@ public class CatalogResponse {
         r.sizeOptions = c.getSizeOptions();
         r.colorsEnabled = c.isColorsEnabled();
         r.colorOptions = c.getColorOptions();
+        r.ownerUserId = c.getUserId();
         r.discount = c.getDiscount();
         r.storeId = c.getStoreId();
         r.productCount = c.getProductCount();
