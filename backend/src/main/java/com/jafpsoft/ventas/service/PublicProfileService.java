@@ -25,6 +25,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import com.jafpsoft.ventas.model.Product;
 
 @Service
 @RequiredArgsConstructor
@@ -97,6 +100,19 @@ public class PublicProfileService {
         if (catalog.getPublishedSnapshotJson() != null) {
             try {
                 CatalogSnapshotData snapshot = objectMapper.readValue(catalog.getPublishedSnapshotJson(), CatalogSnapshotData.class);
+                // Overlay live product prices so price/offerPrice changes apply without republishing
+                Map<Long, Product> liveById = productRepository
+                        .findByCatalogIdOrderBySortOrderAscCreatedAtAsc(catalog.getId())
+                        .stream().collect(Collectors.toMap(Product::getId, p -> p));
+                if (snapshot.getProducts() != null) {
+                    snapshot.getProducts().forEach(sp -> {
+                        Product live = liveById.get(sp.getId());
+                        if (live != null) {
+                            sp.setPrice(live.getPrice());
+                            sp.setOfferPrice(live.getOfferPrice());
+                        }
+                    });
+                }
                 PublicCatalogPageResponse response = PublicCatalogPageResponse.fromSnapshot(catalog, owner, socialLinks, snapshot);
                 if ("PREDEFINED".equals(snapshot.getBackgroundType()) && catalog.getBackgroundTemplateId() != null) {
                     backgroundTemplateRepository.findById(catalog.getBackgroundTemplateId()).ifPresent(t ->
