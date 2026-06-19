@@ -136,6 +136,7 @@ public class CatalogService {
                 .name(req.getName())
                 .description(req.getDescription())
                 .price(req.getPrice())
+                .offerPrice(req.getOfferPrice())
                 .sku(req.getSku())
                 .category(req.getCategory())
                 .imageUrl(req.getImageUrl())
@@ -158,6 +159,7 @@ public class CatalogService {
         product.setName(req.getName());
         product.setDescription(req.getDescription());
         product.setPrice(req.getPrice());
+        product.setOfferPrice(req.getOfferPrice());
         product.setSku(req.getSku());
         product.setCategory(req.getCategory());
         product.setImageUrl(req.getImageUrl());
