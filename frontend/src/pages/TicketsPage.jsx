@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
@@ -19,14 +19,11 @@ const emptyItem = { productId: null, productName: '', productSku: '', variant: '
 function NewTicketModal({ onClose, onCreated }) {
   const [allProducts, setAllProducts] = useState([])
   const [config, setConfig] = useState({ paymentMethods: 'Efectivo', currency: '$' })
-  const [skuInput, setSkuInput] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
-  const [showSearch, setShowSearch] = useState(false)
   const [items, setItems] = useState([])
   const [form, setForm] = useState({ customerName: '', customerPhone: '', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
   const [saving, setSaving] = useState(false)
-  const skuRef = useRef(null)
 
   useEffect(() => {
     productsApi.list().then(r => setAllProducts(r.data || [])).catch(() => {})
@@ -35,7 +32,6 @@ function NewTicketModal({ onClose, onCreated }) {
       const methods = (r.data?.paymentMethods || 'Efectivo').split(',').map(s => s.trim()).filter(Boolean)
       setForm(f => ({ ...f, paymentMethod: methods[0] || 'Efectivo' }))
     }).catch(() => {})
-    setTimeout(() => skuRef.current?.focus(), 150)
   }, [])
 
   const paymentOptions = useMemo(() =>
@@ -70,20 +66,6 @@ function NewTicketModal({ onClose, onCreated }) {
         quantity: 1,
         unitPrice: product.offerPrice || product.price || '',
       }])
-    }
-  }
-
-  function handleSkuKeyDown(e) {
-    if (e.key !== 'Enter') return
-    e.preventDefault()
-    const sku = skuInput.trim()
-    if (!sku) return
-    const found = allProducts.find(p => p.sku && p.sku.toLowerCase() === sku.toLowerCase())
-    if (found) {
-      addProductToItems(found)
-      setSkuInput('')
-    } else {
-      toast.error(`SKU "${sku}" no encontrado`)
     }
   }
 
@@ -135,78 +117,56 @@ function NewTicketModal({ onClose, onCreated }) {
 
         <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
 
-          {/* SKU scan */}
-          <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Escanear / ingresar SKU</label>
-            <div className="flex gap-2">
+          {/* Buscador de productos */}
+          <div className="border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden">
+            <div className="p-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
               <input
-                ref={skuRef}
                 type="text"
-                value={skuInput}
-                onChange={e => setSkuInput(e.target.value)}
-                onKeyDown={handleSkuKeyDown}
-                placeholder="Código de barras o SKU — presioná Enter"
-                className="flex-1 px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Buscar por nombre o SKU..."
+                autoFocus
+                className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
               />
-              <button type="button" onClick={() => { setShowSearch(s => !s); setSearchQuery('') }}
-                className={`px-3 py-2 text-sm rounded-xl border transition-colors ${showSearch ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
-                Buscar
-              </button>
+              {categories.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <button type="button" onClick={() => setSelectedCategory('')}
+                    className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${!selectedCategory ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
+                    Todos
+                  </button>
+                  {categories.map(cat => (
+                    <button key={cat} type="button" onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
+                      className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${selectedCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="max-h-52 overflow-y-auto divide-y divide-gray-50 dark:divide-slate-700/50">
+              {filteredProducts.length === 0 ? (
+                <p className="text-center text-xs text-gray-400 py-6">Sin resultados</p>
+              ) : filteredProducts.map(p => (
+                <button key={p.id} type="button" onClick={() => addProductToItems(p)}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors">
+                  {p.imageUrl
+                    ? <img src={p.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                    : <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-slate-600 shrink-0" />
+                  }
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{p.name}</p>
+                    <p className="text-xs text-gray-400 dark:text-slate-500">
+                      {p.sku && <span className="font-mono mr-2">{p.sku}</span>}
+                      {p.category && <span>{p.category}</span>}
+                    </p>
+                  </div>
+                  <span className="text-sm font-semibold text-gray-700 dark:text-slate-200 shrink-0">
+                    ${(p.offerPrice || p.price || 0).toLocaleString('es-AR')}
+                  </span>
+                </button>
+              ))}
             </div>
           </div>
-
-          {/* Search panel */}
-          {showSearch && (
-            <div className="border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden">
-              <div className="p-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Buscar por nombre o SKU..."
-                  autoFocus
-                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                {categories.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5 mt-2">
-                    <button type="button" onClick={() => setSelectedCategory('')}
-                      className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${!selectedCategory ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
-                      Todos
-                    </button>
-                    {categories.map(cat => (
-                      <button key={cat} type="button" onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-                        className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${selectedCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
-                        {cat}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="max-h-52 overflow-y-auto divide-y divide-gray-50 dark:divide-slate-700/50">
-                {filteredProducts.length === 0 ? (
-                  <p className="text-center text-xs text-gray-400 py-6">Sin resultados</p>
-                ) : filteredProducts.map(p => (
-                  <button key={p.id} type="button" onClick={() => { addProductToItems(p); setShowSearch(false); setSkuInput(''); setTimeout(() => skuRef.current?.focus(), 50) }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors">
-                    {p.imageUrl
-                      ? <img src={p.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
-                      : <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-slate-600 shrink-0" />
-                    }
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{p.name}</p>
-                      <p className="text-xs text-gray-400 dark:text-slate-500">
-                        {p.sku && <span className="font-mono mr-2">{p.sku}</span>}
-                        {p.category && <span>{p.category}</span>}
-                      </p>
-                    </div>
-                    <span className="text-sm font-semibold text-gray-700 dark:text-slate-200 shrink-0">
-                      ${(p.offerPrice || p.price || 0).toLocaleString('es-AR')}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Items */}
           {items.length > 0 && (
