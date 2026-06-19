@@ -431,10 +431,16 @@ export default function StockPage() {
               {products.length} productos — {inCatalogCount} en catálogos, {repoOnlyCount} sin asignar
             </p>
           </div>
-          <button onClick={() => openForm()}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors">
-            + Nuevo producto
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => navigate('/stock/informe')}
+              className="px-4 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 text-sm font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+              Ver informe
+            </button>
+            <button onClick={() => openForm()}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors">
+              + Nuevo producto
+            </button>
+          </div>
         </div>
 
         {/* Filters */}

@@ -35,6 +35,7 @@ import ContactPage from './pages/ContactPage'
 import TermsPage from './pages/TermsPage'
 import PublicCatalogPage from './pages/PublicCatalogPage'
 import StockPage from './pages/StockPage'
+import StockReportPage from './pages/StockReportPage'
 import LocalesPage from './pages/LocalesPage'
 import StorePage from './pages/StorePage'
 import OrdersPage from './pages/OrdersPage'
@@ -97,6 +98,9 @@ export default function App() {
               } />
               <Route path="/stock" element={
                 <ProtectedRoute><StockPage /></ProtectedRoute>
+              } />
+              <Route path="/stock/informe" element={
+                <ProtectedRoute><StockReportPage /></ProtectedRoute>
               } />
               <Route path="/locales" element={
                 <ProtectedRoute><LocalesPage /></ProtectedRoute>
