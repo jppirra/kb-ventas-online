@@ -7,12 +7,13 @@ import { adminApi } from '../api/admin'
 import { fmtDate, fmtDateLong } from '../utils/date'
 
 const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
+const STATUS_COLORS = { PAID: '#16a34a', DRAFT: '#ca8a04', CANCELLED: '#dc2626' }
 
 function buildWhatsAppText(ticket, config) {
   const cur = config?.currency || '$'
   const biz = config?.businessName || 'Tienda'
   let text = `*Comprobante de compra — ${biz}*\n`
-  if (ticket.ticketNumber) text += `Ticket: ${ticket.ticketNumber}\n`
+  if (ticket.ticketNumber) text += `N°: ${ticket.ticketNumber}\n`
   text += `Fecha: ${fmtDate(ticket.createdAt)}\n\n`
   text += `*Detalle:*\n`
   ticket.items?.forEach(it => {
@@ -27,10 +28,184 @@ function buildWhatsAppText(ticket, config) {
   return encodeURIComponent(text)
 }
 
+function buildTicketHtml(ticket, config) {
+  const cur = config?.currency || '$'
+  const biz = config?.businessName || 'Mi tienda'
+  const rows = (ticket.items || []).map(it =>
+    `<tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6;">${it.productName}${it.size ? ` (${it.size})` : ''}</td>
+     <td style="padding:6px 0;text-align:center;border-bottom:1px solid #f3f4f6;">${it.quantity}</td>
+     <td style="padding:6px 0;text-align:right;border-bottom:1px solid #f3f4f6;">${cur}${Number(it.unitPrice).toLocaleString('es-AR')}</td>
+     <td style="padding:6px 0;text-align:right;border-bottom:1px solid #f3f4f6;font-weight:600;">${cur}${Number(it.subtotal).toLocaleString('es-AR')}</td></tr>`
+  ).join('')
+  return `<strong>${biz}</strong> — ${ticket.ticketNumber}<br>${fmtDateLong(ticket.createdAt)}<br><br>
+    <table width="100%" cellpadding="0" cellspacing="0">
+      <thead><tr style="font-size:12px;color:#9ca3af">
+        <th align="left">Producto</th><th>Cant.</th><th align="right">Precio</th><th align="right">Subtotal</th>
+      </tr></thead><tbody>${rows}</tbody>
+    </table><br>
+    <strong>Total: ${cur}${Number(ticket.total).toLocaleString('es-AR')}</strong>
+    ${ticket.paymentMethod ? `<br>Forma de pago: ${ticket.paymentMethod}` : ''}
+    ${config?.footer ? `<br><br><em>${config.footer}</em>` : ''}`
+}
+
+// Comprobante imprimible con formato AFIP cuando puntoVenta está configurado
+function InvoiceDocument({ ticket, config }) {
+  const cur = config?.currency || '$'
+  const isAfip = !!config?.puntoVenta
+  const tipo = config?.tipoComprobante || 'B'
+
+  const tipoLabel = { A: 'FACTURA A', B: 'FACTURA B', C: 'FACTURA C' }[tipo] || 'COMPROBANTE'
+
+  return (
+    <div className="ticket-paper bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm print:shadow-none print:rounded-none print:border-0">
+
+      {/* ── Cabecera ── */}
+      <div className="relative p-6 pb-4 border-b-2 border-gray-800">
+        {/* Logo + nombre (izq) */}
+        <div className="flex items-center gap-4">
+          {config?.logoUrl && (
+            <img src={config.logoUrl} alt="Logo" className="h-14 w-14 object-contain rounded-lg border border-gray-200" />
+          )}
+          <div>
+            <p className="font-bold text-lg text-gray-900">{config?.businessName || 'Mi tienda'}</p>
+            {config?.businessAddress && <p className="text-xs text-gray-500">{config.businessAddress}</p>}
+          </div>
+        </div>
+
+        {/* Tipo de comprobante (centro absoluto) */}
+        <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 text-center">
+          <h1 className="text-2xl font-black tracking-widest text-gray-900 border-2 border-gray-800 px-5 py-1">
+            {isAfip ? tipoLabel : 'COMPROBANTE'}
+          </h1>
+          <div className="mt-1 border border-gray-400 px-4 py-0.5">
+            <span className="font-mono text-sm font-bold text-gray-700">{ticket.ticketNumber}</span>
+          </div>
+        </div>
+
+        {/* Letra en caja (der) — solo AFIP */}
+        {isAfip && (
+          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-14 h-14 border-2 border-gray-800 flex items-center justify-center">
+            <span className="text-3xl font-black text-gray-900">{tipo}</span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Emisor / Fecha / Cliente ── */}
+      <div className="grid grid-cols-3 border-b border-gray-300">
+        {/* Emisor */}
+        <div className="p-4 border-r border-gray-300">
+          <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase mb-2">Emisor</p>
+          <p className="text-sm font-semibold text-gray-900">{config?.businessName || '—'}</p>
+          {config?.businessAddress && <p className="text-xs text-gray-600 mt-0.5">{config.businessAddress}</p>}
+          {config?.taxId && <p className="text-xs text-gray-600 mt-0.5">CUIT: {config.taxId}</p>}
+          {config?.condicionIva && <p className="text-xs text-gray-600 mt-0.5">IVA: {config.condicionIva}</p>}
+          {config?.ingresosBrutos && <p className="text-xs text-gray-600">Ing. Brutos: {config.ingresosBrutos}</p>}
+          {config?.inicioActividades && <p className="text-xs text-gray-600">Inicio act.: {config.inicioActividades}</p>}
+          {config?.businessPhone && <p className="text-xs text-gray-500 mt-1">{config.businessPhone}</p>}
+          {config?.businessEmail && <p className="text-xs text-gray-500">{config.businessEmail}</p>}
+        </div>
+
+        {/* Fecha */}
+        <div className="p-4 border-r border-gray-300 flex flex-col items-center justify-center text-center gap-2">
+          <div className="border border-gray-300 rounded px-3 py-1.5 w-full">
+            <p className="text-xs text-gray-500">Emitida</p>
+            <p className="text-sm font-semibold text-gray-900">{fmtDate(ticket.createdAt)}</p>
+          </div>
+          {ticket.paymentMethod && (
+            <div className="border border-gray-300 rounded px-3 py-1.5 w-full">
+              <p className="text-xs text-gray-500">Forma de pago</p>
+              <p className="text-sm font-semibold text-gray-900">{ticket.paymentMethod}</p>
+            </div>
+          )}
+          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium`}
+            style={{ background: STATUS_COLORS[ticket.status] + '22', color: STATUS_COLORS[ticket.status] }}>
+            {STATUS_LABELS[ticket.status] || ticket.status}
+          </span>
+        </div>
+
+        {/* Cliente */}
+        <div className="p-4">
+          <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase mb-2">Cliente</p>
+          {ticket.customerName
+            ? <p className="text-sm font-semibold text-gray-900">{ticket.customerName}</p>
+            : <p className="text-xs text-gray-400 italic">Consumidor Final</p>
+          }
+          {ticket.customerPhone && <p className="text-xs text-gray-600 mt-0.5">{ticket.customerPhone}</p>}
+          {ticket.customerEmail && <p className="text-xs text-gray-600">{ticket.customerEmail}</p>}
+          {ticket.customerNotes && <p className="text-xs text-gray-500 mt-1 italic">{ticket.customerNotes}</p>}
+        </div>
+      </div>
+
+      {/* ── Items ── */}
+      <div className="p-5">
+        <table className="w-full text-sm mb-4">
+          <thead>
+            <tr className="text-left text-xs text-gray-400 border-b border-gray-200 bg-gray-50">
+              <th className="pb-2 pt-1 px-2 font-medium">Producto</th>
+              <th className="pb-2 pt-1 font-medium text-center w-16">Cant.</th>
+              <th className="pb-2 pt-1 font-medium text-right w-28">Precio unit.</th>
+              <th className="pb-2 pt-1 font-medium text-right w-28 pr-2">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {ticket.items?.map(it => (
+              <tr key={it.id}>
+                <td className="py-2 px-2">
+                  <p className="font-medium text-gray-900">{it.productName}</p>
+                  {it.size && <p className="text-xs text-gray-400">Talle: {it.size}</p>}
+                  {it.color && <p className="text-xs text-gray-400">Color: {it.color}</p>}
+                  {it.productSku && <p className="text-xs text-gray-400 font-mono">SKU: {it.productSku}</p>}
+                </td>
+                <td className="py-2 text-center text-gray-600">{it.quantity}</td>
+                <td className="py-2 text-right text-gray-600">{cur}{Number(it.unitPrice).toLocaleString('es-AR')}</td>
+                <td className="py-2 text-right font-semibold text-gray-900 pr-2">{cur}{Number(it.subtotal).toLocaleString('es-AR')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        {/* Totales */}
+        <div className="border-t border-gray-200 pt-3 ml-auto max-w-xs space-y-1">
+          <div className="flex justify-between text-sm text-gray-500">
+            <span>Subtotal</span><span>{cur}{Number(ticket.subtotal).toLocaleString('es-AR')}</span>
+          </div>
+          {Number(ticket.discount) > 0 && (
+            <div className="flex justify-between text-sm text-green-600">
+              <span>Descuento</span><span>-{cur}{Number(ticket.discount).toLocaleString('es-AR')}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-bold text-base text-gray-900 border-t border-gray-300 pt-2">
+            <span>TOTAL</span><span>{cur}{Number(ticket.total).toLocaleString('es-AR')}</span>
+          </div>
+        </div>
+
+        {/* Notas */}
+        {ticket.notes && (
+          <p className="text-xs text-gray-400 italic mt-4 pt-3 border-t border-gray-100">{ticket.notes}</p>
+        )}
+      </div>
+
+      {/* ── Pie ── */}
+      {(config?.footer || isAfip) && (
+        <div className="border-t border-gray-200 px-5 py-3 bg-gray-50">
+          {isAfip && (
+            <div className="flex gap-6 text-xs text-gray-400 mb-2">
+              <span>CAE: <span className="text-gray-500 italic">— pendiente —</span></span>
+              <span>Vto. CAE: <span className="text-gray-500 italic">— —</span></span>
+            </div>
+          )}
+          {config?.footer && (
+            <p className="text-xs text-gray-400 text-center">{config.footer}</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const printRef = useRef()
   const [ticket, setTicket] = useState(null)
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -53,8 +228,6 @@ export default function TicketDetailPage() {
     finally { setSendingEmail(false) }
   }
 
-  function handlePrint() { window.print() }
-
   function handleWhatsApp() {
     const phone = ticket.customerPhone?.replace(/\D/g, '')
     const text = buildWhatsAppText(ticket, config)
@@ -64,21 +237,19 @@ export default function TicketDetailPage() {
   if (loading) return <Layout><div className="text-center py-16 text-gray-400">Cargando...</div></Layout>
   if (!ticket) return null
 
-  const cur = config?.currency || '$'
-
   return (
     <>
       <style>{`
         @media print {
           .no-print { display: none !important; }
           body { background: white !important; }
-          .ticket-paper { box-shadow: none !important; border: none !important; }
+          .ticket-paper { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
         }
       `}</style>
 
       <Layout>
-        <div className="max-w-2xl mx-auto px-4 py-8">
-          {/* Header */}
+        <div className="max-w-3xl mx-auto px-4 py-8">
+          {/* Toolbar */}
           <div className="flex items-start justify-between mb-6 no-print">
             <div>
               <button onClick={() => navigate('/tickets')}
@@ -88,10 +259,8 @@ export default function TicketDetailPage() {
                 </svg>
                 Tickets
               </button>
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{ticket.ticketNumber}</h1>
-              <p className="text-sm text-gray-500 dark:text-slate-400">
-                {fmtDateLong(ticket.createdAt)}
-              </p>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white font-mono">{ticket.ticketNumber}</h1>
+              <p className="text-sm text-gray-500 dark:text-slate-400">{fmtDateLong(ticket.createdAt)}</p>
             </div>
             <div className="flex gap-2 flex-wrap justify-end">
               {ticket.customerPhone && (
@@ -110,7 +279,7 @@ export default function TicketDetailPage() {
                   {sendingEmail ? 'Enviando...' : 'Email'}
                 </button>
               )}
-              <button onClick={handlePrint}
+              <button onClick={() => window.print()}
                 className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
@@ -120,127 +289,9 @@ export default function TicketDetailPage() {
             </div>
           </div>
 
-          {/* Comprobante imprimible */}
-          <div ref={printRef} className="ticket-paper bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden shadow-sm">
-            {/* Cabecera del negocio */}
-            <div className="bg-blue-600 text-white p-6 text-center">
-              {config?.logoUrl && (
-                <img src={config.logoUrl} alt="Logo" className="h-12 mx-auto mb-2 object-contain" />
-              )}
-              <h2 className="text-lg font-bold">{config?.businessName || 'Mi tienda'}</h2>
-              {config?.businessAddress && <p className="text-sm text-blue-100">{config.businessAddress}</p>}
-              {config?.businessPhone && <p className="text-sm text-blue-100">{config.businessPhone}</p>}
-              {config?.taxId && <p className="text-xs text-blue-200 mt-1">CUIT/RUT: {config.taxId}</p>}
-            </div>
-
-            <div className="p-6">
-              {/* Info del ticket */}
-              <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100 dark:border-slate-700">
-                <div>
-                  <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wide">Comprobante</p>
-                  <p className="font-mono font-bold text-lg text-gray-900 dark:text-white">{ticket.ticketNumber}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-400 dark:text-slate-500">Fecha</p>
-                  <p className="text-sm text-gray-700 dark:text-slate-300">
-                    {fmtDate(ticket.createdAt)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Cliente */}
-              {(ticket.customerName || ticket.customerPhone) && (
-                <div className="mb-4 pb-4 border-b border-gray-100 dark:border-slate-700">
-                  <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wide mb-1">Cliente</p>
-                  {ticket.customerName && <p className="font-medium text-gray-900 dark:text-white">{ticket.customerName}</p>}
-                  {ticket.customerPhone && <p className="text-sm text-gray-500 dark:text-slate-400">{ticket.customerPhone}</p>}
-                  {ticket.customerEmail && <p className="text-sm text-gray-500 dark:text-slate-400">{ticket.customerEmail}</p>}
-                  {ticket.customerNotes && <p className="text-xs text-gray-400 dark:text-slate-500 mt-1 italic">{ticket.customerNotes}</p>}
-                </div>
-              )}
-
-              {/* Items */}
-              <table className="w-full text-sm mb-4">
-                <thead>
-                  <tr className="text-left text-xs text-gray-400 dark:text-slate-500 border-b border-gray-100 dark:border-slate-700">
-                    <th className="pb-2 font-medium">Producto</th>
-                    <th className="pb-2 font-medium text-center">Cant.</th>
-                    <th className="pb-2 font-medium text-right">Precio</th>
-                    <th className="pb-2 font-medium text-right">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
-                  {ticket.items?.map(it => (
-                    <tr key={it.id}>
-                      <td className="py-2 pr-2">
-                        <p className="font-medium text-gray-900 dark:text-white">{it.productName}</p>
-                        {it.size && <p className="text-xs text-gray-400">Talle: {it.size}</p>}
-                        {it.productSku && <p className="text-xs text-gray-400">SKU: {it.productSku}</p>}
-                      </td>
-                      <td className="py-2 text-center text-gray-600 dark:text-slate-400">{it.quantity}</td>
-                      <td className="py-2 text-right text-gray-600 dark:text-slate-400">{cur}{Number(it.unitPrice).toLocaleString('es-AR')}</td>
-                      <td className="py-2 text-right font-medium text-gray-900 dark:text-white">{cur}{Number(it.subtotal).toLocaleString('es-AR')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-
-              {/* Totales */}
-              <div className="border-t border-gray-200 dark:border-slate-700 pt-3 space-y-1">
-                <div className="flex justify-between text-sm text-gray-600 dark:text-slate-400">
-                  <span>Subtotal</span><span>{cur}{Number(ticket.subtotal).toLocaleString('es-AR')}</span>
-                </div>
-                {ticket.discount > 0 && (
-                  <div className="flex justify-between text-sm text-green-600 dark:text-green-400">
-                    <span>Descuento</span><span>-{cur}{Number(ticket.discount).toLocaleString('es-AR')}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-lg text-gray-900 dark:text-white border-t border-gray-200 dark:border-slate-700 pt-2 mt-2">
-                  <span>TOTAL</span><span>{cur}{Number(ticket.total).toLocaleString('es-AR')}</span>
-                </div>
-                {ticket.paymentMethod && (
-                  <p className="text-xs text-gray-400 dark:text-slate-500 text-right">Forma de pago: {ticket.paymentMethod}</p>
-                )}
-              </div>
-
-              {ticket.notes && (
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700">
-                  <p className="text-xs text-gray-400 dark:text-slate-500 italic">{ticket.notes}</p>
-                </div>
-              )}
-
-              {config?.footer && (
-                <div className="mt-4 pt-4 border-t border-gray-100 dark:border-slate-700 text-center">
-                  <p className="text-xs text-gray-400 dark:text-slate-500">{config.footer}</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <InvoiceDocument ticket={ticket} config={config} />
         </div>
       </Layout>
     </>
   )
-}
-
-function buildTicketHtml(ticket, config) {
-  const cur = config?.currency || '$'
-  const biz = config?.businessName || 'Mi tienda'
-  const rows = (ticket.items || []).map(it =>
-    `<tr><td style="padding:6px 0;border-bottom:1px solid #f3f4f6;">${it.productName}${it.size ? ` <span style="color:#9ca3af">(${it.size})</span>` : ''}</td>
-     <td style="padding:6px 0;text-align:center;border-bottom:1px solid #f3f4f6;">${it.quantity}</td>
-     <td style="padding:6px 0;text-align:right;border-bottom:1px solid #f3f4f6;">${cur}${Number(it.unitPrice).toLocaleString('es-AR')}</td>
-     <td style="padding:6px 0;text-align:right;border-bottom:1px solid #f3f4f6;font-weight:600;">${cur}${Number(it.subtotal).toLocaleString('es-AR')}</td></tr>`
-  ).join('')
-
-  return `<strong>${biz}</strong> — ${ticket.ticketNumber}<br>
-    ${fmtDateLong(ticket.createdAt)}<br><br>
-    <table width="100%" cellpadding="0" cellspacing="0">
-      <thead><tr style="font-size:12px;color:#9ca3af">
-        <th align="left">Producto</th><th>Cant.</th><th align="right">Precio</th><th align="right">Subtotal</th>
-      </tr></thead>
-      <tbody>${rows}</tbody>
-    </table><br>
-    <strong>Total: ${cur}${Number(ticket.total).toLocaleString('es-AR')}</strong>
-    ${ticket.paymentMethod ? `<br>Forma de pago: ${ticket.paymentMethod}` : ''}
-    ${config?.footer ? `<br><br><em>${config.footer}</em>` : ''}`
 }

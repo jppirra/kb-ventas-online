@@ -14,4 +14,9 @@ public class TicketConfigRequest {
     private String paymentMethods;
     private String footer;
     private Boolean showCatalogQr;
+    private String tipoComprobante;
+    private Integer puntoVenta;
+    private String condicionIva;
+    private String ingresosBrutos;
+    private String inicioActividades;
 }

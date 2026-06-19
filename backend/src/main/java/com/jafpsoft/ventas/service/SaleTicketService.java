@@ -46,7 +46,9 @@ public class SaleTicketService {
         int ticketNum = config.getNextTicketNumber();
         config.setNextTicketNumber(ticketNum + 1);
         configRepository.save(config);
-        String ticketNumber = String.format("T-%04d", ticketNum);
+        String ticketNumber = config.getPuntoVenta() != null
+                ? String.format("%s %04d-%08d", config.getTipoComprobante() != null ? config.getTipoComprobante() : "B", config.getPuntoVenta(), ticketNum)
+                : String.format("T-%04d", ticketNum);
 
         SaleTicket ticket = SaleTicket.builder()
                 .userId(userId)
@@ -139,6 +141,11 @@ public class SaleTicketService {
         if (req.getPaymentMethods() != null) config.setPaymentMethods(req.getPaymentMethods());
         if (req.getFooter() != null) config.setFooter(req.getFooter());
         if (req.getShowCatalogQr() != null) config.setShowCatalogQr(req.getShowCatalogQr());
+        if (req.getTipoComprobante() != null) config.setTipoComprobante(req.getTipoComprobante());
+        config.setPuntoVenta(req.getPuntoVenta());
+        if (req.getCondicionIva() != null) config.setCondicionIva(req.getCondicionIva());
+        if (req.getIngresosBrutos() != null) config.setIngresosBrutos(req.getIngresosBrutos());
+        if (req.getInicioActividades() != null) config.setInicioActividades(req.getInicioActividades());
         return TicketConfigResponse.from(configRepository.save(config));
     }
 
