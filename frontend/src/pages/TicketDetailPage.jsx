@@ -54,7 +54,8 @@ function InvoiceDocument({ ticket, config }) {
   const isAfip = !!config?.puntoVenta
   const tipo = config?.tipoComprobante || 'B'
 
-  const tipoLabel = { A: 'FACTURA A', B: 'FACTURA B', C: 'FACTURA C' }[tipo] || 'COMPROBANTE'
+  const esSin = tipo === 'SIN'
+  const tipoLabel = esSin ? 'TICKET' : ({ A: 'FACTURA A', B: 'FACTURA B', C: 'FACTURA C' }[tipo] || 'COMPROBANTE')
 
   return (
     <div className="ticket-paper bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm print:shadow-none print:rounded-none print:border-0">
@@ -82,8 +83,8 @@ function InvoiceDocument({ ticket, config }) {
           </div>
         </div>
 
-        {/* Letra en caja (der) — solo AFIP */}
-        {isAfip && (
+        {/* Letra en caja (der) — solo AFIP con tipo A/B/C */}
+        {isAfip && !esSin && (
           <div className="absolute right-6 top-1/2 -translate-y-1/2 w-14 h-14 border-2 border-gray-800 flex items-center justify-center">
             <span className="text-3xl font-black text-gray-900">{tipo}</span>
           </div>
@@ -188,11 +189,16 @@ function InvoiceDocument({ ticket, config }) {
       {/* ── Pie ── */}
       {(config?.footer || isAfip) && (
         <div className="border-t border-gray-200 px-5 py-3 bg-gray-50">
-          {isAfip && (
+          {isAfip && !esSin && (
             <div className="flex gap-6 text-xs text-gray-400 mb-2">
               <span>CAE: <span className="text-gray-500 italic">— pendiente —</span></span>
               <span>Vto. CAE: <span className="text-gray-500 italic">— —</span></span>
             </div>
+          )}
+          {isAfip && esSin && (
+            <p className="text-xs text-gray-500 text-center font-medium mb-2">
+              Este comprobante no es válido como factura
+            </p>
           )}
           {config?.footer && (
             <p className="text-xs text-gray-400 text-center">{config.footer}</p>
