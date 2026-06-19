@@ -39,13 +39,13 @@ public class SaleTicketService {
 
     @Transactional
     public TicketResponse create(TicketRequest req, Long userId) {
-        TicketConfig config = configRepository.findById(userId).orElse(null);
-        int ticketNum = 1;
-        if (config != null) {
-            ticketNum = config.getNextTicketNumber();
-            config.setNextTicketNumber(ticketNum + 1);
-            configRepository.save(config);
-        }
+        // Lock the row so concurrent requests can't take the same number.
+        // If no config exists yet, create one inside the transaction before anyone else can.
+        TicketConfig config = configRepository.findByIdForUpdate(userId)
+                .orElseGet(() -> configRepository.save(TicketConfig.builder().userId(userId).build()));
+        int ticketNum = config.getNextTicketNumber();
+        config.setNextTicketNumber(ticketNum + 1);
+        configRepository.save(config);
         String ticketNumber = String.format("T-%04d", ticketNum);
 
         SaleTicket ticket = SaleTicket.builder()

@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "sale_tickets")
+@Table(name = "sale_tickets", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "ticket_number"}))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class SaleTicket {
 
