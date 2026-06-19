@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
@@ -107,6 +108,16 @@ public class SaleTicketService {
             adjustStock(saved.getItems(), -1, userId);
         }
         return TicketResponse.from(saved);
+    }
+
+    @Transactional
+    public TicketResponse updateCustomer(Long id, Long userId, Map<String, String> data) {
+        SaleTicket ticket = findOwned(id, userId);
+        if (data.containsKey("customerName"))  ticket.setCustomerName(data.get("customerName"));
+        if (data.containsKey("customerPhone")) ticket.setCustomerPhone(data.get("customerPhone"));
+        if (data.containsKey("customerEmail")) ticket.setCustomerEmail(data.get("customerEmail"));
+        if (data.containsKey("customerNotes")) ticket.setCustomerNotes(data.get("customerNotes"));
+        return TicketResponse.from(ticketRepository.save(ticket));
     }
 
     @Transactional

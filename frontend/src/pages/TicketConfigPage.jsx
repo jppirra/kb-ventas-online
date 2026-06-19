@@ -13,7 +13,7 @@ const CONDICIONES_IVA = [
 ]
 
 const TIPOS_COMPROBANTE = [
-  { value: 'SIN', label: 'SIN — Ticket genérico (no válido como factura)' },
+  { value: 'TC', label: 'TC — Ticket Comprobante (no válido como factura)' },
   { value: 'A', label: 'A — Responsable Inscripto a Responsable Inscripto' },
   { value: 'B', label: 'B — Responsable Inscripto a Consumidor Final / Monotrib.' },
   { value: 'C', label: 'C — Monotributista a cualquier destinatario' },
@@ -222,8 +222,8 @@ export default function TicketConfigPage() {
 
             {afipEnabled && (
               <div className="text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-amber-700 dark:text-amber-400">
-                {form.tipoComprobante === 'SIN'
-                  ? <>Con punto de venta activo y tipo SIN, los comprobantes se numerarán como <strong>SIN {String(form.puntoVenta).padStart(4,'0')}-00000001</strong> y mostrarán el aviso de que no son válidos como factura.</>
+                {form.tipoComprobante === 'TC'
+                  ? <>Con punto de venta activo y tipo TC, los comprobantes se numerarán como <strong>TC {String(form.puntoVenta).padStart(4,'0')}-00000001</strong> y mostrarán el aviso de que no son válidos como factura.</>
                   : <>Con punto de venta activo, los comprobantes se numerarán como <strong>{form.tipoComprobante} {String(form.puntoVenta).padStart(4,'0')}-00000001</strong>. Para emitir facturas electrónicas válidas (con CAE) se requiere la integración con AFIP WSFE — próximamente.</>
                 }
               </div>

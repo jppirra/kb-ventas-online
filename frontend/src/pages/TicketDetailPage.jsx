@@ -54,8 +54,8 @@ function InvoiceDocument({ ticket, config }) {
   const isAfip = !!config?.puntoVenta
   const tipo = config?.tipoComprobante || 'B'
 
-  const esSin = tipo === 'SIN'
-  const tipoLabel = esSin ? 'TICKET' : ({ A: 'FACTURA A', B: 'FACTURA B', C: 'FACTURA C' }[tipo] || 'COMPROBANTE')
+  const esTc = tipo === 'TC'
+  const tipoLabel = esTc ? 'TICKET COMPROBANTE' : ({ A: 'FACTURA A', B: 'FACTURA B', C: 'FACTURA C' }[tipo] || 'COMPROBANTE')
 
   return (
     <div className="ticket-paper bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm print:shadow-none print:rounded-none print:border-0">
@@ -84,7 +84,7 @@ function InvoiceDocument({ ticket, config }) {
         </div>
 
         {/* Letra en caja (der) — solo AFIP con tipo A/B/C */}
-        {isAfip && !esSin && (
+        {isAfip && !esTc && (
           <div className="absolute right-6 top-1/2 -translate-y-1/2 w-14 h-14 border-2 border-gray-800 flex items-center justify-center">
             <span className="text-3xl font-black text-gray-900">{tipo}</span>
           </div>
@@ -189,13 +189,13 @@ function InvoiceDocument({ ticket, config }) {
       {/* ── Pie ── */}
       {(config?.footer || isAfip) && (
         <div className="border-t border-gray-200 px-5 py-3 bg-gray-50">
-          {isAfip && !esSin && (
+          {isAfip && !esTc && (
             <div className="flex gap-6 text-xs text-gray-400 mb-2">
               <span>CAE: <span className="text-gray-500 italic">— pendiente —</span></span>
               <span>Vto. CAE: <span className="text-gray-500 italic">— —</span></span>
             </div>
           )}
-          {isAfip && esSin && (
+          {isAfip && esTc && (
             <p className="text-xs text-gray-500 text-center font-medium mb-2">
               Este comprobante no es válido como factura
             </p>
@@ -216,13 +216,37 @@ export default function TicketDetailPage() {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [sendingEmail, setSendingEmail] = useState(false)
+  const [editingCustomer, setEditingCustomer] = useState(false)
+  const [customerForm, setCustomerForm] = useState({ customerName: '', customerPhone: '', customerEmail: '', customerNotes: '' })
+  const [savingCustomer, setSavingCustomer] = useState(false)
 
   useEffect(() => {
     Promise.all([ticketsApi.get(id), ticketsApi.getConfig()])
-      .then(([tr, cr]) => { setTicket(tr.data); setConfig(cr.data) })
+      .then(([tr, cr]) => {
+        setTicket(tr.data)
+        setConfig(cr.data)
+        setCustomerForm({
+          customerName: tr.data.customerName || '',
+          customerPhone: tr.data.customerPhone || '',
+          customerEmail: tr.data.customerEmail || '',
+          customerNotes: tr.data.customerNotes || '',
+        })
+      })
       .catch(() => { toast.error('Error al cargar ticket'); navigate('/tickets') })
       .finally(() => setLoading(false))
   }, [id])
+
+  async function handleSaveCustomer(e) {
+    e.preventDefault()
+    setSavingCustomer(true)
+    try {
+      const { data } = await ticketsApi.updateCustomer(id, customerForm)
+      setTicket(data)
+      setEditingCustomer(false)
+      toast.success('Datos del comprador actualizados')
+    } catch { toast.error('Error al guardar') }
+    finally { setSavingCustomer(false) }
+  }
 
   async function handleSendEmail() {
     if (!ticket.customerEmail) { toast.error('El cliente no tiene email registrado'); return }
@@ -243,6 +267,8 @@ export default function TicketDetailPage() {
   if (loading) return <Layout><div className="text-center py-16 text-gray-400">Cargando...</div></Layout>
   if (!ticket) return null
 
+  const inputCls = 'w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500'
+
   return (
     <>
       <style>{`
@@ -255,6 +281,41 @@ export default function TicketDetailPage() {
 
       <Layout>
         <div className="max-w-3xl mx-auto px-4 py-8">
+
+          {/* Modal editar comprador */}
+          {editingCustomer && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
+                <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-slate-700">
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Datos del comprador</h3>
+                  <button onClick={() => setEditingCustomer(false)} className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-slate-700">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                  </button>
+                </div>
+                <form onSubmit={handleSaveCustomer} className="p-5 space-y-3">
+                  <input type="text" placeholder="Nombre" value={customerForm.customerName}
+                    onChange={e => setCustomerForm(f => ({ ...f, customerName: e.target.value }))} className={inputCls} />
+                  <input type="tel" placeholder="Teléfono WhatsApp" value={customerForm.customerPhone}
+                    onChange={e => setCustomerForm(f => ({ ...f, customerPhone: e.target.value }))} className={inputCls} />
+                  <input type="email" placeholder="Email" value={customerForm.customerEmail}
+                    onChange={e => setCustomerForm(f => ({ ...f, customerEmail: e.target.value }))} className={inputCls} />
+                  <input type="text" placeholder="Notas" value={customerForm.customerNotes}
+                    onChange={e => setCustomerForm(f => ({ ...f, customerNotes: e.target.value }))} className={inputCls} />
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => setEditingCustomer(false)}
+                      className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                      Cancelar
+                    </button>
+                    <button type="submit" disabled={savingCustomer}
+                      className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+                      {savingCustomer ? 'Guardando...' : 'Guardar'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
           {/* Toolbar */}
           <div className="flex items-start justify-between mb-6 no-print">
             <div>
@@ -285,6 +346,13 @@ export default function TicketDetailPage() {
                   {sendingEmail ? 'Enviando...' : 'Email'}
                 </button>
               )}
+              <button onClick={() => setEditingCustomer(true)}
+                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                Comprador
+              </button>
               <button onClick={() => window.print()}
                 className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
