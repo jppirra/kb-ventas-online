@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { ticketsApi } from '../api/tickets'
-import { catalogsApi } from '../api/catalogs'
+import { productsApi } from '../api/products'
 import { fmtDate } from '../utils/date'
 import { useAuth } from '../context/AuthContext'
 
@@ -14,63 +14,91 @@ const STATUS_COLORS = {
   CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
 
-const SIZE_PRESETS = [
-  { label: 'Ropa adulto', sizes: ['XS','S','M','L','XL','XXL'] },
-  { label: 'Ropa niño', sizes: ['2','4','6','8','10','12','14','16'] },
-  { label: 'Calzado', sizes: ['34','35','36','37','38','39','40','41','42','43','44','45'] },
-  { label: 'Talle único', sizes: ['Único'] },
-]
-
 const emptyItem = { productId: null, productName: '', productSku: '', variant: '', quantity: 1, unitPrice: '' }
 
 function NewTicketModal({ onClose, onCreated }) {
-  const [catalogs, setCatalogs] = useState([])
-  const [selectedCatalog, setSelectedCatalog] = useState(null)
-  const [items, setItems] = useState([{ ...emptyItem }])
-  const [form, setForm] = useState({ customerName: '', customerPhone: '', customerEmail: '', customerNotes: '', paymentMethod: 'Efectivo', discount: '', notes: '' })
+  const [allProducts, setAllProducts] = useState([])
+  const [config, setConfig] = useState({ paymentMethods: 'Efectivo', currency: '$' })
+  const [skuInput, setSkuInput] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [showSearch, setShowSearch] = useState(false)
+  const [items, setItems] = useState([])
+  const [form, setForm] = useState({ customerName: '', customerPhone: '', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
   const [saving, setSaving] = useState(false)
+  const skuRef = useRef(null)
 
   useEffect(() => {
-    catalogsApi.list().then(r => setCatalogs(r.data)).catch(() => {})
+    productsApi.list().then(r => setAllProducts(r.data || [])).catch(() => {})
+    ticketsApi.getConfig().then(r => {
+      setConfig(r.data || {})
+      const methods = (r.data?.paymentMethods || 'Efectivo').split(',').map(s => s.trim()).filter(Boolean)
+      setForm(f => ({ ...f, paymentMethod: methods[0] || 'Efectivo' }))
+    }).catch(() => {})
+    setTimeout(() => skuRef.current?.focus(), 150)
   }, [])
 
-  const availableSizes = selectedCatalog?.sizesEnabled
-    ? (selectedCatalog.sizeOptions ? selectedCatalog.sizeOptions.split(',').map(s => s.trim()).filter(Boolean) : [])
-    : []
-  const availableColors = selectedCatalog?.colorsEnabled
-    ? (selectedCatalog.colorOptions ? selectedCatalog.colorOptions.split(',').map(s => s.trim()).filter(Boolean) : [])
-    : []
-  const availableVariants =
-    availableSizes.length > 0 && availableColors.length > 0
-      ? availableSizes.flatMap(s => availableColors.map(c => `${s} / ${c}`))
-      : availableSizes.length > 0
-        ? availableSizes
-        : availableColors
+  const paymentOptions = useMemo(() =>
+    (config.paymentMethods || 'Efectivo').split(',').map(s => s.trim()).filter(Boolean)
+  , [config.paymentMethods])
 
-  function addItem() { setItems(prev => [...prev, { ...emptyItem }]) }
-  function removeItem(i) { setItems(prev => prev.filter((_, idx) => idx !== i)) }
-  function setItem(i, field, value) { setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it)) }
+  const categories = useMemo(() =>
+    [...new Set(allProducts.map(p => p.category).filter(Boolean))].sort()
+  , [allProducts])
 
-  function selectProduct(i, product) {
-    setItem(i, 'productId', product.id)
-    setItem(i, 'productName', product.name)
-    setItem(i, 'productSku', product.sku || '')
-    setItem(i, 'unitPrice', product.price ?? '')
+  const filteredProducts = useMemo(() => {
+    let r = allProducts
+    if (selectedCategory) r = r.filter(p => p.category === selectedCategory)
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase()
+      r = r.filter(p => p.name.toLowerCase().includes(q) || (p.sku && p.sku.toLowerCase().includes(q)))
+    }
+    return r.slice(0, 30)
+  }, [allProducts, searchQuery, selectedCategory])
+
+  function addProductToItems(product) {
+    const existing = items.findIndex(it => it.productId === product.id && !it.variant)
+    if (existing >= 0) {
+      setItems(prev => prev.map((it, i) => i === existing ? { ...it, quantity: (parseInt(it.quantity) || 1) + 1 } : it))
+      toast.success(`+1 ${product.name}`)
+    } else {
+      setItems(prev => [...prev, {
+        productId: product.id,
+        productName: product.name,
+        productSku: product.sku || '',
+        variant: '',
+        quantity: 1,
+        unitPrice: product.offerPrice || product.price || '',
+      }])
+    }
   }
 
-  const subtotal = items.reduce((acc, it) => {
-    const price = parseFloat(it.unitPrice) || 0
-    return acc + price * (parseInt(it.quantity) || 1)
-  }, 0)
+  function handleSkuKeyDown(e) {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    const sku = skuInput.trim()
+    if (!sku) return
+    const found = allProducts.find(p => p.sku && p.sku.toLowerCase() === sku.toLowerCase())
+    if (found) {
+      addProductToItems(found)
+      setSkuInput('')
+    } else {
+      toast.error(`SKU "${sku}" no encontrado`)
+    }
+  }
+
+  function removeItem(i) { setItems(prev => prev.filter((_, idx) => idx !== i)) }
+  function setItem(i, field, value) { setItems(prev => prev.map((it, idx) => idx === i ? { ...it, [field]: value } : it)) }
+  function addManualItem() { setItems(prev => [...prev, { ...emptyItem }]) }
+
+  const subtotal = items.reduce((acc, it) => acc + (parseFloat(it.unitPrice) || 0) * (parseInt(it.quantity) || 1), 0)
   const discount = parseFloat(form.discount) || 0
   const total = Math.max(0, subtotal - discount)
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (items.some(it => !it.productName.trim())) {
-      toast.error('Completá el nombre de todos los productos')
-      return
-    }
+    if (items.length === 0) { toast.error('Agregá al menos un producto'); return }
+    if (items.some(it => !it.productName.trim())) { toast.error('Completá el nombre de todos los productos'); return }
     setSaving(true)
     try {
       const payload = {
@@ -79,37 +107,21 @@ function NewTicketModal({ onClose, onCreated }) {
         items: items.map((it, idx) => {
           let size = null, color = null
           if (it.variant) {
-            if (availableSizes.length > 0 && availableColors.length > 0) {
-              const sep = it.variant.indexOf(' / ')
-              size = sep >= 0 ? it.variant.slice(0, sep) : it.variant
-              color = sep >= 0 ? it.variant.slice(sep + 3) : null
-            } else if (availableColors.length > 0) {
-              color = it.variant
-            } else {
-              size = it.variant
-            }
+            const sep = it.variant.indexOf(' / ')
+            if (sep >= 0) { size = it.variant.slice(0, sep); color = it.variant.slice(sep + 3) }
+            else size = it.variant
           }
-          return {
-            productId: it.productId || null,
-            productName: it.productName,
-            productSku: it.productSku || null,
-            size,
-            color,
-            quantity: parseInt(it.quantity) || 1,
-            unitPrice: parseFloat(it.unitPrice) || 0,
-            sortOrder: idx,
-          }
+          return { productId: it.productId || null, productName: it.productName, productSku: it.productSku || null, size, color, quantity: parseInt(it.quantity) || 1, unitPrice: parseFloat(it.unitPrice) || 0, sortOrder: idx }
         })
       }
       const { data } = await ticketsApi.create(payload)
       toast.success(`Ticket ${data.ticketNumber} creado`)
       onCreated(data)
-    } catch {
-      toast.error('Error al crear el ticket')
-    } finally {
-      setSaving(false)
-    }
+    } catch { toast.error('Error al crear el ticket') }
+    finally { setSaving(false) }
   }
+
+  const inputCls = 'w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500'
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 overflow-y-auto">
@@ -121,120 +133,162 @@ function NewTicketModal({ onClose, onCreated }) {
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-5 space-y-5 max-h-[80vh] overflow-y-auto">
-          {/* Catálogo (opcional para precargar productos) */}
+        <form onSubmit={handleSubmit} className="p-5 space-y-4 max-h-[80vh] overflow-y-auto">
+
+          {/* SKU scan */}
           <div>
-            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Catálogo (opcional — para seleccionar productos)</label>
-            <select value={selectedCatalog?.id || ''} onChange={e => setSelectedCatalog(catalogs.find(c => c.id === Number(e.target.value)) || null)}
-              className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="">— Sin catálogo —</option>
-              {catalogs.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Escanear / ingresar SKU</label>
+            <div className="flex gap-2">
+              <input
+                ref={skuRef}
+                type="text"
+                value={skuInput}
+                onChange={e => setSkuInput(e.target.value)}
+                onKeyDown={handleSkuKeyDown}
+                placeholder="Código de barras o SKU — presioná Enter"
+                className="flex-1 px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button type="button" onClick={() => { setShowSearch(s => !s); setSearchQuery('') }}
+                className={`px-3 py-2 text-sm rounded-xl border transition-colors ${showSearch ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                Buscar
+              </button>
+            </div>
           </div>
 
-          {/* Productos */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-medium text-gray-500 dark:text-slate-400">Productos *</label>
-              <button type="button" onClick={addItem} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">+ Agregar línea</button>
-            </div>
-            <div className="space-y-2">
-              {items.map((item, i) => (
-                <div key={i} className="grid grid-cols-12 gap-2 items-start">
-                  {/* Producto */}
-                  <div className="col-span-12 sm:col-span-4">
-                    {selectedCatalog?.products?.length > 0 ? (
-                      <select value={item.productId || ''} onChange={e => {
-                        const p = selectedCatalog.products.find(p => p.id === Number(e.target.value))
-                        if (p) selectProduct(i, p); else setItem(i, 'productName', e.target.value)
-                      }} className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="">Seleccionar...</option>
-                        {selectedCatalog.products.map(p => {
-                          const stockLabel = p.showStockQuantity && p.stockCount != null
-                            ? ` — ${p.stockCount} en stock`
-                            : p.showStock && p.stockStatus === 'ON_DEMAND'
-                              ? ' — a pedido'
-                              : ''
-                          return <option key={p.id} value={p.id}>{p.name}{stockLabel}</option>
-                        })}
-                      </select>
-                    ) : (
-                      <input type="text" placeholder="Producto *" value={item.productName}
-                        onChange={e => setItem(i, 'productName', e.target.value)} required
-                        className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                    )}
+          {/* Search panel */}
+          {showSearch && (
+            <div className="border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden">
+              <div className="p-3 border-b border-gray-100 dark:border-slate-700 bg-gray-50 dark:bg-slate-700/40">
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Buscar por nombre o SKU..."
+                  autoFocus
+                  className="w-full px-3 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                />
+                {categories.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-2">
+                    <button type="button" onClick={() => setSelectedCategory('')}
+                      className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${!selectedCategory ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
+                      Todos
+                    </button>
+                    {categories.map(cat => (
+                      <button key={cat} type="button" onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
+                        className={`px-2.5 py-1 text-xs rounded-full border transition-colors ${selectedCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700'}`}>
+                        {cat}
+                      </button>
+                    ))}
                   </div>
-                  {/* Variante (talle / color) */}
-                  <div className="col-span-4 sm:col-span-3">
-                    {availableVariants.length > 0 ? (
-                      <select value={item.variant} onChange={e => setItem(i, 'variant', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500">
-                        <option value="">Variante</option>
-                        {availableVariants.map(v => <option key={v} value={v}>{v}</option>)}
-                      </select>
-                    ) : (
-                      <input type="text" placeholder="Talle / Color" value={item.variant}
-                        onChange={e => setItem(i, 'variant', e.target.value)}
-                        className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                    )}
-                  </div>
-                  {/* Cantidad */}
-                  <div className="col-span-2 sm:col-span-2">
-                    <input type="number" min="1" placeholder="Cant." value={item.quantity}
-                      onChange={e => setItem(i, 'quantity', e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                  </div>
-                  {/* Precio */}
-                  <div className="col-span-4 sm:col-span-2">
-                    <input type="number" step="0.01" placeholder="Precio unit." value={item.unitPrice}
-                      onChange={e => setItem(i, 'unitPrice', e.target.value)}
-                      className="w-full px-2 py-1.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-                  </div>
-                  {/* Subtotal + eliminar */}
-                  <div className="col-span-2 sm:col-span-1 flex items-center justify-between gap-1">
-                    <span className="text-xs text-gray-400 whitespace-nowrap">
-                      ${((parseFloat(item.unitPrice) || 0) * (parseInt(item.quantity) || 1)).toLocaleString('es-AR')}
+                )}
+              </div>
+              <div className="max-h-52 overflow-y-auto divide-y divide-gray-50 dark:divide-slate-700/50">
+                {filteredProducts.length === 0 ? (
+                  <p className="text-center text-xs text-gray-400 py-6">Sin resultados</p>
+                ) : filteredProducts.map(p => (
+                  <button key={p.id} type="button" onClick={() => { addProductToItems(p); setShowSearch(false); setSkuInput(''); setTimeout(() => skuRef.current?.focus(), 50) }}
+                    className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors">
+                    {p.imageUrl
+                      ? <img src={p.imageUrl} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                      : <div className="w-9 h-9 rounded-lg bg-gray-200 dark:bg-slate-600 shrink-0" />
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{p.name}</p>
+                      <p className="text-xs text-gray-400 dark:text-slate-500">
+                        {p.sku && <span className="font-mono mr-2">{p.sku}</span>}
+                        {p.category && <span>{p.category}</span>}
+                      </p>
+                    </div>
+                    <span className="text-sm font-semibold text-gray-700 dark:text-slate-200 shrink-0">
+                      ${(p.offerPrice || p.price || 0).toLocaleString('es-AR')}
                     </span>
-                    {items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600 shrink-0">
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Items */}
+          {items.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 dark:text-slate-400">Productos ({items.length})</span>
+                <button type="button" onClick={addManualItem} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">+ Línea manual</button>
+              </div>
+              <div className="space-y-1.5">
+                {items.map((item, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 items-center bg-gray-50 dark:bg-slate-700/30 rounded-lg p-2">
+                    <div className="col-span-12 sm:col-span-5">
+                      <input type="text" placeholder="Producto *" value={item.productName}
+                        onChange={e => setItem(i, 'productName', e.target.value)} required className={inputCls} />
+                    </div>
+                    <div className="col-span-5 sm:col-span-3">
+                      <input type="text" placeholder="Talle / Color" value={item.variant}
+                        onChange={e => setItem(i, 'variant', e.target.value)} className={inputCls} />
+                    </div>
+                    <div className="col-span-2 sm:col-span-1">
+                      <input type="number" min="1" placeholder="Cant." value={item.quantity}
+                        onChange={e => setItem(i, 'quantity', e.target.value)} className={inputCls} />
+                    </div>
+                    <div className="col-span-4 sm:col-span-2">
+                      <input type="number" step="0.01" placeholder="Precio" value={item.unitPrice}
+                        onChange={e => setItem(i, 'unitPrice', e.target.value)} className={inputCls} />
+                    </div>
+                    <div className="col-span-1 flex items-center justify-end">
+                      <button type="button" onClick={() => removeItem(i)} className="text-red-400 hover:text-red-600">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                       </button>
-                    )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
+
+          {items.length === 0 && (
+            <div className="text-center py-4 text-sm text-gray-400 dark:text-slate-500 border border-dashed border-gray-200 dark:border-slate-600 rounded-xl">
+              Escaneá un SKU o buscá un producto para agregar
+            </div>
+          )}
 
           {/* Totales */}
-          <div className="bg-gray-50 dark:bg-slate-700/40 rounded-xl p-3 space-y-1 text-sm">
-            <div className="flex justify-between text-gray-600 dark:text-slate-400">
-              <span>Subtotal</span><span>${subtotal.toLocaleString('es-AR')}</span>
+          {items.length > 0 && (
+            <div className="bg-gray-50 dark:bg-slate-700/40 rounded-xl p-3 space-y-1 text-sm">
+              <div className="flex justify-between text-gray-600 dark:text-slate-400">
+                <span>Subtotal</span><span>${subtotal.toLocaleString('es-AR')}</span>
+              </div>
+              <div className="flex items-center justify-between text-gray-600 dark:text-slate-400">
+                <span>Descuento</span>
+                <input type="number" step="0.01" min="0" value={form.discount} placeholder="0"
+                  onChange={e => setForm(f => ({ ...f, discount: e.target.value }))}
+                  className="w-24 text-right px-2 py-0.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
+              </div>
+              <div className="flex justify-between font-bold text-gray-900 dark:text-white border-t border-gray-200 dark:border-slate-600 pt-1">
+                <span>Total</span><span>${total.toLocaleString('es-AR')}</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between text-gray-600 dark:text-slate-400">
-              <span>Descuento</span>
-              <input type="number" step="0.01" min="0" value={form.discount} placeholder="0"
-                onChange={e => setForm(f => ({ ...f, discount: e.target.value }))}
-                className="w-24 text-right px-2 py-0.5 text-sm rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500" />
-            </div>
-            <div className="flex justify-between font-bold text-gray-900 dark:text-white border-t border-gray-200 dark:border-slate-600 pt-1">
-              <span>Total</span><span>${total.toLocaleString('es-AR')}</span>
-            </div>
-          </div>
+          )}
 
           {/* Forma de pago */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-500 dark:text-slate-400 mb-1">Forma de pago</label>
-              <input type="text" value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value }))}
-                placeholder="Efectivo"
-                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              {paymentOptions.length > 1 ? (
+                <select value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {paymentOptions.map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              ) : (
+                <input type="text" value={form.paymentMethod} onChange={e => setForm(f => ({ ...f, paymentMethod: e.target.value }))}
+                  placeholder="Efectivo"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              )}
             </div>
           </div>
 
           {/* Cliente */}
           <div>
-            <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2">Datos del cliente (para registro y WhatsApp)</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2">Datos del cliente</p>
             <div className="grid grid-cols-2 gap-3">
               <input type="text" placeholder="Nombre" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -252,7 +306,7 @@ function NewTicketModal({ onClose, onCreated }) {
               className="flex-1 py-2.5 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
               Cancelar
             </button>
-            <button type="submit" disabled={saving}
+            <button type="submit" disabled={saving || items.length === 0}
               className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
               {saving ? 'Guardando...' : 'Crear ticket'}
             </button>
