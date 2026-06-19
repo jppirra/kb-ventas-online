@@ -38,7 +38,7 @@ public class PublicCatalogResponse {
         r.backgroundColor = snap.getBackgroundColor();
         r.backgroundImageUrl = snap.getBackgroundImageUrl();
         r.rubro = snap.getRubro();
-        r.discount = snap.getDiscount();
+        r.discount = c.getDiscount();
         r.sectionOrder = snap.getSectionOrder();
         r.viewCount = c.getViewCount();
         r.products = snap.getProducts();
