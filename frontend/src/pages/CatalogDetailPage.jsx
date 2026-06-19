@@ -150,6 +150,14 @@ function toTitleCase(str) {
   return str.replace(/\b\w/g, c => c.toUpperCase())
 }
 
+function effectiveOffer(product, catalogDiscount) {
+  const base = Number(product.price)
+  const catalogOffer = catalogDiscount > 0 ? base * (1 - catalogDiscount / 100) : null
+  const prodOffer = product.offerPrice != null ? Number(product.offerPrice) : null
+  if (catalogOffer && prodOffer) return Math.min(catalogOffer, prodOffer)
+  return prodOffer ?? catalogOffer
+}
+
 function TagInput({ label, values, onChange, placeholder }) {
   const [editingIdx, setEditingIdx] = useState(null)
   const [editText, setEditText] = useState('')
@@ -1697,11 +1705,23 @@ export default function CatalogDetailPage() {
                       {product.category && product.category.split(',').map(c => c.trim()).filter(Boolean).map(c => (
                         <span key={c} className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full">{c}</span>
                       ))}
-                      {product.price != null && (
-                        <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
-                          ${Number(product.price).toLocaleString('es-AR')}
-                        </span>
-                      )}
+                      {product.price != null && (() => {
+                        const offer = effectiveOffer(product, catalogDiscount || 0)
+                        return offer != null ? (
+                          <span className="flex items-center gap-1">
+                            <span className="text-xs font-semibold text-green-600 dark:text-green-400">
+                              ${Number(offer).toLocaleString('es-AR')}
+                            </span>
+                            <span className="text-xs text-gray-400 line-through">
+                              ${Number(product.price).toLocaleString('es-AR')}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">
+                            ${Number(product.price).toLocaleString('es-AR')}
+                          </span>
+                        )
+                      })()}
                       {product.showStock && product.stockStatus && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                           product.stockStatus === 'IN_STOCK'
