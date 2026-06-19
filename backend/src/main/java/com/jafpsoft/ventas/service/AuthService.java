@@ -143,6 +143,7 @@ public class AuthService {
         String email = (String) data.get("email");
         String name = (String) data.getOrDefault("name", email);
         String googleId = (String) data.get("sub");
+        String picture = (String) data.get("picture");
 
         if (email == null || email.isBlank()) {
             throw new IllegalArgumentException("No se pudo obtener el email de Google.");
@@ -153,16 +154,18 @@ public class AuthService {
             user = userRepository.save(User.builder()
                     .email(email).name(name)
                     .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
-                    .googleId(googleId).emailVerified(true).enabled(true).build());
+                    .googleId(googleId).emailVerified(true).enabled(true)
+                    .profileImageUrl(picture)
+                    .build());
         } else {
             if (!user.isEnabled()) {
                 throw new IllegalArgumentException("Tu cuenta está deshabilitada.");
             }
-            if (!user.isEmailVerified() || user.getGoogleId() == null) {
-                user.setEmailVerified(true);
-                if (user.getGoogleId() == null) user.setGoogleId(googleId);
-                userRepository.save(user);
-            }
+            boolean changed = false;
+            if (!user.isEmailVerified()) { user.setEmailVerified(true); changed = true; }
+            if (user.getGoogleId() == null) { user.setGoogleId(googleId); changed = true; }
+            if (user.getProfileImageUrl() == null && picture != null) { user.setProfileImageUrl(picture); changed = true; }
+            if (changed) userRepository.save(user);
         }
         return buildAuthResponse(user);
     }
