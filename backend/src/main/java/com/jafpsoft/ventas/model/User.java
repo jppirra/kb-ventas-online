@@ -79,5 +79,15 @@ public class User {
 
     @Column(name = "last_access_at")
     private LocalDateTime lastAccessAt;
+
+    @Column(name = "stock_report_frequency", length = 10, columnDefinition = "varchar(10) default 'NONE'")
+    @Builder.Default
+    private String stockReportFrequency = "NONE";
+
+    @Column(name = "stock_report_day_of_week")
+    private Integer stockReportDayOfWeek;
+
+    @Column(name = "stock_report_day_of_month")
+    private Integer stockReportDayOfMonth;
 }
 

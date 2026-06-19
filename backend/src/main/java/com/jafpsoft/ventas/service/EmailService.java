@@ -267,6 +267,67 @@ public class EmailService {
         send(toEmail, "COLLABORATOR_INVITE", "Te invitaron a colaborar en " + fromName(), html);
     }
 
+    @Async
+    public void sendStockReport(String toEmail, String userName,
+                                 java.util.List<com.jafpsoft.ventas.model.Product> agotados,
+                                 java.util.List<com.jafpsoft.ventas.model.Product> enStock,
+                                 int totalUnidades) {
+        String color = primaryColor();
+        String nombre = userName != null ? userName : "vendedor";
+
+        StringBuilder rows = new StringBuilder();
+        if (!agotados.isEmpty()) {
+            rows.append("<h3 style='margin:24px 0 8px;font-size:16px;color:#dc2626;'>Agotados (").append(agotados.size()).append(")</h3>");
+            rows.append("<table width='100%' cellpadding='6' cellspacing='0' style='border-collapse:collapse;font-size:13px;'>");
+            rows.append("<tr style='background:#fee2e2;'><th align='left' style='padding:6px 8px;'>Producto</th><th align='left'>SKU</th><th align='right'>Stock</th></tr>");
+            for (var p : agotados) {
+                rows.append("<tr style='border-bottom:1px solid #fecaca;'><td style='padding:6px 8px;'>").append(esc(p.getName())).append("</td>")
+                    .append("<td>").append(esc(p.getSku())).append("</td>")
+                    .append("<td align='right' style='color:#dc2626;font-weight:700;'>0</td></tr>");
+            }
+            rows.append("</table>");
+        }
+        if (!enStock.isEmpty()) {
+            rows.append("<h3 style='margin:24px 0 8px;font-size:16px;color:#16a34a;'>En stock (").append(enStock.size()).append(" productos · ").append(totalUnidades).append(" u.)</h3>");
+            rows.append("<table width='100%' cellpadding='6' cellspacing='0' style='border-collapse:collapse;font-size:13px;'>");
+            rows.append("<tr style='background:#dcfce7;'><th align='left' style='padding:6px 8px;'>Producto</th><th align='left'>SKU</th><th align='right'>Stock</th></tr>");
+            for (var p : enStock) {
+                rows.append("<tr style='border-bottom:1px solid #bbf7d0;'><td style='padding:6px 8px;'>").append(esc(p.getName())).append("</td>")
+                    .append("<td>").append(esc(p.getSku())).append("</td>")
+                    .append("<td align='right' style='color:#16a34a;font-weight:700;'>").append(p.getStockCount()).append("</td></tr>");
+            }
+            rows.append("</table>");
+        }
+
+        String html = """
+            <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
+            <body style="margin:0;padding:0;background:#f5f3ff;font-family:'Segoe UI',Arial,sans-serif;">
+              <table width="100%%" cellpadding="0" cellspacing="0" style="padding:48px 20px;">
+                <tr><td align="center">
+                  <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%%;">
+                    <tr><td style="text-align:center;padding-bottom:20px;">
+                      <span style="font-size:22px;font-weight:700;color:%s;">%s</span>
+                    </td></tr>
+                    <tr><td style="background:#fff;border-radius:20px;padding:36px 40px;box-shadow:0 2px 20px rgba(99,102,241,0.10);">
+                      <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1e1b4b;">Informe de stock</h1>
+                      <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Hola %s, este es tu resumen de stock.</p>
+                      %s
+                      <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;">Podés cambiar la frecuencia de este informe en Configuración → Informe de stock.</p>
+                    </td></tr>
+                  </table>
+                </td></tr>
+              </table>
+            </body></html>
+            """.formatted(color, fromName(), esc(nombre), rows);
+
+        send(toEmail, "STOCK_REPORT", "Informe de stock — " + fromName(), html);
+    }
+
+    private static String esc(String s) {
+        if (s == null) return "";
+        return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
     // ── HTML builder ──────────────────────────────────────────────────────────
 
     private String buildActionEmail(String heading, String body, String ctaUrl, String ctaText, String footer) {

@@ -18,9 +18,11 @@ export default function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
+  const [topProducts, setTopProducts] = useState(null)
 
   useEffect(() => {
     dashboardApi.getStats().then(r => setStats(r.data)).catch(() => {})
+    dashboardApi.getTopProducts().then(r => setTopProducts(r.data)).catch(() => {})
   }, [])
 
   return (
@@ -137,6 +139,40 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Top / Least sold products */}
+        {topProducts && (topProducts.top.length > 0 || topProducts.least.length > 0) && (
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {topProducts.top.length > 0 && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Más vendidos</h2>
+                <ol className="space-y-2">
+                  {topProducts.top.map((p, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <span className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                      <span className="flex-1 text-sm text-gray-700 dark:text-slate-300 truncate">{p.name}</span>
+                      <span className="text-sm font-semibold text-green-600 dark:text-green-400 shrink-0">{p.totalSold} u.</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            {topProducts.least.length > 0 && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Menos vendidos</h2>
+                <ol className="space-y-2">
+                  {topProducts.least.map((p, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                      <span className="flex-1 text-sm text-gray-700 dark:text-slate-300 truncate">{p.name}</span>
+                      <span className="text-sm font-semibold text-orange-500 dark:text-orange-400 shrink-0">{p.totalSold} u.</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   )
