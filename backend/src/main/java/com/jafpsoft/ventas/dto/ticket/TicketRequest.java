@@ -16,6 +16,8 @@ public class TicketRequest {
     private String paymentMethod;
     private BigDecimal discount;
     private String notes;
+    private String tipoDoc;
+    private String referenceTicketNumber;
     @Valid @NotEmpty
     private List<TicketItemRequest> items;
 }

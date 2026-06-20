@@ -54,6 +54,14 @@ public class SaleTicket {
     @Column(name = "payment_method")
     private String paymentMethod;
 
+    // ── Tipo de comprobante ────────────────────────────────────────────────────
+    @Column(name = "tipo_doc", length = 10)
+    @Builder.Default
+    private String tipoDoc = "COMP";
+
+    @Column(name = "reference_ticket_number", length = 30)
+    private String referenceTicketNumber;
+
     // ── Estado ─────────────────────────────────────────────────────────────────
     @Column(length = 20, nullable = false)
     @Builder.Default

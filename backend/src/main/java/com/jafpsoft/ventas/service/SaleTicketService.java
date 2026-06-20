@@ -47,13 +47,27 @@ public class SaleTicketService {
         int ticketNum = config.getNextTicketNumber();
         config.setNextTicketNumber(ticketNum + 1);
         configRepository.save(config);
+
+        String tipoDoc = req.getTipoDoc() != null ? req.getTipoDoc() : "COMP";
+        String prefix;
+        if ("NC".equals(tipoDoc)) {
+            prefix = config.getPuntoVenta() != null ? "NC" : "NC";
+        } else if ("ND".equals(tipoDoc)) {
+            prefix = config.getPuntoVenta() != null ? "ND" : "ND";
+        } else {
+            prefix = config.getTipoComprobante() != null ? config.getTipoComprobante() : "B";
+        }
         String ticketNumber = config.getPuntoVenta() != null
-                ? String.format("%s %04d-%08d", config.getTipoComprobante() != null ? config.getTipoComprobante() : "B", config.getPuntoVenta(), ticketNum)
-                : String.format("T-%04d", ticketNum);
+                ? String.format("%s %04d-%08d", prefix, config.getPuntoVenta(), ticketNum)
+                : ("NC".equals(tipoDoc) || "ND".equals(tipoDoc))
+                    ? String.format("%s-%04d", tipoDoc, ticketNum)
+                    : String.format("T-%04d", ticketNum);
 
         SaleTicket ticket = SaleTicket.builder()
                 .userId(userId)
                 .ticketNumber(ticketNumber)
+                .tipoDoc(tipoDoc)
+                .referenceTicketNumber(req.getReferenceTicketNumber())
                 .customerName(req.getCustomerName())
                 .customerPhone(req.getCustomerPhone())
                 .customerEmail(req.getCustomerEmail())
@@ -92,7 +106,8 @@ public class SaleTicketService {
         ticket.setTotal(subtotal.subtract(discount).max(BigDecimal.ZERO));
 
         SaleTicket saved = ticketRepository.save(ticket);
-        adjustStock(saved.getItems(), -1, userId);
+        // NC devuelve stock; ND y COMP descuentan stock
+        adjustStock(saved.getItems(), "NC".equals(tipoDoc) ? 1 : -1, userId);
         return TicketResponse.from(saved);
     }
 

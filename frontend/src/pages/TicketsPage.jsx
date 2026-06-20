@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import { ticketsApi } from '../api/tickets'
 import { productsApi } from '../api/products'
+import { customersApi } from '../api/customers'
 import { fmtDate } from '../utils/date'
 import { useAuth } from '../context/AuthContext'
 
@@ -13,26 +14,45 @@ const STATUS_COLORS = {
   DRAFT: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
   CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
 }
+const TIPODOC_LABELS = { COMP: null, NC: 'NC', ND: 'ND', TC: null }
 
 const emptyItem = { productId: null, productName: '', productSku: '', variant: '', quantity: 1, unitPrice: '' }
 
 function NewTicketModal({ onClose, onCreated }) {
   const [allProducts, setAllProducts] = useState([])
+  const [allCustomers, setAllCustomers] = useState([])
   const [config, setConfig] = useState({ paymentMethods: 'Efectivo', currency: '$' })
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState('')
+  const [customerSearch, setCustomerSearch] = useState('')
+  const [showCustomerResults, setShowCustomerResults] = useState(false)
   const [items, setItems] = useState([])
   const [form, setForm] = useState({ customerName: '', customerPhone: '', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     productsApi.list().then(r => setAllProducts(r.data || [])).catch(() => {})
+    customersApi.list().then(r => setAllCustomers(r.data || [])).catch(() => {})
     ticketsApi.getConfig().then(r => {
       setConfig(r.data || {})
       const methods = (r.data?.paymentMethods || 'Efectivo').split(',').map(s => s.trim()).filter(Boolean)
       setForm(f => ({ ...f, paymentMethod: methods[0] || 'Efectivo' }))
     }).catch(() => {})
   }, [])
+
+  const customerResults = useMemo(() => {
+    if (!customerSearch.trim()) return []
+    const q = customerSearch.toLowerCase()
+    return allCustomers.filter(c =>
+      c.name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q)
+    ).slice(0, 6)
+  }, [allCustomers, customerSearch])
+
+  function selectCustomer(c) {
+    setForm(f => ({ ...f, customerName: c.name, customerPhone: c.phone || '', customerEmail: c.email || '', customerNotes: c.notes || '' }))
+    setCustomerSearch('')
+    setShowCustomerResults(false)
+  }
 
   const paymentOptions = useMemo(() =>
     (config.paymentMethods || 'Efectivo').split(',').map(s => s.trim()).filter(Boolean)
@@ -249,6 +269,34 @@ function NewTicketModal({ onClose, onCreated }) {
           {/* Cliente */}
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2">Datos del cliente</p>
+            {allCustomers.length > 0 && (
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  value={customerSearch}
+                  onChange={e => { setCustomerSearch(e.target.value); setShowCustomerResults(true) }}
+                  onFocus={() => setShowCustomerResults(true)}
+                  placeholder="Buscar cliente guardado..."
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                {showCustomerResults && customerResults.length > 0 && (
+                  <div className="absolute z-10 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden">
+                    {customerResults.map(c => (
+                      <button key={c.id} type="button" onClick={() => selectCustomer(c)}
+                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors border-b border-gray-50 dark:border-slate-700/50 last:border-0">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                          {c.name[0].toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{c.name}</p>
+                          <p className="text-xs text-gray-400 truncate">{c.phone || c.email || ''}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <input type="text" placeholder="Nombre" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -310,7 +358,21 @@ export default function TicketsPage() {
     )
   }
 
-  const total = tickets.reduce((acc, t) => acc + Number(t.total), 0)
+  const totalVentas = tickets
+    .filter(t => t.status !== 'CANCELLED' && t.tipoDoc !== 'NC')
+    .reduce((acc, t) => acc + Number(t.total), 0)
+
+  const totalNC = tickets
+    .filter(t => t.tipoDoc === 'NC' && t.status !== 'CANCELLED')
+    .reduce((acc, t) => acc + Number(t.total), 0)
+
+  const byPayment = tickets
+    .filter(t => t.status === 'PAID' && t.tipoDoc !== 'NC' && t.paymentMethod)
+    .reduce((acc, t) => {
+      const m = t.paymentMethod
+      acc[m] = (acc[m] || 0) + Number(t.total)
+      return acc
+    }, {})
 
   return (
     <Layout>
@@ -326,13 +388,13 @@ export default function TicketsPage() {
       )}
 
       <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Facturación</h1>
               <span className="px-2 py-0.5 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-xs font-semibold rounded-full">Beta</span>
             </div>
-            <p className="text-sm text-gray-500 dark:text-slate-400">{tickets.length} tickets · Total ${total.toLocaleString('es-AR')}</p>
+            <p className="text-sm text-gray-500 dark:text-slate-400">{tickets.length} comprobantes</p>
           </div>
           <div className="flex gap-2">
             <Link to="/tickets/config" className="px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
@@ -344,6 +406,28 @@ export default function TicketsPage() {
             </button>
           </div>
         </div>
+
+        {/* Resumen de ventas */}
+        {!loading && tickets.length > 0 && (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4">
+              <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wide mb-1">Ventas</p>
+              <p className="text-xl font-bold text-green-600 dark:text-green-400">${totalVentas.toLocaleString('es-AR')}</p>
+            </div>
+            {totalNC > 0 && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4">
+                <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wide mb-1">Notas de crédito</p>
+                <p className="text-xl font-bold text-orange-500 dark:text-orange-400">-${totalNC.toLocaleString('es-AR')}</p>
+              </div>
+            )}
+            {Object.entries(byPayment).map(([method, amt]) => (
+              <div key={method} className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4">
+                <p className="text-xs text-gray-400 dark:text-slate-500 uppercase tracking-wide mb-1 truncate">{method}</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">${Number(amt).toLocaleString('es-AR')}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {loading ? (
           <div className="text-center py-12 text-gray-400">Cargando...</div>
@@ -372,7 +456,12 @@ export default function TicketsPage() {
                 {tickets.map(t => (
                   <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors"
                     onClick={() => navigate(`/tickets/${t.id}`)}>
-                    <td className="px-4 py-3 font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{t.ticketNumber}</td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-xs font-semibold text-blue-600 dark:text-blue-400">{t.ticketNumber}</span>
+                      {TIPODOC_LABELS[t.tipoDoc] && (
+                        <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded font-medium">{t.tipoDoc}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       <p className="font-medium text-gray-900 dark:text-white">{t.customerName || '—'}</p>
                       {t.customerPhone && <p className="text-xs text-gray-400">{t.customerPhone}</p>}

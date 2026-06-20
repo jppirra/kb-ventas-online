@@ -55,7 +55,12 @@ function InvoiceDocument({ ticket, config }) {
   const tipo = config?.tipoComprobante || 'B'
 
   const esTc = tipo === 'TC'
-  const tipoLabel = esTc ? 'TICKET COMPROBANTE' : ({ A: 'FACTURA A', B: 'FACTURA B', C: 'FACTURA C' }[tipo] || 'COMPROBANTE')
+  const esNC = tipo === 'NC'
+  const esND = tipo === 'ND'
+  const tipoLabel = esTc ? 'TICKET COMPROBANTE'
+    : esNC ? 'NOTA DE CRÉDITO'
+    : esND ? 'NOTA DE DÉBITO'
+    : ({ A: 'FACTURA A', B: 'FACTURA B', C: 'FACTURA C' }[tipo] || 'COMPROBANTE')
 
   return (
     <div className="ticket-paper bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm print:shadow-none print:rounded-none print:border-0">
@@ -84,7 +89,7 @@ function InvoiceDocument({ ticket, config }) {
         </div>
 
         {/* Letra en caja (der) — solo AFIP con tipo A/B/C */}
-        {isAfip && !esTc && (
+        {isAfip && !esTc && !esNC && !esND && (
           <div className="absolute right-6 top-1/2 -translate-y-1/2 w-14 h-14 border-2 border-gray-800 flex items-center justify-center">
             <span className="text-3xl font-black text-gray-900">{tipo}</span>
           </div>
@@ -112,6 +117,12 @@ function InvoiceDocument({ ticket, config }) {
             <p className="text-xs text-gray-500">Emitida</p>
             <p className="text-sm font-semibold text-gray-900">{fmtDate(ticket.createdAt)}</p>
           </div>
+          {ticket.referenceTicketNumber && (
+            <div className="border border-orange-300 rounded px-3 py-1.5 w-full bg-orange-50">
+              <p className="text-xs text-orange-500">Referencia</p>
+              <p className="text-sm font-semibold text-orange-700 font-mono">{ticket.referenceTicketNumber}</p>
+            </div>
+          )}
           {ticket.paymentMethod && (
             <div className="border border-gray-300 rounded px-3 py-1.5 w-full">
               <p className="text-xs text-gray-500">Forma de pago</p>
@@ -219,6 +230,8 @@ export default function TicketDetailPage() {
   const [editingCustomer, setEditingCustomer] = useState(false)
   const [customerForm, setCustomerForm] = useState({ customerName: '', customerPhone: '', customerEmail: '', customerNotes: '' })
   const [savingCustomer, setSavingCustomer] = useState(false)
+  const [showNC, setShowNC] = useState(false)
+  const [creatingNC, setCreatingNC] = useState(false)
 
   useEffect(() => {
     Promise.all([ticketsApi.get(id), ticketsApi.getConfig()])
@@ -235,6 +248,38 @@ export default function TicketDetailPage() {
       .catch(() => { toast.error('Error al cargar ticket'); navigate('/tickets') })
       .finally(() => setLoading(false))
   }, [id])
+
+  async function handleCreateNC() {
+    setCreatingNC(true)
+    try {
+      const payload = {
+        customerName: ticket.customerName,
+        customerPhone: ticket.customerPhone,
+        customerEmail: ticket.customerEmail,
+        customerNotes: ticket.customerNotes,
+        paymentMethod: ticket.paymentMethod,
+        tipoDoc: 'NC',
+        referenceTicketNumber: ticket.ticketNumber,
+        discount: 0,
+        notes: `Nota de crédito de ${ticket.ticketNumber}`,
+        items: ticket.items.map((it, idx) => ({
+          productId: it.productId || null,
+          productName: it.productName,
+          productSku: it.productSku || null,
+          size: it.size || null,
+          color: it.color || null,
+          quantity: it.quantity,
+          unitPrice: Number(it.unitPrice),
+          sortOrder: idx,
+        }))
+      }
+      const { data } = await ticketsApi.create(payload)
+      toast.success(`Nota de crédito ${data.ticketNumber} creada`)
+      setShowNC(false)
+      navigate(`/tickets/${data.id}`)
+    } catch { toast.error('Error al crear la nota de crédito') }
+    finally { setCreatingNC(false) }
+  }
 
   async function handleSaveCustomer(e) {
     e.preventDefault()
@@ -281,6 +326,28 @@ export default function TicketDetailPage() {
 
       <Layout>
         <div className="max-w-3xl mx-auto px-4 py-8">
+
+          {/* Modal nota de crédito */}
+          {showNC && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Nota de crédito</h3>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
+                  Se creará una nota de crédito por los mismos items del comprobante <strong>{ticket.ticketNumber}</strong>. El stock de los productos se repondrá automáticamente.
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => setShowNC(false)}
+                    className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                    Cancelar
+                  </button>
+                  <button onClick={handleCreateNC} disabled={creatingNC}
+                    className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+                    {creatingNC ? 'Creando...' : 'Confirmar NC'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Modal editar comprador */}
           {editingCustomer && (
@@ -344,6 +411,15 @@ export default function TicketDetailPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
                   {sendingEmail ? 'Enviando...' : 'Email'}
+                </button>
+              )}
+              {ticket.tipoDoc !== 'NC' && ticket.status !== 'CANCELLED' && (
+                <button onClick={() => setShowNC(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 border border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-sm font-medium rounded-xl transition-colors">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                  </svg>
+                  Nota de crédito
                 </button>
               )}
               <button onClick={() => setEditingCustomer(true)}

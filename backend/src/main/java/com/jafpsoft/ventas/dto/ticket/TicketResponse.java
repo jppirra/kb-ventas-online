@@ -21,6 +21,8 @@ public class TicketResponse {
     private String paymentMethod;
     private String status;
     private String notes;
+    private String tipoDoc;
+    private String referenceTicketNumber;
     private List<TicketItemResponse> items;
     private LocalDateTime createdAt;
 
@@ -38,6 +40,8 @@ public class TicketResponse {
         r.paymentMethod = t.getPaymentMethod();
         r.status = t.getStatus();
         r.notes = t.getNotes();
+        r.tipoDoc = t.getTipoDoc() != null ? t.getTipoDoc() : "COMP";
+        r.referenceTicketNumber = t.getReferenceTicketNumber();
         r.createdAt = t.getCreatedAt();
         r.items = t.getItems().stream()
                 .sorted((a, b) -> Integer.compare(
