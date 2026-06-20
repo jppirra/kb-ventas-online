@@ -89,7 +89,7 @@ export default function NCNDModal({ tipo, refTicket, config, onClose, onCreated 
       <form onSubmit={handleSubmit}
         className="bg-white dark:bg-slate-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-xl max-h-[92vh] flex flex-col">
 
-        {/* Header */}
+        {/* Encabezado */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-slate-700 shrink-0">
           <div>
             <h3 className="font-semibold text-gray-900 dark:text-white">{title}</h3>
@@ -104,7 +104,7 @@ export default function NCNDModal({ tipo, refTicket, config, onClose, onCreated 
           </button>
         </div>
 
-        {/* Scrollable body */}
+        {/* Cuerpo con scroll */}
         <div className="overflow-y-auto flex-1 p-5 space-y-5">
 
           {/* Concepto */}
@@ -214,7 +214,7 @@ export default function NCNDModal({ tipo, refTicket, config, onClose, onCreated 
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Pie */}
         <div className="flex gap-2 p-5 border-t border-gray-100 dark:border-slate-700 shrink-0">
           <button type="button" onClick={onClose}
             className="flex-1 py-2.5 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">

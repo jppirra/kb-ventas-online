@@ -14,7 +14,7 @@ import java.util.List;
 @Service
 public class ExcelService {
 
-    // Expected columns (case-insensitive): nombre/name, descripcion/description, precio/price, sku, categoria/category
+    // Columnas esperadas (sin distinción de mayúsculas): nombre/name, descripcion/description, precio/price, sku, categoria/category
     public List<ProductRequest> parseProducts(MultipartFile file) throws IOException {
         List<ProductRequest> products = new ArrayList<>();
 

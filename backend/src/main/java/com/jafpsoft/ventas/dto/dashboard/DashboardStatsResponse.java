@@ -13,7 +13,7 @@ public class DashboardStatsResponse {
     private long totalOrders;
     private long pendingOrders;
     private long totalViews;
-    // Ticket stats (filtered by month)
+    // Estadísticas de tickets (filtradas por mes)
     private long totalTickets;
     private BigDecimal totalRevenue;
     private long totalCustomers;

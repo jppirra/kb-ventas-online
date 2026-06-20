@@ -18,7 +18,7 @@ export default function ImageModal({ src, alt = '', onClose, prev, next, childre
       className="fixed inset-0 z-[100] bg-black/85 flex items-center justify-center p-4"
       onClick={onClose}
     >
-      {/* Prev */}
+      {/* Anterior */}
       {prev && (
         <button
           onClick={e => { e.stopPropagation(); prev() }}
@@ -37,7 +37,7 @@ export default function ImageModal({ src, alt = '', onClose, prev, next, childre
         onClick={e => e.stopPropagation()}
       />
 
-      {/* Next */}
+      {/* Siguiente */}
       {next && (
         <button
           onClick={e => { e.stopPropagation(); next() }}
@@ -49,7 +49,7 @@ export default function ImageModal({ src, alt = '', onClose, prev, next, childre
         </button>
       )}
 
-      {/* Close */}
+      {/* Cerrar */}
       <button
         onClick={onClose}
         className="absolute top-3 right-3 p-2 rounded-full bg-black/40 hover:bg-black/70 text-white transition-colors"

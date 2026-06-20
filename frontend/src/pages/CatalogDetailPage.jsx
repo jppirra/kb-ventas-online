@@ -303,7 +303,7 @@ export default function CatalogDetailPage() {
   const [reverting, setReverting] = useState(false)
   const [confirmModal, setConfirmModal] = useState(null)
 
-  // Drag-and-drop reorder
+  // Reordenamiento por arrastrar y soltar
   const dragIdx = useRef(null)
   const dragOverIdx = useRef(null)
   const [draggingId, setDraggingId] = useState(null)
@@ -321,7 +321,7 @@ export default function CatalogDetailPage() {
 
   const rubros = useRubros()
 
-  // Appearance state (synced on load, saved separately)
+  // Estado de apariencia (sincronizado al cargar, guardado por separado)
   const [viewMode, setViewMode] = useState('GRID')
   const [bgType, setBgType] = useState('NONE')
   const [bgColor, setBgColor] = useState('#f8fafc')
@@ -604,7 +604,7 @@ export default function CatalogDetailPage() {
         toast.success('Producto agregado')
       }
       setShowProductForm(false)
-      // Reload but preserve current drag-and-drop order
+      // Recargar pero preservar el orden actual de arrastrar y soltar
       const { data: fresh } = await catalogsApi.get(id)
       if (wasEditing) {
         setCatalog(prev => ({

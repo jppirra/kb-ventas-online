@@ -26,7 +26,7 @@ public class CatalogResponse {
     private boolean colorsEnabled;
     private String colorOptions;
     private Long ownerUserId;
-    private Boolean collaboratorCanPublish; // null = owner/admin (always can), true/false = collaborator permission
+    private Boolean collaboratorCanPublish; // null = dueño/admin (siempre puede), true/false = permiso del colaborador
     private Integer discount;
     private String sectionOrder;
     private Long storeId;

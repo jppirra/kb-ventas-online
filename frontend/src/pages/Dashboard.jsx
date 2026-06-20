@@ -208,7 +208,7 @@ export default function Dashboard() {
           />
         </div>
 
-        {/* Top / Least sold products */}
+        {/* Productos más / menos vendidos */}
         {topProducts && (topProducts.top.length > 0 || topProducts.least.length > 0) && (
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {topProducts.top.length > 0 && (

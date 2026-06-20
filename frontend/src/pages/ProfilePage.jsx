@@ -178,7 +178,7 @@ export default function ProfilePage() {
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
-          {/* Name */}
+          {/* Nombre */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
               Nombre para mostrar

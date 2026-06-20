@@ -56,7 +56,7 @@ public class ProfileController {
     @GetMapping("/slug-suggestion")
     public ResponseEntity<Map<String, String>> slugSuggestion(
             @AuthenticationPrincipal CustomUserDetails user) {
-        // Returns a suggested slug based on the user's name (called on first profile setup)
+        // Devuelve un slug sugerido basado en el nombre del usuario (se llama en la configuración inicial del perfil)
         ProfileResponse profile = profileService.getProfile(id(user));
         String suggested = profile.getSlug() != null
                 ? profile.getSlug()

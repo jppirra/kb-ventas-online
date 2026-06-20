@@ -1,6 +1,6 @@
 import { compressImage } from './imageCompress'
 
-// Compresses the file then calls uploadFn(compressedFile, onProgress) → returns public URL string
+// Comprime el archivo y llama a uploadFn(compressedFile, onProgress) → retorna la URL pública
 export async function uploadCompressed(file, uploadFn, onProgress) {
   onProgress?.(0)
   const compressed = await compressImage(file)

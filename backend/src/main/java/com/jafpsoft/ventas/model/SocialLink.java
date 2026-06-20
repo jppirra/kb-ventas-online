@@ -16,7 +16,7 @@ public class SocialLink {
     private Long userId;
 
     @Column(nullable = false, length = 30)
-    private String platform; // WHATSAPP, INSTAGRAM, LINKEDIN, FACEBOOK, TIKTOK, WEBSITE
+    private String platform; // plataformas: WHATSAPP, INSTAGRAM, LINKEDIN, FACEBOOK, TIKTOK, WEBSITE
 
     @Column(nullable = false)
     private String url;

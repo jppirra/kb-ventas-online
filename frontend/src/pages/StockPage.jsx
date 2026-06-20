@@ -236,7 +236,7 @@ export default function StockPage() {
       if (!json) return { sizes: [], colors: [], combos: [] }
       const p = JSON.parse(json)
       if (Array.isArray(p)) {
-        // Legacy format [{name, options}]
+        // Formato anterior [{name, options}]
         const sz = p.find(v => ['talle','talles','size','sizes'].includes((v.name||'').toLowerCase()))
         const cl = p.find(v => ['color','colores'].includes((v.name||'').toLowerCase()))
         return { sizes: sz?.options || [], colors: cl?.options || [], combos: [] }
@@ -306,7 +306,7 @@ export default function StockPage() {
     if (!form.name.trim()) return
     setSaving(true)
     const isCreating = !editingId
-    // For new products, blob URLs are local previews — exclude from payload
+    // Para productos nuevos, las URLs blob son previsualizaciones locales — no incluir en el payload
     const payloadExtraImages = isCreating ? [] : form.extraImages
     const payload = {
       ...form,

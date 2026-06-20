@@ -435,7 +435,7 @@ public class CatalogService {
         } catch (Exception e) {
             throw new RuntimeException("Error al leer snapshot publicado", e);
         }
-        // Restore catalog metadata from snapshot
+        // Restaura los metadatos del catálogo desde el snapshot
         catalog.setName(snapshot.getName());
         catalog.setDescription(snapshot.getDescription());
         catalog.setAiContent(snapshot.getAiContent());
@@ -448,12 +448,12 @@ public class CatalogService {
         catalog.setDiscount(snapshot.getDiscount());
         catalog.setSectionOrder(snapshot.getSectionOrder());
 
-        // Restore product visibility based on snapshot
+        // Restaura la visibilidad de productos según el snapshot
         if (snapshot.getProducts() != null) {
             var snapshotIds = snapshot.getProducts().stream()
                     .map(PublicProductResponse::getId).collect(java.util.stream.Collectors.toSet());
             List<Product> current = productRepository.findByCatalogIdOrderBySortOrderAscCreatedAtAsc(catalogId);
-            // Products added after publish → hide
+            // Productos agregados después de publicar → ocultar
             current.forEach(p -> {
                 boolean wasPublished = snapshotIds.contains(p.getId());
                 if (p.isActive() != wasPublished) {
@@ -461,7 +461,7 @@ public class CatalogService {
                     productRepository.save(p);
                 }
             });
-            // Products in snapshot missing from catalog → relink if still in DB
+            // Productos del snapshot ausentes en el catálogo → religar si aún existen en BD
             var currentIds = current.stream().map(Product::getId).collect(java.util.stream.Collectors.toSet());
             snapshot.getProducts().forEach(sp -> {
                 if (!currentIds.contains(sp.getId())) {

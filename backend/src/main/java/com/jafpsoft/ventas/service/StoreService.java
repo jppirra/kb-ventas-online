@@ -63,7 +63,7 @@ public class StoreService {
     @Transactional
     public void delete(Long storeId, Long userId) {
         Store store = findOwned(storeId, userId);
-        // Unlink catalogs from this store
+        // Desvincula los catálogos de este local
         catalogRepository.findByUserIdOrderByCreatedAtDesc(userId).stream()
                 .filter(c -> storeId.equals(c.getStoreId()))
                 .forEach(c -> { c.setStoreId(null); catalogRepository.save(c); });

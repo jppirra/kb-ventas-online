@@ -18,7 +18,7 @@ public class AdminUserResponse {
     private long profileViewCount;
     private LocalDateTime lastAccessAt;
     private LocalDateTime createdAt;
-    // profile fields
+    // campos de perfil
     private String bio;
     private String whatsappNumber;
     private String profileImageUrl;

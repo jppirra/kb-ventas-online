@@ -3,7 +3,7 @@ import ImageModal from './ImageModal'
 
 export default function ImageUpload({ label, currentUrl, onUpload, aspectRatio = '1/1', className = '' }) {
   const inputRef = useRef()
-  const [progress, setProgress] = useState(null) // null = idle, 0-100 = uploading
+  const [progress, setProgress] = useState(null) // null = inactivo, 0-100 = subiendo
   const [preview, setPreview] = useState(false)
 
   async function handleChange(e) {

@@ -1,10 +1,10 @@
 import api from './axios'
 
 export const adminApi = {
-  // Stats
+  // Estadísticas
   stats: () => api.get('/admin/stats'),
 
-  // Users
+  // Usuarios
   users: () => api.get('/admin/users'),
   toggleEnabled: (id, reason) => api.patch(`/admin/users/${id}/toggle-enabled`, { reason }),
   userModerationLog: (id) => api.get(`/admin/users/${id}/moderation-log`),
@@ -23,13 +23,13 @@ export const adminApi = {
   bulkResetPassword: (ids) => api.post('/admin/users/bulk/reset-password', { ids }),
   bulkDelete: (ids) => api.post('/admin/users/bulk/delete', { ids }),
 
-  // Orders
+  // Pedidos
   orders: () => api.get('/admin/orders'),
 
-  // Reports
+  // Denuncias
   reports: () => api.get('/admin/reports'),
 
-  // Catalogs
+  // Catálogos
   catalogs: () => api.get('/admin/catalogs'),
   toggleCatalogActive: (id, reason) => api.patch(`/admin/catalogs/${id}/toggle-active`, { reason }),
   catalogModerationLog: (id) => api.get(`/admin/catalogs/${id}/moderation-log`),
@@ -45,11 +45,11 @@ export const adminApi = {
   emailSettings: () => api.get('/admin/settings/email'),
   saveEmailSettings: (data) => api.put('/admin/settings/email', data),
 
-  // AI Settings
+  // Configuración de IA
   aiConfig: () => api.get('/admin/settings/ai'),
   saveAiConfig: (data) => api.put('/admin/settings/ai', data),
 
-  // Background templates
+  // Fondos de pantalla
   backgrounds: () => api.get('/admin/backgrounds'),
   createBackground: (data) => api.post('/admin/backgrounds', data),
   updateBackground: (id, data) => api.put(`/admin/backgrounds/${id}`, data),

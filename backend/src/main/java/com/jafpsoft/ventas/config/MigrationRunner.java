@@ -32,10 +32,10 @@ public class MigrationRunner implements ApplicationRunner {
             "is_active column"
         );
 
-        // Drop NOT NULL on catalog_id so products can exist without a catalog (repository)
+        // Elimina NOT NULL de catalog_id para que los productos puedan existir sin catálogo (repositorio)
         dropNotNullIfNeeded();
 
-        // Backfill user_id from catalog's user_id for existing products
+        // Rellena user_id desde el user_id del catálogo para productos existentes
         backfillUserId();
 
         applyIfNeeded(
@@ -188,7 +188,7 @@ public class MigrationRunner implements ApplicationRunner {
 
     private void dropNotNullIfNeeded() {
         try {
-            // Check if catalog_id is still NOT NULL
+            // Verifica si catalog_id sigue siendo NOT NULL
             Integer notNullCount = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='products' AND column_name='catalog_id' AND is_nullable='NO'",
                 Integer.class

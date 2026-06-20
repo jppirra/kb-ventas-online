@@ -14,7 +14,7 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 })
 
-// Attach Bearer token on every request
+// Adjunta el token Bearer en cada solicitud
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -32,7 +32,7 @@ const processQueue = (error, token = null) => {
   failedQueue = []
 }
 
-// Auto-refresh on 401
+// Refresco automático al recibir 401
 api.interceptors.response.use(
   (response) => response,
   async (error) => {

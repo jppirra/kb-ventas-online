@@ -198,7 +198,7 @@ export default function ExplorarPage() {
           <span className="font-bold text-gray-900 dark:text-white text-base tracking-tight">Mercato</span>
         </a>
 
-        {/* Language switcher */}
+        {/* Selector de idioma */}
         <div className="flex items-center gap-1 ml-4">
           {LANGS.map(l => (
             <button

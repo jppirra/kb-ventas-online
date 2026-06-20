@@ -192,7 +192,7 @@ public class AiService {
                 return "ERROR: " + e.getMessage();
             }
         }
-        // gemini (default)
+        // gemini (por defecto)
         if (geminiApiKey == null || geminiApiKey.isBlank()) return "ERROR: GEMINI_API_KEY no configurada";
         try {
             String activeModel = appSettingService.get("ai.model.gemini", geminiModel);

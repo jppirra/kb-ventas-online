@@ -33,7 +33,7 @@ public class CollaboratorService {
         User owner = userRepository.findById(ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Usuario no encontrado"));
 
-        // If collaborator already exists for this owner+email, re-send / reactivate
+        // Si el colaborador ya existe para este dueño+email, reenviar / reactivar
         Optional<CatalogCollaborator> existing = collaboratorRepository
                 .findByCollaboratorEmailAndOwnerId(req.getEmail().toLowerCase().trim(), ownerId);
         if (existing.isPresent()) {
@@ -41,7 +41,7 @@ public class CollaboratorService {
             if ("ACTIVE".equals(c.getStatus())) {
                 throw new IllegalArgumentException("Este colaborador ya tiene acceso activo");
             }
-            // Reactivate / update and re-send invite
+            // Reactivar / actualizar y reenviar invitación
             c.setStatus("PENDING");
             c.setInviteToken(UUID.randomUUID().toString());
             c.setAccessAllCatalogs(req.isAccessAllCatalogs());
@@ -143,7 +143,7 @@ public class CollaboratorService {
         List<Long> result = new ArrayList<>();
         for (CatalogCollaborator c : active) {
             if (c.isAccessAllCatalogs()) {
-                // Add all catalogs from the owner
+                // Agregar todos los catálogos del dueño
                 catalogRepository.findByUserIdOrderByCreatedAtDesc(c.getOwnerId())
                         .stream().filter(cat -> cat.isActive())
                         .map(Catalog::getId).forEach(result::add);
@@ -154,7 +154,7 @@ public class CollaboratorService {
         return result.stream().distinct().toList();
     }
 
-    // Returns collaborator context for a specific catalog (for response enrichment)
+    // Devuelve el contexto del colaborador para un catálogo específico (para enriquecer la respuesta)
     public CatalogCollaborator getActiveCollaboratorForCatalog(Long catalogId, Long userId) {
         List<CatalogCollaborator> active = collaboratorRepository
                 .findByCollaboratorUserIdAndStatus(userId, "ACTIVE");
@@ -177,7 +177,7 @@ public class CollaboratorService {
         if (owner != null) {
             r.setCatalogNames(buildCatalogNames(c, owner.getId()));
         }
-        // Enrich with collaborator user info if ACTIVE
+        // Enriquecer con datos del usuario colaborador si está ACTIVE
         if (c.getCollaboratorUserId() != null) {
             userRepository.findById(c.getCollaboratorUserId()).ifPresent(u -> {
                 r.setCollaboratorName(u.getName());

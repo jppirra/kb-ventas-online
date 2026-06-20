@@ -144,7 +144,7 @@ export default function StockReportPage() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Header */}
+        {/* Encabezado */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <button onClick={() => navigate('/stock')} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
@@ -168,7 +168,7 @@ export default function StockReportPage() {
           </button>
         </div>
 
-        {/* Summary cards */}
+        {/* Tarjetas resumen */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
           <div className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl p-4 text-center">
             <p className="text-2xl font-bold text-gray-900 dark:text-white">{products.length}</p>
@@ -188,7 +188,7 @@ export default function StockReportPage() {
           </div>
         </div>
 
-        {/* Sections */}
+        {/* Secciones */}
         <Section title="Agotados" color="red" products={agotados} emptyMsg="Sin productos agotados" />
         <Section title="En stock" color="green" products={enStock} emptyMsg="Sin productos con stock activo" />
         <Section title="A pedido" color="yellow" products={aPedido} emptyMsg="Sin productos a pedido" />

@@ -51,7 +51,7 @@ public class CollaboratorController {
         return collaboratorService.accept(token, user.getUserId());
     }
 
-    // Public endpoint — returns invite info without requiring auth
+    // Endpoint público — devuelve info de la invitación sin requerir autenticación
     @GetMapping("/invite-info/{token}")
     public CollaboratorResponse inviteInfo(@PathVariable String token) {
         return collaboratorService.getInviteInfo(token);

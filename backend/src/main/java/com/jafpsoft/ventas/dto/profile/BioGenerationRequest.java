@@ -10,5 +10,5 @@ public class BioGenerationRequest {
     @NotBlank
     private String productTypes;    // ej: "remeras, vestidos, accesorios"
     @NotBlank
-    private String tone;            // PROFESIONAL | CERCANO | CREATIVO
+    private String tone;            // tono: PROFESIONAL | CERCANO | CREATIVO
 }

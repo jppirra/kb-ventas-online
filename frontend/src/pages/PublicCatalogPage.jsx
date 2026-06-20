@@ -120,7 +120,7 @@ function PriceDisplay({ price, offerPrice, size = 'sm' }) {
   return null
 }
 
-// Gallery helpers
+// Utilidades de galería
 function parseExtraImages(json) {
   try { return JSON.parse(json) || [] } catch { return [] }
 }
@@ -251,7 +251,7 @@ function LightboxModal({ items, startIndex, productName, onClose }) {
   )
 }
 
-// Variant selector
+// Selector de variantes
 function parseVariants(json) {
   try { return JSON.parse(json) || [] } catch { return [] }
 }
@@ -608,7 +608,7 @@ function ProductDetailModal({ product, catalogName, vendorWhatsapp, inCart, sele
   return (
     <div className="fixed inset-0 z-[55] bg-black/75 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
       <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden w-full max-w-4xl max-h-[92vh] flex flex-col md:flex-row relative" onClick={e => e.stopPropagation()}>
-        {/* Close */}
+        {/* Cerrar */}
         <button onClick={onClose}
           className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -888,7 +888,7 @@ function ShareButton({ url, catalogName }) {
   )
 }
 
-// Cart floating panel
+// Panel flotante del carrito
 function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRemove, onClear, previewMode = false }) {
   const [showModal, setShowModal] = useState(false)
   const [customerName, setCustomerName] = useState('')
@@ -1342,7 +1342,7 @@ export default function PublicCatalogPage({ previewMode = false }) {
             <a href={`/catalogs/${id}`} className="underline underline-offset-2 hover:opacity-80 ml-2">Volver a editar</a>
           </div>
         )}
-        {/* Mercato brand bar */}
+        {/* Barra de marca Mercato */}
         <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3 print:hidden">
           <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
             <img src="/logo-icon.png" alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />

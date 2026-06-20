@@ -6,7 +6,7 @@ import { notificationsApi } from '../api/notifications'
 import { Client } from '@stomp/stompjs'
 import SockJS from 'sockjs-client'
 
-// ── SVG Icons ─────────────────────────────────────────────────────────────────
+// ── Iconos SVG ────────────────────────────────────────────────────────────────
 const IC = {
   dashboard: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>,
   catalogs: <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>,
@@ -169,7 +169,7 @@ function NotificationBell() {
   )
 }
 
-// ── Sidebar logo ──────────────────────────────────────────────────────────────
+// ── Logo del sidebar ──────────────────────────────────────────────────────────
 function SidebarLogo({ collapsed }) {
   return (
     <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2.5 min-w-0">
@@ -182,7 +182,7 @@ function SidebarLogo({ collapsed }) {
   )
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
+// ── Exportación principal ─────────────────────────────────────────────────────
 export default function Navbar({ collapsed, onToggle }) {
   const { logout, user } = useAuth()
   const location = useLocation()
@@ -201,7 +201,7 @@ export default function Navbar({ collapsed, onToggle }) {
 
   const sidebarContent = (
     <div className="h-full flex flex-col">
-      {/* Logo + toggle */}
+      {/* Logo + botón colapsar */}
       <div className={`flex items-center border-b border-gray-100 dark:border-slate-800 h-16 px-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
         <SidebarLogo collapsed={collapsed} />
         <button onClick={onToggle}
@@ -211,7 +211,7 @@ export default function Navbar({ collapsed, onToggle }) {
         </button>
       </div>
 
-      {/* Nav links */}
+      {/* Vínculos de navegación */}
       <nav className="flex-1 py-3 overflow-y-auto space-y-0.5 px-2">
         {NAV_LINKS.map(({ to, label, icon }) => (
           <Link key={to} to={to} title={collapsed ? label : undefined} className={linkClass(to)}>
@@ -229,7 +229,7 @@ export default function Navbar({ collapsed, onToggle }) {
         )}
       </nav>
 
-      {/* Bottom: logout */}
+      {/* Pie: cerrar sesión */}
       <div className="border-t border-gray-100 dark:border-slate-800 py-2 px-2">
         <button onClick={logout} title={collapsed ? 'Cerrar sesión' : undefined}
           className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 hover:text-gray-900 dark:hover:text-white transition-colors ${collapsed ? 'justify-center' : ''}`}>
@@ -242,9 +242,9 @@ export default function Navbar({ collapsed, onToggle }) {
 
   return (
     <>
-      {/* ── Top header bar (all screen sizes) ─────────────────────────── */}
+      {/* ── Barra superior (todos los tamaños de pantalla) ────────────── */}
       <div className={`fixed top-0 right-0 z-30 h-14 bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-slate-700 flex items-center px-3 gap-2 transition-all duration-300 left-0 ${collapsed ? 'md:left-16' : 'md:left-56'}`}>
-        {/* Mobile only: hamburger + logo */}
+        {/* Solo móvil: hamburguesa + logo */}
         <button onClick={() => setMobileOpen(v => !v)}
           className="md:hidden p-2 text-gray-600 dark:text-slate-300 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
           {IC.menu}
@@ -254,19 +254,19 @@ export default function Navbar({ collapsed, onToggle }) {
           <span className="font-bold text-gray-900 dark:text-white text-base tracking-tight">Mercato</span>
         </a>
 
-        {/* Right side: notification bell + theme toggle */}
+        {/* Lado derecho: campana de notificaciones + selector de tema */}
         <div className="ml-auto flex items-center gap-1">
           <NotificationBell />
           <ThemeToggle />
         </div>
       </div>
 
-      {/* ── Mobile backdrop ───────────────────────────────────────────────── */}
+      {/* ── Fondo oscuro móvil ───────────────────────────────────────────── */}
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-40 bg-black/40" onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* ── Sidebar ───────────────────────────────────────────────────────── */}
+      {/* ── Sidebar ──────────────────────────────────────────────────────── */}
       <aside className={`
         fixed left-0 top-0 h-[100dvh] z-40
         bg-white dark:bg-slate-900

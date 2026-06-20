@@ -36,7 +36,7 @@ export default function AdminReportsPage() {
     (r.vendorEmail || '').toLowerCase().includes(search.toLowerCase())
   )
 
-  // Group by catalogId to show unique catalogs count
+  // Agrupar por catalogId para obtener la cantidad de catálogos únicos
   const uniqueCatalogs = new Set(reports.map(r => r.catalogId)).size
 
   return (

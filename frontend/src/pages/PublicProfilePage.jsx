@@ -270,7 +270,7 @@ export default function PublicProfilePage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950">
-      {/* Mercato brand bar */}
+      {/* Barra de marca Mercato */}
       <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3">
         <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
           <img src="/logo-icon.png" alt="" className="h-10 w-10 rounded-lg object-cover shrink-0" />

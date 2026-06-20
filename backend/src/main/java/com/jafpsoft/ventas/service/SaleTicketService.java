@@ -44,8 +44,8 @@ public class SaleTicketService {
 
     @Transactional
     public TicketResponse create(TicketRequest req, Long userId) {
-        // Lock the row so concurrent requests can't take the same number.
-        // If no config exists yet, create one inside the transaction before anyone else can.
+        // Bloquea la fila para que solicitudes concurrentes no tomen el mismo número.
+        // Si todavía no existe config, la crea dentro de la transacción antes que cualquier otro proceso.
         TicketConfig config = configRepository.findByIdForUpdate(userId)
                 .orElseGet(() -> configRepository.save(TicketConfig.builder().userId(userId).build()));
         String tipoDoc = req.getTipoDoc() != null ? req.getTipoDoc() : "COMP";

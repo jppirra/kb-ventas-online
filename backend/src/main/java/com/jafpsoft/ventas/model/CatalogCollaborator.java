@@ -30,14 +30,14 @@ public class CatalogCollaborator {
 
     @Column(length = 20)
     @Builder.Default
-    private String status = "PENDING"; // PENDING, ACTIVE, REVOKED
+    private String status = "PENDING"; // estados posibles: PENDING, ACTIVE, REVOKED
 
     @Column(name = "access_all_catalogs", nullable = false)
     @Builder.Default
     private boolean accessAllCatalogs = false;
 
     @Column(name = "catalog_ids", columnDefinition = "TEXT")
-    private String catalogIds; // JSON array of Long IDs
+    private String catalogIds; // arreglo JSON de IDs (Long)
 
     @Column(name = "can_publish", nullable = false)
     @Builder.Default

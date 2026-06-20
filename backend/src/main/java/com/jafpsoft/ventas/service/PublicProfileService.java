@@ -100,7 +100,7 @@ public class PublicProfileService {
         if (catalog.getPublishedSnapshotJson() != null) {
             try {
                 CatalogSnapshotData snapshot = objectMapper.readValue(catalog.getPublishedSnapshotJson(), CatalogSnapshotData.class);
-                // Overlay live product prices so price/offerPrice changes apply without republishing
+                // Superpone precios actuales para que cambios de precio/offerPrice apliquen sin republicar
                 Map<Long, Product> liveById = productRepository
                         .findByCatalogIdOrderBySortOrderAscCreatedAtAsc(catalog.getId())
                         .stream().collect(Collectors.toMap(Product::getId, p -> p));
@@ -121,7 +121,7 @@ public class PublicProfileService {
                 }
                 return response;
             } catch (Exception e) {
-                // fall through to live data
+                // continuar con datos en vivo
             }
         }
 

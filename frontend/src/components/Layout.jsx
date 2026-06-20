@@ -19,7 +19,7 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-slate-950">
       <Navbar collapsed={collapsed} onToggle={toggleCollapsed} />
-      {/* Offset: sidebar width on desktop, top bar on mobile */}
+      {/* Desplazamiento: ancho del sidebar en escritorio, barra superior en móvil */}
       <div className={`transition-all duration-300 ${collapsed ? 'md:pl-16' : 'md:pl-56'} pt-14 min-h-screen flex flex-col`}>
         <main className="flex-1">
           {children}
