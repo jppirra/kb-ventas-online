@@ -44,18 +44,29 @@ public class SaleTicketService {
         // If no config exists yet, create one inside the transaction before anyone else can.
         TicketConfig config = configRepository.findByIdForUpdate(userId)
                 .orElseGet(() -> configRepository.save(TicketConfig.builder().userId(userId).build()));
-        int ticketNum = config.getNextTicketNumber();
-        config.setNextTicketNumber(ticketNum + 1);
+        String tipoDoc = req.getTipoDoc() != null ? req.getTipoDoc() : "COMP";
+        String tipoLetra = config.getTipoComprobante() != null ? config.getTipoComprobante() : "B";
+
+        int ticketNum;
+        if ("NC".equals(tipoDoc)) {
+            ticketNum = config.getNextNcNumber();
+            config.setNextNcNumber(ticketNum + 1);
+        } else if ("ND".equals(tipoDoc)) {
+            ticketNum = config.getNextNdNumber();
+            config.setNextNdNumber(ticketNum + 1);
+        } else {
+            ticketNum = config.getNextTicketNumber();
+            config.setNextTicketNumber(ticketNum + 1);
+        }
         configRepository.save(config);
 
-        String tipoDoc = req.getTipoDoc() != null ? req.getTipoDoc() : "COMP";
         String prefix;
         if ("NC".equals(tipoDoc)) {
-            prefix = config.getPuntoVenta() != null ? "NC" : "NC";
+            prefix = "NC " + tipoLetra;
         } else if ("ND".equals(tipoDoc)) {
-            prefix = config.getPuntoVenta() != null ? "ND" : "ND";
+            prefix = "ND " + tipoLetra;
         } else {
-            prefix = config.getTipoComprobante() != null ? config.getTipoComprobante() : "B";
+            prefix = tipoLetra;
         }
         String ticketNumber = config.getPuntoVenta() != null
                 ? String.format("%s %04d-%08d", prefix, config.getPuntoVenta(), ticketNum)

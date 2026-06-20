@@ -5,6 +5,7 @@ import Layout from '../components/Layout'
 import { ticketsApi } from '../api/tickets'
 import { adminApi } from '../api/admin'
 import { fmtDate, fmtDateLong } from '../utils/date'
+import NCNDModal from '../components/NCNDModal'
 
 const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
 const STATUS_COLORS = { PAID: '#16a34a', DRAFT: '#ca8a04', CANCELLED: '#dc2626' }
@@ -54,12 +55,13 @@ function InvoiceDocument({ ticket, config }) {
   const isAfip = !!config?.puntoVenta
   const tipo = config?.tipoComprobante || 'B'
 
+  const tipoDoc = ticket.tipoDoc || 'COMP'
   const esTc = tipo === 'TC'
-  const esNC = tipo === 'NC'
-  const esND = tipo === 'ND'
+  const esNC = tipoDoc === 'NC'
+  const esND = tipoDoc === 'ND'
   const tipoLabel = esTc ? 'TICKET COMPROBANTE'
-    : esNC ? 'NOTA DE CRÉDITO'
-    : esND ? 'NOTA DE DÉBITO'
+    : esNC ? `NOTA DE CRÉDITO ${tipo !== 'TC' ? tipo : ''}`.trim()
+    : esND ? `NOTA DE DÉBITO ${tipo !== 'TC' ? tipo : ''}`.trim()
     : ({ A: 'FACTURA A', B: 'FACTURA B', C: 'FACTURA C' }[tipo] || 'COMPROBANTE')
 
   return (
@@ -234,8 +236,7 @@ export default function TicketDetailPage() {
   const [editingCustomer, setEditingCustomer] = useState(false)
   const [customerForm, setCustomerForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerEmail: '', customerNotes: '' })
   const [savingCustomer, setSavingCustomer] = useState(false)
-  const [showNC, setShowNC] = useState(false)
-  const [creatingNC, setCreatingNC] = useState(false)
+  const [showNcNd, setShowNcNd] = useState(null) // 'NC' | 'ND' | null
 
   useEffect(() => {
     Promise.all([ticketsApi.get(id), ticketsApi.getConfig()])
@@ -253,39 +254,6 @@ export default function TicketDetailPage() {
       .catch(() => { toast.error('Error al cargar ticket'); navigate('/tickets') })
       .finally(() => setLoading(false))
   }, [id])
-
-  async function handleCreateNC() {
-    setCreatingNC(true)
-    try {
-      const payload = {
-        customerName: ticket.customerName,
-        customerDni: ticket.customerDni,
-        customerPhone: ticket.customerPhone,
-        customerEmail: ticket.customerEmail,
-        customerNotes: ticket.customerNotes,
-        paymentMethod: ticket.paymentMethod,
-        tipoDoc: 'NC',
-        referenceTicketNumber: ticket.ticketNumber,
-        discount: 0,
-        notes: `Nota de crédito de ${ticket.ticketNumber}`,
-        items: ticket.items.map((it, idx) => ({
-          productId: it.productId || null,
-          productName: it.productName,
-          productSku: it.productSku || null,
-          size: it.size || null,
-          color: it.color || null,
-          quantity: it.quantity,
-          unitPrice: Number(it.unitPrice),
-          sortOrder: idx,
-        }))
-      }
-      const { data } = await ticketsApi.create(payload)
-      toast.success(`Nota de crédito ${data.ticketNumber} creada`)
-      setShowNC(false)
-      navigate(`/tickets/${data.id}`)
-    } catch { toast.error('Error al crear la nota de crédito') }
-    finally { setCreatingNC(false) }
-  }
 
   async function handleSaveCustomer(e) {
     e.preventDefault()
@@ -333,26 +301,18 @@ export default function TicketDetailPage() {
       <Layout>
         <div className="max-w-3xl mx-auto px-4 py-8">
 
-          {/* Modal nota de crédito */}
-          {showNC && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-              <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Nota de crédito</h3>
-                <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
-                  Se creará una nota de crédito por los mismos items del comprobante <strong>{ticket.ticketNumber}</strong>. El stock de los productos se repondrá automáticamente.
-                </p>
-                <div className="flex gap-2">
-                  <button onClick={() => setShowNC(false)}
-                    className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                    Cancelar
-                  </button>
-                  <button onClick={handleCreateNC} disabled={creatingNC}
-                    className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
-                    {creatingNC ? 'Creando...' : 'Confirmar NC'}
-                  </button>
-                </div>
-              </div>
-            </div>
+          {/* Modal NC / ND */}
+          {showNcNd && (
+            <NCNDModal
+              tipo={showNcNd}
+              refTicket={ticket}
+              config={config}
+              onClose={() => setShowNcNd(null)}
+              onCreated={(data) => {
+                setShowNcNd(null)
+                navigate(`/tickets/${data.id}`)
+              }}
+            />
           )}
 
           {/* Modal editar comprador */}
@@ -423,14 +383,23 @@ export default function TicketDetailPage() {
                   {sendingEmail ? 'Enviando...' : 'Email'}
                 </button>
               )}
-              {ticket.tipoDoc !== 'NC' && ticket.status !== 'CANCELLED' && (
-                <button onClick={() => setShowNC(true)}
-                  className="flex items-center gap-1.5 px-3 py-2 border border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-sm font-medium rounded-xl transition-colors">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
-                  </svg>
-                  Nota de crédito
-                </button>
+              {ticket.tipoDoc !== 'NC' && ticket.tipoDoc !== 'ND' && ticket.status !== 'CANCELLED' && (
+                <>
+                  <button onClick={() => setShowNcNd('NC')}
+                    className="flex items-center gap-1.5 px-3 py-2 border border-orange-300 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 text-sm font-medium rounded-xl transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+                    </svg>
+                    Nota de crédito
+                  </button>
+                  <button onClick={() => setShowNcNd('ND')}
+                    className="flex items-center gap-1.5 px-3 py-2 border border-blue-300 dark:border-blue-700 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-sm font-medium rounded-xl transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Nota de débito
+                  </button>
+                </>
               )}
               <button onClick={() => setEditingCustomer(true)}
                 className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">

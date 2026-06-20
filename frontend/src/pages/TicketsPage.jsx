@@ -7,6 +7,7 @@ import { productsApi } from '../api/products'
 import { customersApi } from '../api/customers'
 import { fmtDate } from '../utils/date'
 import { useAuth } from '../context/AuthContext'
+import NCNDModal from '../components/NCNDModal'
 
 function buildWaText(ticket, config) {
   const cur = config?.currency || '$'
@@ -468,32 +469,6 @@ export default function TicketsPage() {
     finally { setSavingAction(false) }
   }
 
-  async function handleCreateDoc(tipo) {
-    setSavingAction(true)
-    const src = modal.ticket
-    try {
-      const payload = {
-        customerName: src.customerName, customerDni: src.customerDni,
-        customerPhone: src.customerPhone, customerEmail: src.customerEmail,
-        customerNotes: src.customerNotes, paymentMethod: src.paymentMethod,
-        tipoDoc: tipo, referenceTicketNumber: src.ticketNumber,
-        discount: 0,
-        notes: `${tipo === 'NC' ? 'Nota de crédito' : 'Nota de débito'} de ${src.ticketNumber}`,
-        items: src.items.map((it, idx) => ({
-          productId: it.productId || null, productName: it.productName,
-          productSku: it.productSku || null, size: it.size || null,
-          color: it.color || null, quantity: it.quantity,
-          unitPrice: Number(it.unitPrice), sortOrder: idx,
-        }))
-      }
-      const { data } = await ticketsApi.create(payload)
-      setTickets(ts => [data, ...ts])
-      toast.success(`${tipo} ${data.ticketNumber} creada`)
-      setModal(null)
-      navigate(`/tickets/${data.id}`)
-    } catch { toast.error('Error al crear documento') }
-    finally { setSavingAction(false) }
-  }
 
   if (!isBeta) {
     return (
@@ -797,27 +772,17 @@ export default function TicketsPage() {
 
       {/* Modal: NC / ND */}
       {(modal?.type === 'nc' || modal?.type === 'nd') && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
-            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-              {modal.type === 'nc' ? 'Nota de crédito' : 'Nota de débito'}
-            </h3>
-            <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
-              Se creará una <strong>{modal.type === 'nc' ? 'nota de crédito' : 'nota de débito'}</strong> referenciando el comprobante <span className="font-mono font-semibold">{modal.ticket.ticketNumber}</span>.
-              {modal.type === 'nc' && ' El stock de los productos se repondrá automáticamente.'}
-            </p>
-            <div className="flex gap-2">
-              <button onClick={() => setModal(null)}
-                className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
-                Cancelar
-              </button>
-              <button onClick={() => handleCreateDoc(modal.type.toUpperCase())} disabled={savingAction}
-                className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
-                {savingAction ? 'Creando...' : `Confirmar ${modal.type.toUpperCase()}`}
-              </button>
-            </div>
-          </div>
-        </div>
+        <NCNDModal
+          tipo={modal.type.toUpperCase()}
+          refTicket={modal.ticket}
+          config={config}
+          onClose={() => setModal(null)}
+          onCreated={(data) => {
+            setTickets(ts => [data, ...ts])
+            setModal(null)
+            navigate(`/tickets/${data.id}`)
+          }}
+        />
       )}
     </Layout>
   )
