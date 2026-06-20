@@ -78,6 +78,7 @@ public class SaleTicketService {
                     ? String.format("%s-%04d", tipoDoc, ticketNum)
                     : String.format("T-%04d", ticketNum);
 
+        boolean isDraft = Boolean.TRUE.equals(req.getDraft());
         SaleTicket ticket = SaleTicket.builder()
                 .userId(userId)
                 .ticketNumber(ticketNumber)
@@ -91,7 +92,7 @@ public class SaleTicketService {
                 .paymentMethod(req.getPaymentMethod())
                 .discount(req.getDiscount() != null ? req.getDiscount() : BigDecimal.ZERO)
                 .notes(req.getNotes())
-                .status("PAID")
+                .status(isDraft ? "DRAFT" : "PAID")
                 .build();
 
         AtomicInteger order = new AtomicInteger(0);
@@ -122,8 +123,11 @@ public class SaleTicketService {
         ticket.setTotal(subtotal.subtract(discount).max(BigDecimal.ZERO));
 
         SaleTicket saved = ticketRepository.save(ticket);
-        // NC devuelve stock; ND y COMP descuentan stock
-        adjustStock(saved.getItems(), "NC".equals(tipoDoc) ? 1 : -1, userId);
+        // DRAFT: no ajustar stock hasta que el pago sea confirmado vía webhook
+        // NC: devuelve stock; ND y COMP: descuentan stock
+        if (!isDraft) {
+            adjustStock(saved.getItems(), "NC".equals(tipoDoc) ? 1 : -1, userId);
+        }
         return TicketResponse.from(saved);
     }
 
@@ -166,7 +170,9 @@ public class SaleTicketService {
     @Transactional
     public void delete(Long id, Long userId) {
         SaleTicket ticket = findOwned(id, userId);
-        if (!"CANCELLED".equals(ticket.getStatus())) {
+        // Solo devolver stock si el ticket descontó stock (no aplica a DRAFT ni CANCELLED)
+        String status = ticket.getStatus();
+        if ("PAID".equals(status)) {
             adjustStock(ticket.getItems(), 1, userId);
         }
         ticketRepository.delete(ticket);

@@ -2,6 +2,9 @@ package com.jafpsoft.ventas.service;
 
 import com.jafpsoft.ventas.dto.order.OrderRequestPayload;
 import com.jafpsoft.ventas.model.EmailLog;
+import com.jafpsoft.ventas.model.SaleTicket;
+import com.jafpsoft.ventas.model.SaleTicketItem;
+import com.jafpsoft.ventas.model.TicketConfig;
 import com.jafpsoft.ventas.repository.EmailLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -153,6 +156,38 @@ public class EmailService {
                 null, null,
                 fromName() + " — Admin");
         send(toEmail, "TEST", "Email de prueba — " + fromName(), html);
+    }
+
+    @Async
+    public void sendPaymentConfirmationEmail(SaleTicket ticket, TicketConfig config) {
+        if (ticket.getCustomerEmail() == null || ticket.getCustomerEmail().isBlank()) return;
+        String biz = config.getBusinessName() != null ? config.getBusinessName() : fromName();
+        String cur = config.getCurrency() != null ? config.getCurrency() : "$";
+        StringBuilder rows = new StringBuilder();
+        for (SaleTicketItem item : ticket.getItems()) {
+            double sub = item.getUnitPrice().doubleValue() * item.getQuantity();
+            rows.append(String.format(
+                "<tr><td style='padding:6px 0;border-bottom:1px solid #f3f4f6;color:#374151;'>%s</td>" +
+                "<td style='padding:6px 0;text-align:center;border-bottom:1px solid #f3f4f6;'>%d</td>" +
+                "<td style='padding:6px 0;text-align:right;border-bottom:1px solid #f3f4f6;font-weight:600;'>%s%.2f</td></tr>",
+                esc(item.getProductName()), item.getQuantity(), cur, sub));
+        }
+        String body = String.format(
+            "<p>Hola%s,</p><p>Tu pago fue <strong style='color:#16a34a;'>confirmado exitosamente</strong> mediante Mercado Pago.</p>" +
+            "<table width='100%%' style='font-size:14px;border-collapse:collapse;margin:16px 0;'>" +
+            "<thead><tr style='font-size:12px;color:#9ca3af;'>" +
+            "<th align='left' style='padding-bottom:6px;border-bottom:1px solid #e5e7eb;'>Producto</th>" +
+            "<th style='padding-bottom:6px;border-bottom:1px solid #e5e7eb;'>Cant.</th>" +
+            "<th align='right' style='padding-bottom:6px;border-bottom:1px solid #e5e7eb;'>Subtotal</th></tr></thead>" +
+            "<tbody>%s</tbody>" +
+            "<tfoot><tr><td colspan='2' style='padding-top:10px;font-weight:600;'>Total</td>" +
+            "<td style='padding-top:10px;text-align:right;font-weight:700;font-size:16px;color:#1d4ed8;'>%s%.2f</td></tr></tfoot>" +
+            "</table><p style='font-size:12px;color:#6b7280;'>Comprobante: <b>%s</b></p>",
+            ticket.getCustomerName() != null ? " " + esc(ticket.getCustomerName()) : "",
+            rows, cur, ticket.getTotal().doubleValue(), esc(ticket.getTicketNumber()));
+        String subject = "Pago confirmado — " + esc(ticket.getTicketNumber()) + " — " + biz;
+        String html = buildActionEmail("Tu pago fue recibido", body, null, null, biz);
+        send(ticket.getCustomerEmail(), "PAYMENT_CONFIRMATION", subject, html);
     }
 
     @Async

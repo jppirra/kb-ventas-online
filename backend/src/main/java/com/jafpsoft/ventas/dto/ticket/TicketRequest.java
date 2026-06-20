@@ -21,4 +21,7 @@ public class TicketRequest {
     private String referenceTicketNumber;
     @Valid @NotEmpty
     private List<TicketItemRequest> items;
+
+    // Si true: crea el ticket en DRAFT para pagar luego con MP (sin descontar stock)
+    private Boolean draft;
 }

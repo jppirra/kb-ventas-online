@@ -81,6 +81,23 @@ public class SaleTicket {
     @Builder.Default
     private List<SaleTicketItem> items = new ArrayList<>();
 
+    // ── Mercado Pago ───────────────────────────────────────────────────────────
+    @Column(name = "mp_preference_id", length = 100)
+    private String mpPreferenceId;
+
+    @Column(name = "mp_payment_id", length = 100)
+    private String mpPaymentId;
+
+    // Estado en MP: pending | approved | rejected | cancelled | refunded
+    @Column(name = "mp_status", length = 30)
+    private String mpStatus;
+
+    @Column(name = "mp_status_detail", length = 100)
+    private String mpStatusDetail;
+
+    @Column(name = "mp_paid_at")
+    private LocalDateTime mpPaidAt;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
