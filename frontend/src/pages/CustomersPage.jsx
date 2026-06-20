@@ -181,7 +181,7 @@ export default function CustomersPage() {
                   <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 px-4 py-3 flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center shrink-0">
                       <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
-                        {c.name[0].toUpperCase()}
+                      {(c.name?.[0] ?? '?').toUpperCase()}
                       </span>
                     </div>
                     <div className="flex-1 min-w-0">

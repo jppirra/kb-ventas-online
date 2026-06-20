@@ -74,7 +74,7 @@ public class DashboardController {
                 .totalProducts(productRepository.countByUserId(userId))
                 .totalOrders(orderRepository.countByVendorUserId(userId))
                 .pendingOrders(orderRepository.countByVendorUserIdAndStatus(userId, "PENDING"))
-                .totalViews(catalogRepository.sumViewCountByUserId(userId))
+                .totalViews(Objects.requireNonNullElse(catalogRepository.sumViewCountByUserId(userId), 0L))
                 .totalTickets(totalTickets)
                 .totalRevenue(totalRevenue)
                 .totalCustomers(totalCustomers)
