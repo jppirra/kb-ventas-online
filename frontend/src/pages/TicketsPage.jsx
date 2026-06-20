@@ -41,10 +41,12 @@ function RowMenu({ ticket, config, onAction }) {
   const isCancelled = ticket.status === 'CANCELLED'
   const isNC = ticket.tipoDoc === 'NC'
   const phone = ticket.customerPhone?.replace(/\D/g, '')
+  const email = ticket.customerEmail
 
   const items = [
     { label: 'Abrir', icon: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14', action: 'open', always: true },
     phone && { label: 'WhatsApp', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', action: 'wa', always: true, color: 'text-green-600 dark:text-green-400' },
+    email && { label: 'Enviar email', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', action: 'email', always: true, color: 'text-blue-500 dark:text-blue-400' },
     { label: 'Imprimir', icon: 'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z', action: 'print', always: true },
     { label: 'Editar comprador', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', action: 'customer', always: true },
     !isCancelled && !isNC && { label: 'Nota de crédito', icon: 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6', action: 'nc', color: 'text-orange-500' },
@@ -57,6 +59,10 @@ function RowMenu({ ticket, config, onAction }) {
     if (action === 'wa') {
       const waText = buildWaText(ticket, config)
       window.open(`https://wa.me/${phone}?text=${waText}`, '_blank')
+      return
+    }
+    if (action === 'email') {
+      onAction('email', ticket)
       return
     }
     if (action === 'print') {
@@ -430,6 +436,12 @@ export default function TicketsPage() {
 
   function openAction(type, ticket) {
     if (type === 'open') { navigate(`/tickets/${ticket.id}`); return }
+    if (type === 'email') {
+      ticketsApi.sendEmail(ticket.id)
+        .then(() => toast.success(`Email enviado a ${ticket.customerEmail}`))
+        .catch(() => toast.error('Error al enviar email'))
+      return
+    }
     if (type === 'customer') {
       setCustomerForm({ customerName: ticket.customerName || '', customerDni: ticket.customerDni || '', customerPhone: ticket.customerPhone || '', customerEmail: ticket.customerEmail || '', customerNotes: ticket.customerNotes || '' })
     }

@@ -55,6 +55,13 @@ public class SaleTicketController {
         return service.cancel(id, user.getUserId(), body.get("reason"));
     }
 
+    @PostMapping("/{id}/send-email")
+    public ResponseEntity<Map<String, String>> sendEmail(@PathVariable Long id,
+                                                         @AuthenticationPrincipal CustomUserDetails user) {
+        service.sendTicketEmail(id, user.getUserId());
+        return ResponseEntity.ok(Map.of("status", "sent"));
+    }
+
     @PatchMapping("/{id}/customer")
     public TicketResponse updateCustomer(@PathVariable Long id,
                                          @RequestBody Map<String, String> body,

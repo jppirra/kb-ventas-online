@@ -51,11 +51,11 @@ public class TicketConfig {
     @Builder.Default
     private Integer nextTicketNumber = 1;
 
-    @Column(name = "next_nc_number", nullable = false)
+    @Column(name = "next_nc_number")
     @Builder.Default
     private Integer nextNcNumber = 1;
 
-    @Column(name = "next_nd_number", nullable = false)
+    @Column(name = "next_nd_number")
     @Builder.Default
     private Integer nextNdNumber = 1;
 

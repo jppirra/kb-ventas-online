@@ -7,6 +7,7 @@ export const ticketsApi = {
   create: (data) => api.post('/tickets', data).then(r => { track('TICKET_CREATED'); return r }),
   updateStatus: (id, status) => api.patch(`/tickets/${id}/status`, { status }),
   cancel: (id, reason) => api.patch(`/tickets/${id}/cancel`, { reason }),
+  sendEmail: (id) => api.post(`/tickets/${id}/send-email`),
   updateCustomer: (id, data) => api.patch(`/tickets/${id}/customer`, data),
   remove: (id) => api.delete(`/tickets/${id}`),
 

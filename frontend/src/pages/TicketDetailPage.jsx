@@ -261,6 +261,13 @@ export default function TicketDetailPage() {
     try {
       const { data } = await ticketsApi.updateCustomer(id, customerForm)
       setTicket(data)
+      setCustomerForm({
+        customerName: data.customerName || '',
+        customerDni: data.customerDni || '',
+        customerPhone: data.customerPhone || '',
+        customerEmail: data.customerEmail || '',
+        customerNotes: data.customerNotes || '',
+      })
       setEditingCustomer(false)
       toast.success('Datos del comprador actualizados')
     } catch { toast.error('Error al guardar') }
@@ -271,7 +278,7 @@ export default function TicketDetailPage() {
     if (!ticket.customerEmail) { toast.error('El cliente no tiene email registrado'); return }
     setSendingEmail(true)
     try {
-      await adminApi.sendEmail({ to: ticket.customerEmail, subject: `Comprobante ${ticket.ticketNumber}`, body: buildTicketHtml(ticket, config) })
+      await ticketsApi.sendEmail(id)
       toast.success(`Email enviado a ${ticket.customerEmail}`)
     } catch { toast.error('Error al enviar email') }
     finally { setSendingEmail(false) }
@@ -279,6 +286,7 @@ export default function TicketDetailPage() {
 
   function handleWhatsApp() {
     const phone = ticket.customerPhone?.replace(/\D/g, '')
+    if (!phone) { toast.error('El cliente no tiene teléfono registrado'); return }
     const text = buildWhatsAppText(ticket, config)
     window.open(`https://wa.me/${phone}?text=${text}`, '_blank')
   }
