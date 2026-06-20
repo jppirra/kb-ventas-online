@@ -31,6 +31,7 @@ public class OrderRequestService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final ObjectMapper objectMapper;
+    private final OrderAutoTicketService orderAutoTicketService;
 
     @Transactional
     public OrderRequest submit(Long catalogId, OrderRequestPayload payload) {
@@ -111,11 +112,19 @@ public class OrderRequestService {
     @Transactional
     public OrderResponse update(Long orderId, Long vendorUserId, OrderUpdateRequest req) {
         OrderRequest order = findOwned(orderId, vendorUserId);
+        String oldStatus = order.getStatus();
         if (req.getCustomerName() != null) order.setCustomerName(req.getCustomerName());
         if (req.getCustomerPhone() != null) order.setCustomerPhone(req.getCustomerPhone());
         if (req.getVendorNotes() != null) order.setVendorNotes(req.getVendorNotes());
         if (req.getStatus() != null) order.setStatus(req.getStatus());
-        return OrderResponse.from(orderRequestRepository.save(order));
+        OrderRequest saved = orderRequestRepository.save(order);
+
+        // Al confirmar el pedido: generar comprobante PAID automáticamente (async, no bloquea)
+        if ("CONFIRMED".equals(req.getStatus()) && !"CONFIRMED".equals(oldStatus)) {
+            orderAutoTicketService.generateFromOrder(saved);
+        }
+
+        return OrderResponse.from(saved);
     }
 
     private OrderRequest findOwned(Long orderId, Long vendorUserId) {

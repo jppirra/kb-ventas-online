@@ -358,6 +358,48 @@ public class EmailService {
         send(toEmail, "STOCK_REPORT", "Informe de stock — " + fromName(), html);
     }
 
+    // ── Campaña masiva MP (sin @Async — el BatchNotificationService controla el ritmo) ──
+
+    public void sendMpAnnouncementEmailSync(String toEmail, String vendorName) {
+        String name = fromName();
+        String subject = "¡Novedad! Cobrá con Mercado Pago desde tu cuenta en " + name;
+        String body = "Hola <strong>" + esc(vendorName) + "</strong>,<br><br>" +
+            "Tenemos una gran novedad para tu negocio:<br><br>" +
+            "<strong style='color:#2563eb;font-size:16px;'>Ahora podés cobrar con Mercado Pago directamente desde " + name + ".</strong><br><br>" +
+            "Con esta integración podés:<br>" +
+            "<ul style='margin:12px 0;padding-left:22px;color:#374151;line-height:1.8;'>" +
+            "<li>Generar links de pago automáticos en cada comprobante de venta</li>" +
+            "<li>Compartir el link por WhatsApp o email y cobrar a distancia</li>" +
+            "<li>Recibir el dinero directamente en tu cuenta de Mercado Pago</li>" +
+            "<li>El comprobante se confirma automáticamente cuando se acredita el pago</li>" +
+            "<li>Generar QRs dinámicos para cobrar en persona desde tu celular</li>" +
+            "</ul><br>" +
+            "Para activarlo, ingresá a tu cuenta, andá a <strong>Facturación → Configurar</strong> " +
+            "y buscá la sección <strong>\"Medios de pago digital\"</strong>.<br><br>" +
+            "El proceso de vinculación toma menos de 2 minutos.";
+        String html = buildActionEmail(
+            "¡Cobrá con Mercado Pago!", body,
+            baseUrl + "/tickets/config", "Activar Mercado Pago →",
+            "Si ya tenías tu cuenta vinculada, este email es solo informativo. Tu configuración no se modificó.");
+        send(toEmail, "MP_ANNOUNCEMENT", subject, html);
+    }
+
+    // ── Notificación al vendedor de comprobante auto-generado ─────────────────
+
+    @Async
+    public void sendOrderConfirmedTicketEmail(String toEmail, String vendorName,
+                                              String ticketNumber, String customerName) {
+        String body = "Hola <strong>" + esc(vendorName) + "</strong>,<br><br>" +
+            "Confirmaste el pedido de <strong>" + esc(customerName) + "</strong>.<br>" +
+            "El comprobante <strong style='font-family:monospace;'>" + esc(ticketNumber) +
+            "</strong> fue generado automáticamente y está disponible en tu panel de facturación.";
+        String html = buildActionEmail(
+            "Comprobante generado", body,
+            baseUrl + "/tickets", "Ver comprobantes →",
+            fromName() + " — Notificación automática");
+        send(toEmail, "TICKET_AUTO_CREATED", "Comprobante " + ticketNumber + " generado — " + fromName(), html);
+    }
+
     private static String esc(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");

@@ -30,6 +30,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Slf4j
 @Service
@@ -192,6 +193,48 @@ public class MercadoPagoPaymentService {
         ticket.setMpStatus(null);
         ticket.setMpStatusDetail(null);
         return TicketResponse.from(ticketRepository.save(ticket));
+    }
+
+    // ── QR de venta presencial ────────────────────────────────────────────────
+
+    public MercadoPagoPreferenceResponse generateQrPreference(
+            Long userId, BigDecimal amount, String description, String correlationId) {
+
+        TicketConfig config = configRepository.findById(userId)
+            .orElseThrow(() -> new MercadoPagoTokenException("Mercado Pago no está configurado para este vendedor"));
+
+        if (!config.isMpEnabled()) {
+            throw new MercadoPagoTokenException("Mercado Pago no está conectado para este vendedor");
+        }
+
+        String token = tokenManager.getValidToken(userId);
+        String safeDesc = (description != null && !description.isBlank()) ? description : "Venta presencial";
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("items", List.of(Map.of(
+            "title", safeDesc,
+            "quantity", 1,
+            "unit_price", amount.doubleValue(),
+            "currency_id", "ARS"
+        )));
+        body.put("external_reference", "qr:" + UUID.randomUUID());
+
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("correlationId", correlationId);
+        metadata.put("userId", userId);
+        metadata.put("type", "QR_PRESENTIAL");
+        body.put("metadata", metadata);
+
+        JsonNode response = apiClient.createPreference(token, body, correlationId);
+
+        log.info("QR preference created userId={} amount={} desc='{}' correlationId={}",
+            userId, amount, safeDesc, correlationId);
+
+        return MercadoPagoPreferenceResponse.builder()
+            .preferenceId(response.path("id").asText())
+            .initPoint(response.path("init_point").asText())
+            .sandboxInitPoint(response.path("sandbox_init_point").asText())
+            .build();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

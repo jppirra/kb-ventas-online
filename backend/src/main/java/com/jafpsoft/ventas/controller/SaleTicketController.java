@@ -153,4 +153,18 @@ public class SaleTicketController {
                                         @AuthenticationPrincipal CustomUserDetails user) {
         return mpPaymentService.resetPaymentAttempt(id, user.getUserId());
     }
+
+    // ── QR de venta presencial ────────────────────────────────────────────────
+
+    @PostMapping("/qr/mercadopago")
+    public MercadoPagoPreferenceResponse generateQrPreference(
+            @RequestBody Map<String, Object> body,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        java.math.BigDecimal amount = new java.math.BigDecimal(
+            body.getOrDefault("amount", "0").toString());
+        String description = (String) body.getOrDefault("description", "Venta presencial");
+        String correlationId = MDC.get("correlationId") != null
+            ? MDC.get("correlationId") : UUID.randomUUID().toString();
+        return mpPaymentService.generateQrPreference(user.getUserId(), amount, description, correlationId);
+    }
 }
