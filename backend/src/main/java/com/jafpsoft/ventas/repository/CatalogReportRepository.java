@@ -8,4 +8,5 @@ import java.util.List;
 public interface CatalogReportRepository extends JpaRepository<CatalogReport, Long> {
     long countByCatalogId(Long catalogId);
     List<CatalogReport> findByCatalogIdOrderByCreatedAtDesc(Long catalogId);
+    void deleteAllByCatalogId(Long catalogId);
 }

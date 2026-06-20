@@ -12,6 +12,7 @@ public class TicketResponse {
     private Long id;
     private String ticketNumber;
     private String customerName;
+    private String customerDni;
     private String customerPhone;
     private String customerEmail;
     private String customerNotes;
@@ -20,7 +21,10 @@ public class TicketResponse {
     private BigDecimal total;
     private String paymentMethod;
     private String status;
+    private String cancellationReason;
     private String notes;
+    private String tipoDoc;
+    private String referenceTicketNumber;
     private List<TicketItemResponse> items;
     private LocalDateTime createdAt;
 
@@ -29,6 +33,7 @@ public class TicketResponse {
         r.id = t.getId();
         r.ticketNumber = t.getTicketNumber();
         r.customerName = t.getCustomerName();
+        r.customerDni = t.getCustomerDni();
         r.customerPhone = t.getCustomerPhone();
         r.customerEmail = t.getCustomerEmail();
         r.customerNotes = t.getCustomerNotes();
@@ -37,7 +42,10 @@ public class TicketResponse {
         r.total = t.getTotal();
         r.paymentMethod = t.getPaymentMethod();
         r.status = t.getStatus();
+        r.cancellationReason = t.getCancellationReason();
         r.notes = t.getNotes();
+        r.tipoDoc = t.getTipoDoc() != null ? t.getTipoDoc() : "COMP";
+        r.referenceTicketNumber = t.getReferenceTicketNumber();
         r.createdAt = t.getCreatedAt();
         r.items = t.getItems().stream()
                 .sorted((a, b) -> Integer.compare(

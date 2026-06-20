@@ -136,6 +136,11 @@ public class AdminService {
         ratingRepository.deleteByUser(user);
     }
 
+    private void purgeCatalogDependencies(Long catalogId) {
+        productRepository.unlinkAllFromCatalog(catalogId);
+        catalogReportRepository.deleteAllByCatalogId(catalogId);
+    }
+
     @Transactional
     public AdminUserResponse updateUserEmail(Long userId, String newEmail) {
         if (newEmail == null || newEmail.isBlank()) throw new IllegalArgumentException("Email inválido");
@@ -285,6 +290,7 @@ public class AdminService {
     public void deleteCatalog(Long catalogId) {
         Catalog catalog = catalogRepository.findById(catalogId)
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
+        purgeCatalogDependencies(catalogId);
         catalogRepository.delete(catalog);
     }
 
@@ -326,6 +332,7 @@ public class AdminService {
         for (Long id : ids) {
             Catalog catalog = catalogRepository.findById(id).orElse(null);
             if (catalog == null) { skipped++; continue; }
+            purgeCatalogDependencies(id);
             catalogRepository.delete(catalog);
             processed++;
         }
@@ -390,6 +397,35 @@ public class AdminService {
         user.setEmailVerified(true);
         user.setEnabled(true);
         return AdminUserResponse.from(userRepository.save(user), 0);
+    }
+
+    @Transactional
+    public AdminUserResponse updateUserProfile(Long userId, com.jafpsoft.ventas.dto.admin.AdminUpdateProfileRequest req) {
+        User user = findUser(userId);
+        if (req.getName() != null && !req.getName().isBlank()) {
+            user.setName(req.getName().trim());
+        }
+        if (req.getSlug() != null) {
+            String slug = req.getSlug().trim().toLowerCase().replaceAll("[^a-z0-9-]", "-").replaceAll("-+", "-").replaceAll("^-|-$", "");
+            if (!slug.isBlank() && !slug.equals(user.getSlug())) {
+                if (userRepository.findBySlug(slug).filter(u -> !u.getId().equals(userId)).isPresent()) {
+                    throw new IllegalStateException("El slug ya está en uso por otro usuario");
+                }
+                user.setSlug(slug);
+            } else if (slug.isBlank()) {
+                user.setSlug(null);
+            }
+        }
+        if (req.getBio() != null) user.setBio(req.getBio().isBlank() ? null : req.getBio().trim());
+        if (req.getWhatsappNumber() != null) user.setWhatsappNumber(req.getWhatsappNumber().isBlank() ? null : req.getWhatsappNumber().trim());
+        if (req.getBrandColorPrimary() != null && req.getBrandColorPrimary().matches("#[0-9a-fA-F]{6}")) {
+            user.setBrandColorPrimary(req.getBrandColorPrimary());
+        }
+        if (req.getBrandColorSecondary() != null && req.getBrandColorSecondary().matches("#[0-9a-fA-F]{6}")) {
+            user.setBrandColorSecondary(req.getBrandColorSecondary());
+        }
+        long catalogCount = catalogRepository.countByUserIdAndActive(userId, true);
+        return AdminUserResponse.from(userRepository.save(user), (int) catalogCount);
     }
 
     private User findUser(Long userId) {

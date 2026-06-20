@@ -16,6 +16,11 @@ public class TicketConfigResponse {
     private String footer;
     private boolean showCatalogQr;
     private Integer nextTicketNumber;
+    private String tipoComprobante;
+    private Integer puntoVenta;
+    private String condicionIva;
+    private String ingresosBrutos;
+    private String inicioActividades;
 
     public static TicketConfigResponse from(TicketConfig c) {
         TicketConfigResponse r = new TicketConfigResponse();
@@ -30,6 +35,11 @@ public class TicketConfigResponse {
         r.footer = c.getFooter();
         r.showCatalogQr = c.isShowCatalogQr();
         r.nextTicketNumber = c.getNextTicketNumber();
+        r.tipoComprobante = c.getTipoComprobante() != null ? c.getTipoComprobante() : "B";
+        r.puntoVenta = c.getPuntoVenta();
+        r.condicionIva = c.getCondicionIva();
+        r.ingresosBrutos = c.getIngresosBrutos();
+        r.inicioActividades = c.getInicioActividades();
         return r;
     }
 }

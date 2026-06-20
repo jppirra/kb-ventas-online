@@ -32,6 +32,7 @@ public class CustomerService {
         Customer customer = Customer.builder()
                 .vendorUserId(vendorUserId)
                 .name(req.getName())
+                .dni(req.getDni())
                 .phone(req.getPhone())
                 .email(req.getEmail())
                 .notes(req.getNotes())
@@ -47,6 +48,7 @@ public class CustomerService {
                 .filter(c -> c.getVendorUserId().equals(vendorUserId))
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado"));
         customer.setName(req.getName());
+        customer.setDni(req.getDni());
         customer.setPhone(req.getPhone());
         customer.setEmail(req.getEmail());
         customer.setNotes(req.getNotes());

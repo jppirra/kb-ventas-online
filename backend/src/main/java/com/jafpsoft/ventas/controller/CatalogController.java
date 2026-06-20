@@ -4,7 +4,10 @@ import com.jafpsoft.ventas.dto.catalog.CatalogRequest;
 import com.jafpsoft.ventas.dto.catalog.CatalogResponse;
 import com.jafpsoft.ventas.dto.catalog.ProductRequest;
 import com.jafpsoft.ventas.dto.catalog.ProductResponse;
+import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.service.CatalogService;
+import com.jafpsoft.ventas.service.ProductService;
+import com.jafpsoft.ventas.service.PublicProfileService;
 import com.jafpsoft.ventas.security.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,8 @@ import java.util.Map;
 public class CatalogController {
 
     private final CatalogService catalogService;
+    private final ProductService productService;
+    private final PublicProfileService publicProfileService;
 
     @GetMapping
     public List<CatalogResponse> list(@AuthenticationPrincipal CustomUserDetails user) {
@@ -53,6 +58,18 @@ public class CatalogController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails user) {
         catalogService.delete(id, getUserId(user));
+    }
+
+    @PostMapping("/from-stock")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CatalogResponse createFromStock(@RequestBody Map<String, Object> body,
+                                           @AuthenticationPrincipal CustomUserDetails user) {
+        String name = (String) body.get("name");
+        @SuppressWarnings("unchecked")
+        List<Long> productIds = ((List<?>) body.get("productIds")).stream()
+                .map(v -> Long.valueOf(v.toString()))
+                .toList();
+        return catalogService.createFromStock(name, productIds, getUserId(user));
     }
 
     @PostMapping("/{id}/products")
@@ -114,6 +131,11 @@ public class CatalogController {
         return catalogService.publish(id, getUserId(user));
     }
 
+    @PostMapping("/{id}/revert")
+    public CatalogResponse revert(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails user) {
+        return catalogService.revertToPublished(id, getUserId(user));
+    }
+
     @PostMapping("/{id}/generate")
     public ResponseEntity<Map<String, String>> generate(@PathVariable Long id,
                                                         @AuthenticationPrincipal CustomUserDetails user) {
@@ -144,6 +166,44 @@ public class CatalogController {
             @RequestParam("file") MultipartFile file,
             @AuthenticationPrincipal CustomUserDetails user) throws IOException {
         return ResponseEntity.ok(catalogService.uploadCatalogBackground(id, file, getUserId(user)));
+    }
+
+    @PostMapping("/{id}/upload-cover")
+    public ResponseEntity<Map<String, String>> uploadCover(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails user) throws IOException {
+        return ResponseEntity.ok(catalogService.uploadCoverImage(id, file, getUserId(user)));
+    }
+
+    @PutMapping("/{id}/products/reorder")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void reorderProducts(@PathVariable Long id,
+                                @RequestBody List<Map<String, Object>> order,
+                                @AuthenticationPrincipal CustomUserDetails user) {
+        catalogService.reorderProducts(id, order, getUserId(user));
+    }
+
+    @PutMapping("/{id}/categories/rename")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void renameCategory(@PathVariable Long id,
+                               @RequestBody Map<String, String> body,
+                               @AuthenticationPrincipal CustomUserDetails user) {
+        catalogService.renameCategory(id, body.get("from"), body.get("to"), getUserId(user));
+    }
+
+    @GetMapping("/{id}/owner-stock")
+    public List<ProductResponse> ownerStock(@PathVariable Long id,
+                                            @AuthenticationPrincipal CustomUserDetails user) {
+        Long ownerId = catalogService.getCatalogOwnerId(id, getUserId(user));
+        return productService.listByUser(ownerId);
+    }
+
+    @GetMapping("/{id}/preview")
+    public PublicCatalogPageResponse previewCatalog(@PathVariable Long id,
+                                                    @AuthenticationPrincipal CustomUserDetails user) {
+        catalogService.checkAccess(id, getUserId(user));
+        return publicProfileService.getCatalogPreviewById(id);
     }
 
     private Long getUserId(CustomUserDetails user) { return user.getUserId(); }

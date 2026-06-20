@@ -18,6 +18,12 @@ public class AdminUserResponse {
     private long profileViewCount;
     private LocalDateTime lastAccessAt;
     private LocalDateTime createdAt;
+    // profile fields
+    private String bio;
+    private String whatsappNumber;
+    private String profileImageUrl;
+    private String brandColorPrimary;
+    private String brandColorSecondary;
 
     public static AdminUserResponse from(User u, int catalogCount) {
         AdminUserResponse r = new AdminUserResponse();
@@ -32,6 +38,11 @@ public class AdminUserResponse {
         r.profileViewCount = u.getProfileViewCount() == null ? 0L : u.getProfileViewCount();
         r.lastAccessAt = u.getLastAccessAt();
         r.createdAt = u.getCreatedAt();
+        r.bio = u.getBio();
+        r.whatsappNumber = u.getWhatsappNumber();
+        r.profileImageUrl = u.getProfileImageUrl();
+        r.brandColorPrimary = u.getBrandColorPrimary();
+        r.brandColorSecondary = u.getBrandColorSecondary();
         return r;
     }
 }

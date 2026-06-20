@@ -79,7 +79,7 @@ export default function CatalogsPage() {
   const [catalogs, setCatalogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
-  const [form, setForm] = useState({ name: '', description: '', rubro: '' })
+  const [form, setForm] = useState({ name: '', description: '', rubro: '', discount: '' })
   const [showForm, setShowForm] = useState(false)
   const [qrCatalog, setQrCatalog] = useState(null)
 
@@ -103,7 +103,8 @@ export default function CatalogsPage() {
     if (!form.name.trim()) return
     setCreating(true)
     try {
-      const { data } = await catalogsApi.create(form)
+      const payload = { ...form, discount: form.discount !== '' ? parseInt(form.discount) : null }
+      const { data } = await catalogsApi.create(payload)
       toast.success('Catálogo creado')
       navigate(`/catalogs/${data.id}`)
     } catch {
@@ -164,6 +165,19 @@ export default function CatalogsPage() {
               </select>
             </div>
             <div>
+              <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1">Descuento general (%)</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number" min="0" max="100" step="1"
+                  value={form.discount}
+                  onChange={e => setForm(f => ({ ...f, discount: e.target.value }))}
+                  placeholder="0"
+                  className="w-28 px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                />
+                <span className="text-xs text-gray-500 dark:text-slate-400">Se aplica a todos los productos del catálogo. Por producto podés usar precio oferta.</span>
+              </div>
+            </div>
+            <div>
               <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1">Descripción</label>
               <textarea
                 value={form.description}
@@ -213,6 +227,9 @@ export default function CatalogsPage() {
                     {(() => { const b = publishBadge(catalog); return <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${b.cls}`}>{b.label}</span> })()}
                     {catalog.status === 'GENERATING' && (
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-400">Generando IA...</span>
+                    )}
+                    {catalog.collaboratorCanPublish !== null && catalog.collaboratorCanPublish !== undefined && (
+                      <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-purple-50 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400">Colaborador</span>
                     )}
                     {catalog.rubro && getRubro(catalog.rubro) && (
                       <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400">

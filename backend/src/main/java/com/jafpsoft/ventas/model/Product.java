@@ -89,6 +89,9 @@ public class Product {
     @Column(name = "product_colors", columnDefinition = "TEXT")
     private String productColors;
 
+    @Column(name = "stock_matrix", columnDefinition = "TEXT")
+    private String stockMatrix;
+
     @CreationTimestamp
     private LocalDateTime createdAt;
 

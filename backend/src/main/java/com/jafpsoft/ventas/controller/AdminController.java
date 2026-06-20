@@ -1,6 +1,8 @@
 package com.jafpsoft.ventas.controller;
 
 import com.jafpsoft.ventas.dto.admin.*;
+import com.jafpsoft.ventas.dto.rubro.RubroRequest;
+import com.jafpsoft.ventas.dto.rubro.RubroResponse;
 import com.jafpsoft.ventas.model.EmailLog;
 import com.jafpsoft.ventas.repository.EmailLogRepository;
 import com.jafpsoft.ventas.security.CustomUserDetails;
@@ -8,6 +10,9 @@ import com.jafpsoft.ventas.service.AdminService;
 import com.jafpsoft.ventas.service.AiService;
 import com.jafpsoft.ventas.service.AppSettingService;
 import com.jafpsoft.ventas.service.EmailService;
+import com.jafpsoft.ventas.service.ProfileService;
+import com.jafpsoft.ventas.service.RubroService;
+import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,6 +39,8 @@ public class AdminController {
     private final AppSettingService appSettingService;
     private final EmailService emailService;
     private final EmailLogRepository emailLogRepository;
+    private final RubroService rubroService;
+    private final ProfileService profileService;
 
     @Value("${gemini.api-key:}")
     private String geminiApiKey;
@@ -77,6 +84,25 @@ public class AdminController {
     @PatchMapping("/users/{id}/email")
     public AdminUserResponse updateUserEmail(@PathVariable Long id, @RequestBody Map<String, String> body) {
         return adminService.updateUserEmail(id, body.get("email"));
+    }
+
+    @PatchMapping("/users/{id}/profile")
+    public AdminUserResponse updateUserProfile(@PathVariable Long id, @RequestBody AdminUpdateProfileRequest req) {
+        return adminService.updateUserProfile(id, req);
+    }
+
+    @PostMapping("/users/{id}/upload-avatar")
+    public ResponseEntity<Map<String, String>> uploadAvatar(@PathVariable Long id,
+                                                             @RequestParam("file") MultipartFile file) throws java.io.IOException {
+        String url = profileService.uploadAvatar(id, file);
+        return ResponseEntity.ok(Map.of("profileImageUrl", url));
+    }
+
+    @PostMapping("/users/{id}/upload-banner")
+    public ResponseEntity<Map<String, String>> uploadBanner(@PathVariable Long id,
+                                                             @RequestParam("file") MultipartFile file) throws java.io.IOException {
+        String url = profileService.uploadBanner(id, file);
+        return ResponseEntity.ok(Map.of("bannerImageUrl", url));
     }
 
     @PostMapping("/users/{id}/reset-password")
@@ -340,5 +366,28 @@ public class AdminController {
             }
         });
         return ResponseEntity.ok(Map.of("message", "Configuración guardada"));
+    }
+
+    // ── Rubros ────────────────────────────────────────────────────────────────
+    @GetMapping("/rubros")
+    public List<RubroResponse> listRubros() {
+        return rubroService.listAll();
+    }
+
+    @PostMapping("/rubros")
+    @ResponseStatus(HttpStatus.CREATED)
+    public RubroResponse createRubro(@RequestBody RubroRequest req) {
+        return rubroService.create(req);
+    }
+
+    @PutMapping("/rubros/{id}")
+    public RubroResponse updateRubro(@PathVariable Long id, @RequestBody RubroRequest req) {
+        return rubroService.update(id, req);
+    }
+
+    @DeleteMapping("/rubros/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteRubro(@PathVariable Long id) {
+        rubroService.delete(id);
     }
 }

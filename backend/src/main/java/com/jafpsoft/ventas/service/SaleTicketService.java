@@ -9,11 +9,15 @@ import com.jafpsoft.ventas.repository.SaleTicketRepository;
 import com.jafpsoft.ventas.repository.TicketConfigRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
@@ -23,6 +27,7 @@ public class SaleTicketService {
     private final SaleTicketRepository ticketRepository;
     private final TicketConfigRepository configRepository;
     private final ProductRepository productRepository;
+    private final EmailService emailService;
 
     // ── Tickets ───────────────────────────────────────────────────────────────
 
@@ -39,19 +44,47 @@ public class SaleTicketService {
 
     @Transactional
     public TicketResponse create(TicketRequest req, Long userId) {
-        TicketConfig config = configRepository.findById(userId).orElse(null);
-        int ticketNum = 1;
-        if (config != null) {
+        // Lock the row so concurrent requests can't take the same number.
+        // If no config exists yet, create one inside the transaction before anyone else can.
+        TicketConfig config = configRepository.findByIdForUpdate(userId)
+                .orElseGet(() -> configRepository.save(TicketConfig.builder().userId(userId).build()));
+        String tipoDoc = req.getTipoDoc() != null ? req.getTipoDoc() : "COMP";
+        String tipoLetra = config.getTipoComprobante() != null ? config.getTipoComprobante() : "B";
+
+        int ticketNum;
+        if ("NC".equals(tipoDoc)) {
+            ticketNum = config.getNextNcNumber() != null ? config.getNextNcNumber() : 1;
+            config.setNextNcNumber(ticketNum + 1);
+        } else if ("ND".equals(tipoDoc)) {
+            ticketNum = config.getNextNdNumber() != null ? config.getNextNdNumber() : 1;
+            config.setNextNdNumber(ticketNum + 1);
+        } else {
             ticketNum = config.getNextTicketNumber();
             config.setNextTicketNumber(ticketNum + 1);
-            configRepository.save(config);
         }
-        String ticketNumber = String.format("T-%04d", ticketNum);
+        configRepository.save(config);
+
+        String prefix;
+        if ("NC".equals(tipoDoc)) {
+            prefix = "NC " + tipoLetra;
+        } else if ("ND".equals(tipoDoc)) {
+            prefix = "ND " + tipoLetra;
+        } else {
+            prefix = tipoLetra;
+        }
+        String ticketNumber = config.getPuntoVenta() != null
+                ? String.format("%s %04d-%08d", prefix, config.getPuntoVenta(), ticketNum)
+                : ("NC".equals(tipoDoc) || "ND".equals(tipoDoc))
+                    ? String.format("%s-%04d", tipoDoc, ticketNum)
+                    : String.format("T-%04d", ticketNum);
 
         SaleTicket ticket = SaleTicket.builder()
                 .userId(userId)
                 .ticketNumber(ticketNumber)
+                .tipoDoc(tipoDoc)
+                .referenceTicketNumber(req.getReferenceTicketNumber())
                 .customerName(req.getCustomerName())
+                .customerDni(req.getCustomerDni())
                 .customerPhone(req.getCustomerPhone())
                 .customerEmail(req.getCustomerEmail())
                 .customerNotes(req.getCustomerNotes())
@@ -89,7 +122,8 @@ public class SaleTicketService {
         ticket.setTotal(subtotal.subtract(discount).max(BigDecimal.ZERO));
 
         SaleTicket saved = ticketRepository.save(ticket);
-        adjustStock(saved.getItems(), -1, userId);
+        // NC devuelve stock; ND y COMP descuentan stock
+        adjustStock(saved.getItems(), "NC".equals(tipoDoc) ? 1 : -1, userId);
         return TicketResponse.from(saved);
     }
 
@@ -105,6 +139,28 @@ public class SaleTicketService {
             adjustStock(saved.getItems(), -1, userId);
         }
         return TicketResponse.from(saved);
+    }
+
+    @Transactional
+    public TicketResponse cancel(Long id, Long userId, String reason) {
+        SaleTicket ticket = findOwned(id, userId);
+        if ("CANCELLED".equals(ticket.getStatus())) return TicketResponse.from(ticket);
+        ticket.setStatus("CANCELLED");
+        ticket.setCancellationReason(reason != null ? reason.trim() : null);
+        SaleTicket saved = ticketRepository.save(ticket);
+        adjustStock(saved.getItems(), 1, userId);
+        return TicketResponse.from(saved);
+    }
+
+    @Transactional
+    public TicketResponse updateCustomer(Long id, Long userId, Map<String, String> data) {
+        SaleTicket ticket = findOwned(id, userId);
+        if (data.containsKey("customerName"))  ticket.setCustomerName(data.get("customerName"));
+        if (data.containsKey("customerDni"))   ticket.setCustomerDni(data.get("customerDni"));
+        if (data.containsKey("customerPhone")) ticket.setCustomerPhone(data.get("customerPhone"));
+        if (data.containsKey("customerEmail")) ticket.setCustomerEmail(data.get("customerEmail"));
+        if (data.containsKey("customerNotes")) ticket.setCustomerNotes(data.get("customerNotes"));
+        return TicketResponse.from(ticketRepository.save(ticket));
     }
 
     @Transactional
@@ -139,7 +195,69 @@ public class SaleTicketService {
         if (req.getPaymentMethods() != null) config.setPaymentMethods(req.getPaymentMethods());
         if (req.getFooter() != null) config.setFooter(req.getFooter());
         if (req.getShowCatalogQr() != null) config.setShowCatalogQr(req.getShowCatalogQr());
+        if (req.getTipoComprobante() != null) config.setTipoComprobante(req.getTipoComprobante());
+        config.setPuntoVenta(req.getPuntoVenta());
+        if (req.getCondicionIva() != null) config.setCondicionIva(req.getCondicionIva());
+        if (req.getIngresosBrutos() != null) config.setIngresosBrutos(req.getIngresosBrutos());
+        if (req.getInicioActividades() != null) config.setInicioActividades(req.getInicioActividades());
         return TicketConfigResponse.from(configRepository.save(config));
+    }
+
+    // ── Email ─────────────────────────────────────────────────────────────────
+
+    public void sendTicketEmail(Long id, Long userId) {
+        SaleTicket ticket = findOwned(id, userId);
+        if (ticket.getCustomerEmail() == null || ticket.getCustomerEmail().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El comprobante no tiene email de comprador");
+        }
+        TicketConfig config = configRepository.findById(userId)
+                .orElse(TicketConfig.builder().userId(userId).build());
+        String biz = config.getBusinessName() != null ? config.getBusinessName() : "Tu negocio";
+        String cur = config.getCurrency() != null ? config.getCurrency() : "$";
+        String subject = "Comprobante de tu compra - " + biz;
+        String body = buildEmailHtml(ticket, biz, cur, config.getFooter());
+        emailService.sendAdminEmail(ticket.getCustomerEmail(), subject, body);
+    }
+
+    private String buildEmailHtml(SaleTicket ticket, String biz, String cur, String footer) {
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+        String fecha = ticket.getCreatedAt() != null ? ticket.getCreatedAt().format(fmt) : "";
+        StringBuilder rows = new StringBuilder();
+        for (SaleTicketItem it : ticket.getItems()) {
+            double sub = it.getUnitPrice().doubleValue() * it.getQuantity();
+            rows.append(String.format(
+                "<tr><td style='padding:8px 0;border-bottom:1px solid #f3f4f6;'>%s%s</td>" +
+                "<td style='padding:8px 0;text-align:center;border-bottom:1px solid #f3f4f6;'>%d</td>" +
+                "<td style='padding:8px 0;text-align:right;border-bottom:1px solid #f3f4f6;'>%s%.2f</td>" +
+                "<td style='padding:8px 0;text-align:right;border-bottom:1px solid #f3f4f6;font-weight:600;'>%s%.2f</td></tr>",
+                it.getProductName(), it.getSize() != null ? " (" + it.getSize() + ")" : "",
+                it.getQuantity(), cur, it.getUnitPrice().doubleValue(), cur, sub));
+        }
+        double disc = ticket.getDiscount() != null ? ticket.getDiscount().doubleValue() : 0;
+        String discRow = disc > 0 ? String.format("<tr><td colspan='3' style='padding:6px 0;text-align:right;color:#6b7280;'>Descuento</td><td style='padding:6px 0;text-align:right;color:#6b7280;'>-%s%.2f</td></tr>", cur, disc) : "";
+        String footerHtml = (footer != null && !footer.isBlank()) ? "<p style='color:#9ca3af;font-size:12px;text-align:center;margin-top:24px;'>" + footer + "</p>" : "";
+        return "<!DOCTYPE html><html><body style='margin:0;padding:0;background:#f9fafb;font-family:system-ui,-apple-system,sans-serif;'>" +
+            "<div style='max-width:560px;margin:32px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,.06);'>" +
+            "<div style='background:#1d4ed8;padding:24px 32px;'>" +
+            "<p style='color:#bfdbfe;font-size:13px;margin:0 0 4px;'>" + biz + "</p>" +
+            "<h1 style='color:#fff;font-size:20px;margin:0;'>Comprobante de compra</h1></div>" +
+            "<div style='padding:24px 32px;'>" +
+            "<div style='display:flex;justify-content:space-between;margin-bottom:16px;font-size:14px;color:#6b7280;'>" +
+            "<span><b style='color:#111827;font-family:monospace;'>" + ticket.getTicketNumber() + "</b></span>" +
+            "<span>" + fecha + "</span></div>" +
+            (ticket.getCustomerName() != null ? "<p style='font-size:14px;color:#374151;margin:0 0 16px;'>Para: <b>" + ticket.getCustomerName() + "</b></p>" : "") +
+            "<table width='100%' cellpadding='0' cellspacing='0' style='font-size:14px;'>" +
+            "<thead><tr style='font-size:12px;color:#9ca3af;'><th align='left' style='padding-bottom:8px;border-bottom:1px solid #e5e7eb;'>Producto</th>" +
+            "<th style='padding-bottom:8px;border-bottom:1px solid #e5e7eb;'>Cant.</th>" +
+            "<th align='right' style='padding-bottom:8px;border-bottom:1px solid #e5e7eb;'>Precio</th>" +
+            "<th align='right' style='padding-bottom:8px;border-bottom:1px solid #e5e7eb;'>Subtotal</th></tr></thead>" +
+            "<tbody>" + rows + "</tbody>" +
+            "<tfoot>" + discRow +
+            "<tr><td colspan='3' style='padding-top:12px;text-align:right;font-weight:600;color:#111827;'>Total</td>" +
+            "<td style='padding-top:12px;text-align:right;font-weight:700;font-size:18px;color:#1d4ed8;'>" + cur + String.format("%.2f", ticket.getTotal().doubleValue()) + "</td></tr>" +
+            (ticket.getPaymentMethod() != null ? "<tr><td colspan='4' style='padding-top:8px;font-size:12px;color:#6b7280;'>Forma de pago: " + ticket.getPaymentMethod() + "</td></tr>" : "") +
+            "</tfoot></table>" +
+            footerHtml + "</div></div></body></html>";
     }
 
     // ── Stock ─────────────────────────────────────────────────────────────────

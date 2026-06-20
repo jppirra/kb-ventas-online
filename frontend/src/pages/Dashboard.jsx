@@ -59,10 +59,15 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [month, setMonth] = useState(currentMonth)
   const [stats, setStats] = useState(null)
+  const [topProducts, setTopProducts] = useState(null)
 
   useEffect(() => {
     dashboardApi.getStats(month).then(r => setStats(r.data)).catch(() => {})
   }, [month])
+
+  useEffect(() => {
+    dashboardApi.getTopProducts().then(r => setTopProducts(r.data)).catch(() => {})
+  }, [])
 
   return (
     <Layout>
@@ -140,7 +145,7 @@ export default function Dashboard() {
                 value={fmt(stats.totalCustomers)}
                 sub="únicos del período"
                 color="text-pink-600 dark:text-pink-400"
-                onClick={() => navigate('/clientes')}
+                onClick={() => navigate('/customers')}
               />
             </div>
           </>
@@ -190,7 +195,7 @@ export default function Dashboard() {
             hoverColor="hover:border-pink-400 dark:hover:border-pink-500"
             bgColor="bg-pink-100 dark:bg-pink-900/40"
             icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-pink-600 dark:text-pink-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>}
-            onClick={() => navigate('/clientes')}
+            onClick={() => navigate('/customers')}
           />
           <NavCard
             label="Mi perfil público"
@@ -202,6 +207,40 @@ export default function Dashboard() {
             onClick={() => navigate('/profile')}
           />
         </div>
+
+        {/* Top / Least sold products */}
+        {topProducts && (topProducts.top.length > 0 || topProducts.least.length > 0) && (
+          <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {topProducts.top.length > 0 && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Más vendidos</h2>
+                <ol className="space-y-2">
+                  {topProducts.top.map((p, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <span className="w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                      <span className="flex-1 text-sm text-gray-700 dark:text-slate-300 truncate">{p.name}</span>
+                      <span className="text-sm font-semibold text-green-600 dark:text-green-400 shrink-0">{p.totalSold} u.</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+            {topProducts.least.length > 0 && (
+              <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-5">
+                <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-4">Menos vendidos</h2>
+                <ol className="space-y-2">
+                  {topProducts.least.map((p, i) => (
+                    <li key={i} className="flex items-center gap-3">
+                      <span className="w-5 h-5 rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 text-xs font-bold flex items-center justify-center shrink-0">{i + 1}</span>
+                      <span className="flex-1 text-sm text-gray-700 dark:text-slate-300 truncate">{p.name}</span>
+                      <span className="text-sm font-semibold text-orange-500 dark:text-orange-400 shrink-0">{p.totalSold} u.</span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </Layout>
   )

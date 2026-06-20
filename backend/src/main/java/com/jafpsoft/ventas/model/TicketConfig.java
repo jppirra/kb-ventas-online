@@ -51,6 +51,31 @@ public class TicketConfig {
     @Builder.Default
     private Integer nextTicketNumber = 1;
 
+    @Column(name = "next_nc_number")
+    @Builder.Default
+    private Integer nextNcNumber = 1;
+
+    @Column(name = "next_nd_number")
+    @Builder.Default
+    private Integer nextNdNumber = 1;
+
+    // ── Facturación electrónica Argentina (AFIP) ─────────────────────────────
+    @Column(name = "tipo_comprobante", length = 2)
+    @Builder.Default
+    private String tipoComprobante = "B";
+
+    @Column(name = "punto_venta")
+    private Integer puntoVenta;
+
+    @Column(name = "condicion_iva", length = 60)
+    private String condicionIva;
+
+    @Column(name = "ingresos_brutos", length = 30)
+    private String ingresosBrutos;
+
+    @Column(name = "inicio_actividades", length = 20)
+    private String inicioActividades;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

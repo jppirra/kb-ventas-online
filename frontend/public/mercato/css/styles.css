@@ -277,6 +277,88 @@ nav a:hover { color: var(--primary); }
   line-height: 1.65;
 }
 
+/* ── Explorer banner ─────────────────────────────────────── */
+.explorer-banner {
+  padding: 72px 6%;
+  background: linear-gradient(135deg, #0f4c75 0%, #1b6ca8 50%, #0891b2 100%);
+}
+
+.dark .explorer-banner {
+  background: linear-gradient(135deg, #0c2d4a 0%, #0f3d6e 50%, #065f78 100%);
+}
+
+.explorer-inner {
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+.explorer-icon {
+  flex-shrink: 0;
+  width: 72px;
+  height: 72px;
+  background: rgba(255,255,255,.15);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.explorer-text {
+  flex: 1;
+  min-width: 220px;
+}
+
+.explorer-text h2 {
+  font-family: Outfit, sans-serif;
+  font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  line-height: 1.25;
+}
+
+.explorer-text p {
+  color: rgba(255,255,255,.75);
+  font-size: .95rem;
+  line-height: 1.5;
+}
+
+.btn-explorer {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 15px 28px;
+  background: #fff;
+  color: #0f4c75;
+  font-weight: 700;
+  font-size: .95rem;
+  border-radius: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 4px 20px rgba(0,0,0,.2);
+}
+
+.btn-explorer:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.28);
+}
+
+@media (max-width: 900px) {
+  .explorer-inner {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  .btn-explorer { white-space: normal; text-align: center; }
+}
+
 /* ── Dashboard preview ───────────────────────────────────── */
 .dashboard-preview {
   padding: 80px 6%;

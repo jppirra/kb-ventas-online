@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { publicApi } from '../api/profile'
+import { catalogsApi } from '../api/catalogs'
 import { reportsApi } from '../api/reports'
 import { useAuth } from '../context/AuthContext'
 import ImageModal from '../components/ImageModal'
@@ -57,12 +58,24 @@ const STOCK_COLORS = {
   ON_DEMAND: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
 }
 
-function StockBadge({ stockStatus, stockCount }) {
-  if (!stockStatus) return null
+function calcStockTotal(product) {
+  if (product.stockMatrix) {
+    try {
+      const m = JSON.parse(product.stockMatrix)
+      return Object.values(m).reduce((sum, v) =>
+        sum + (typeof v === 'number' ? v : Object.values(v).reduce((s, n) => s + n, 0)), 0)
+    } catch { return null }
+  }
+  return product.stockCount ?? null
+}
+
+function StockBadge({ product }) {
+  if (!product?.showStock || !product?.stockStatus) return null
+  const count = calcStockTotal(product)
   return (
-    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${STOCK_COLORS[stockStatus] || 'bg-gray-100 text-gray-600'}`}>
-      {STOCK_LABELS[stockStatus] || stockStatus}
-      {stockCount != null && <span>({stockCount})</span>}
+    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${STOCK_COLORS[product.stockStatus] || 'bg-gray-100 text-gray-600'}`}>
+      {STOCK_LABELS[product.stockStatus] || product.stockStatus}
+      {count != null && <span>({count})</span>}
     </span>
   )
 }
@@ -151,7 +164,7 @@ function LightboxModal({ items, startIndex, productName, onClose }) {
   const item = items[current]
 
   return (
-    <div className="fixed inset-0 bg-black/95 z-50 flex flex-col" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/95 z-[70] flex flex-col" onClick={onClose}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 shrink-0" onClick={e => e.stopPropagation()}>
         <span className="text-white font-medium text-sm truncate">{productName}</span>
@@ -274,6 +287,22 @@ function parseJsonArray(json) {
   try { return JSON.parse(json) || [] } catch { return [] }
 }
 
+function parseSizeColorMap(json) {
+  try {
+    const p = JSON.parse(json)
+    if (p && !Array.isArray(p) && typeof p === 'object') return p
+    return null
+  } catch { return null }
+}
+
+function effectiveOffer(product, catalogDiscount) {
+  const base = Number(product.price)
+  const catalogOffer = catalogDiscount > 0 ? base * (1 - catalogDiscount / 100) : null
+  const prodOffer = product.offerPrice != null ? Number(product.offerPrice) : null
+  if (catalogOffer && prodOffer) return Math.min(catalogOffer, prodOffer)
+  return prodOffer ?? catalogOffer
+}
+
 function OptionChips({ label, options, selected, onSelect }) {
   if (!options.length) return null
   return (
@@ -325,19 +354,25 @@ function AddToCartButton({ inCart, onAdd, onRemove, hasVariants, variantSelected
   )
 }
 
-function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, rubroInfo }) {
+function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, onOpenDetail, rubroInfo, catalogDiscount = 0 }) {
   const galleryItems = getGalleryItems(product)
   const hasGallery = galleryItems.length > 1
   const variants = parseVariants(product.variantsJson)
   const sizes = parseJsonArray(product.productSizes)
-  const colors = parseJsonArray(product.productColors)
+  const sizeColorMap = parseSizeColorMap(product.productColors)
+  const flatColors = sizeColorMap ? [] : parseJsonArray(product.productColors)
   const sizeKey = rubroInfo?.atributo || 'Talle'
+  const selectedSize = selectedVariants?.[sizeKey] || null
+  const availableColors = sizeColorMap
+    ? (selectedSize ? (sizeColorMap[selectedSize] || []) : [])
+    : flatColors
+  const needsColor = sizeColorMap ? (selectedSize ? availableColors.length > 0 : false) : flatColors.length > 0
   const hasRequiredSelections = (
     (variants.length === 0 || variants.every(v => selectedVariants?.[v.name])) &&
-    (sizes.length === 0 || !!selectedVariants?.[sizeKey]) &&
-    (colors.length === 0 || !!selectedVariants?.['Color'])
+    (sizes.length === 0 || !!selectedSize) &&
+    (!needsColor || !!selectedVariants?.['Color'])
   )
-  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || colors.length > 0
+  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || flatColors.length > 0 || (sizeColorMap && Object.keys(sizeColorMap).length > 0)
 
   function handleWhatsapp() {
     track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
@@ -377,24 +412,39 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
       <div className="p-4 flex flex-col flex-1 gap-2">
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-semibold text-gray-900 dark:text-white text-sm leading-tight">{product.name}</h4>
-          <PriceDisplay price={product.price} offerPrice={product.offerPrice} />
+          <PriceDisplay price={product.price} offerPrice={effectiveOffer(product, catalogDiscount)} />
         </div>
         {product.category && (
           <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full self-start">{product.category}</span>
         )}
-        {product.aiDescription ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.aiDescription}</p>
-        ) : product.description ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.description}</p>
-        ) : null}
-        {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
+        {(product.aiDescription || product.description) && (
+          <div>
+            <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed line-clamp-3 whitespace-pre-line">
+              {product.aiDescription || product.description}
+            </p>
+            <button onClick={() => onOpenDetail(product)}
+              className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium mt-0.5 print:hidden">
+              ver más
+            </button>
+          </div>
+        )}
+        {product.showStock && <StockBadge product={product} />}
         {variants.length > 0 && (
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
         )}
         <OptionChips label={sizeKey} options={sizes} selected={selectedVariants?.[sizeKey]}
-          onSelect={v => onVariantChange({ ...(selectedVariants || {}), [sizeKey]: v })} />
-        <OptionChips label="Color" options={colors} selected={selectedVariants?.['Color']}
-          onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+          onSelect={v => {
+            const next = { ...(selectedVariants || {}), [sizeKey]: v }
+            delete next['Color']
+            onVariantChange(next)
+          }} />
+        {availableColors.length > 0 && (
+          <OptionChips label="Color" options={availableColors} selected={selectedVariants?.['Color']}
+            onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+        )}
+        {sizeColorMap && selectedSize && availableColors.length === 0 && (
+          <p className="text-xs text-gray-400 dark:text-slate-500 italic">Sin colores para este talle.</p>
+        )}
         <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove}
           hasVariants={hasAnyRequired} variantSelected={hasRequiredSelections} />
         {vendorWhatsapp && (
@@ -409,19 +459,25 @@ function ProductCardGrid({ product, catalogName, vendorWhatsapp, inCart, selecte
   )
 }
 
-function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, rubroInfo }) {
+function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onOpenGallery, onOpenDetail, rubroInfo, catalogDiscount = 0 }) {
   const galleryItems = getGalleryItems(product)
   const hasGallery = galleryItems.length > 1
   const variants = parseVariants(product.variantsJson)
   const sizes = parseJsonArray(product.productSizes)
-  const colors = parseJsonArray(product.productColors)
+  const sizeColorMap = parseSizeColorMap(product.productColors)
+  const flatColors = sizeColorMap ? [] : parseJsonArray(product.productColors)
   const sizeKey = rubroInfo?.atributo || 'Talle'
+  const selectedSize = selectedVariants?.[sizeKey] || null
+  const availableColors = sizeColorMap
+    ? (selectedSize ? (sizeColorMap[selectedSize] || []) : [])
+    : flatColors
+  const needsColor = sizeColorMap ? (selectedSize ? availableColors.length > 0 : false) : flatColors.length > 0
   const hasRequiredSelections = (
     (variants.length === 0 || variants.every(v => selectedVariants?.[v.name])) &&
-    (sizes.length === 0 || !!selectedVariants?.[sizeKey]) &&
-    (colors.length === 0 || !!selectedVariants?.['Color'])
+    (sizes.length === 0 || !!selectedSize) &&
+    (!needsColor || !!selectedVariants?.['Color'])
   )
-  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || colors.length > 0
+  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || flatColors.length > 0 || (sizeColorMap && Object.keys(sizeColorMap).length > 0)
 
   function handleWhatsapp() {
     track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
@@ -459,25 +515,37 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
       <div className="p-4 flex flex-col flex-1 gap-1.5">
         <div className="flex items-start justify-between gap-2">
           <h4 className="font-semibold text-gray-900 dark:text-white text-base leading-tight">{product.name}</h4>
-          <PriceDisplay price={product.price} offerPrice={product.offerPrice} size="base" />
+          <PriceDisplay price={product.price} offerPrice={effectiveOffer(product, catalogDiscount)} size="base" />
         </div>
         {product.sku && <p className="text-xs text-gray-400">SKU: {product.sku}</p>}
         {product.category && (
           <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full self-start">{product.category}</span>
         )}
-        {product.aiDescription ? (
-          <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{product.aiDescription}</p>
-        ) : product.description ? (
-          <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed">{product.description}</p>
-        ) : null}
-        {product.showStock && <StockBadge stockStatus={product.stockStatus} stockCount={product.stockCount} />}
+        {(product.aiDescription || product.description) && (
+          <div>
+            <p className="text-sm text-gray-500 dark:text-slate-400 leading-relaxed line-clamp-3 whitespace-pre-line">
+              {product.aiDescription || product.description}
+            </p>
+            <button onClick={() => onOpenDetail(product)}
+              className="text-xs text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium mt-0.5 print:hidden">
+              ver más
+            </button>
+          </div>
+        )}
+        {product.showStock && <StockBadge product={product} />}
         {variants.length > 0 && (
           <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
         )}
         <OptionChips label={sizeKey} options={sizes} selected={selectedVariants?.[sizeKey]}
-          onSelect={v => onVariantChange({ ...(selectedVariants || {}), [sizeKey]: v })} />
-        <OptionChips label="Color" options={colors} selected={selectedVariants?.['Color']}
-          onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+          onSelect={v => {
+            const next = { ...(selectedVariants || {}), [sizeKey]: v }
+            delete next['Color']
+            onVariantChange(next)
+          }} />
+        {availableColors.length > 0 && (
+          <OptionChips label="Color" options={availableColors} selected={selectedVariants?.['Color']}
+            onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+        )}
         <div className="flex items-center gap-2 mt-auto pt-2 flex-wrap print:hidden">
           <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove}
             hasVariants={hasAnyRequired} variantSelected={hasRequiredSelections} />
@@ -488,6 +556,187 @@ function ProductCardList({ product, catalogName, vendorWhatsapp, inCart, selecte
               Consultar
             </button>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ProductDetailModal({ product, catalogName, vendorWhatsapp, inCart, selectedVariants, onVariantChange, onAdd, onRemove, onClose, rubroInfo, catalogDiscount = 0, onOpenLightbox }) {
+  const [currentImg, setCurrentImg] = useState(0)
+  const galleryItems = getGalleryItems(product)
+  const item = galleryItems[currentImg] || null
+
+  const variants = parseVariants(product.variantsJson)
+  const sizes = parseJsonArray(product.productSizes)
+  const sizeColorMap = parseSizeColorMap(product.productColors)
+  const flatColors = sizeColorMap ? [] : parseJsonArray(product.productColors)
+  const sizeKey = rubroInfo?.atributo || 'Talle'
+  const selectedSize = selectedVariants?.[sizeKey] || null
+  const availableColors = sizeColorMap
+    ? (selectedSize ? (sizeColorMap[selectedSize] || []) : [])
+    : flatColors
+  const needsColor = sizeColorMap ? (selectedSize ? availableColors.length > 0 : false) : flatColors.length > 0
+  const hasRequiredSelections = (
+    (variants.length === 0 || variants.every(v => selectedVariants?.[v.name])) &&
+    (sizes.length === 0 || !!selectedSize) &&
+    (!needsColor || !!selectedVariants?.['Color'])
+  )
+  const hasAnyRequired = variants.length > 0 || sizes.length > 0 || flatColors.length > 0 || (sizeColorMap && Object.keys(sizeColorMap).length > 0)
+  const description = product.aiDescription || product.description
+
+  useEffect(() => {
+    function onKey(e) {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowLeft' && currentImg > 0) setCurrentImg(c => c - 1)
+      if (e.key === 'ArrowRight' && currentImg < galleryItems.length - 1) setCurrentImg(c => c + 1)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose, currentImg, galleryItems.length])
+
+  function handleWhatsapp() {
+    track('PRODUCT_WHATSAPP', { metadata: JSON.stringify({ product: product.name }) })
+    const extras = []
+    if (selectedVariants?.[sizeKey]) extras.push(`${sizeKey}: ${selectedVariants[sizeKey]}`)
+    if (selectedVariants?.['Color']) extras.push(`Color: ${selectedVariants['Color']}`)
+    const extraStr = extras.length ? ` (${extras.join(', ')})` : ''
+    const msg = encodeURIComponent(`Hola, vi el producto "${product.name}"${extraStr} en el catálogo "${catalogName}" y me interesa.`)
+    window.open(`https://wa.me/${vendorWhatsapp}?text=${msg}`, '_blank')
+  }
+
+  return (
+    <div className="fixed inset-0 z-[55] bg-black/75 flex items-center justify-center p-2 sm:p-4" onClick={onClose}>
+      <div className="bg-white dark:bg-slate-900 rounded-2xl overflow-hidden w-full max-w-4xl max-h-[92vh] flex flex-col md:flex-row relative" onClick={e => e.stopPropagation()}>
+        {/* Close */}
+        <button onClick={onClose}
+          className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        {/* LEFT: carousel */}
+        <div className="md:w-[52%] bg-black flex flex-col shrink-0">
+          <div className="relative flex items-center justify-center aspect-square md:aspect-auto md:flex-1 md:min-h-0 overflow-hidden">
+            {item?.type === 'image' && (
+              <img src={item.url} alt={product.name}
+                className="w-full h-full object-contain cursor-zoom-in"
+                onClick={() => onOpenLightbox(galleryItems, currentImg)} />
+            )}
+            {item?.type === 'youtube' && (
+              <div className="w-full aspect-video">
+                <iframe src={`https://www.youtube.com/embed/${getYouTubeId(item.url)}`}
+                  title={product.name}
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen className="w-full h-full" />
+              </div>
+            )}
+            {item?.type === 'video' && (
+              <video src={item.url} controls className="w-full h-full object-contain">
+                Tu navegador no soporta video.
+              </video>
+            )}
+            {!item && (
+              <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-slate-800 min-h-[200px]">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-300 dark:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+            )}
+            {currentImg > 0 && (
+              <button onClick={e => { e.stopPropagation(); setCurrentImg(c => c - 1) }}
+                className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+            {currentImg < galleryItems.length - 1 && (
+              <button onClick={e => { e.stopPropagation(); setCurrentImg(c => c + 1) }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+            {item?.type === 'image' && galleryItems.length > 0 && (
+              <div className="absolute bottom-2 right-2 bg-black/40 text-white text-xs px-2 py-0.5 rounded-lg flex items-center gap-1 pointer-events-none">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                </svg>
+                Zoom
+              </div>
+            )}
+            {galleryItems.length > 1 && (
+              <div className="absolute bottom-2 left-2 bg-black/40 text-white text-xs px-2 py-0.5 rounded-lg pointer-events-none">
+                {currentImg + 1} / {galleryItems.length}
+              </div>
+            )}
+          </div>
+          {/* Thumbnail strip */}
+          {galleryItems.length > 1 && (
+            <div className="flex gap-1.5 p-2 justify-center overflow-x-auto bg-black/90 shrink-0">
+              {galleryItems.map((it, i) => (
+                <button key={i} onClick={() => setCurrentImg(i)}
+                  className={`w-12 h-12 shrink-0 rounded-lg overflow-hidden border-2 transition-colors ${i === currentImg ? 'border-white' : 'border-transparent opacity-50 hover:opacity-80'}`}>
+                  {it.type === 'image' ? (
+                    <img src={it.url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* RIGHT: details */}
+        <div className="md:w-[48%] overflow-y-auto flex flex-col">
+          <div className="p-5 flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-2 pr-8">
+              <h3 className="text-lg font-bold text-gray-900 dark:text-white leading-tight">{product.name}</h3>
+              <div className="shrink-0">
+                <PriceDisplay price={product.price} offerPrice={effectiveOffer(product, catalogDiscount)} size="base" />
+              </div>
+            </div>
+            {product.sku && <p className="text-xs text-gray-400">SKU: {product.sku}</p>}
+            {product.category && (
+              <span className="text-xs px-2 py-0.5 bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 rounded-full self-start">{product.category}</span>
+            )}
+            {product.showStock && <StockBadge product={product} />}
+            {description && (
+              <p className="text-sm text-gray-600 dark:text-slate-300 leading-relaxed whitespace-pre-line">{description}</p>
+            )}
+            {variants.length > 0 && (
+              <VariantSelector variantsJson={product.variantsJson} selected={selectedVariants || {}} onChange={onVariantChange} />
+            )}
+            <OptionChips label={sizeKey} options={sizes} selected={selectedVariants?.[sizeKey]}
+              onSelect={v => { const next = { ...(selectedVariants || {}), [sizeKey]: v }; delete next['Color']; onVariantChange(next) }} />
+            {availableColors.length > 0 && (
+              <OptionChips label="Color" options={availableColors} selected={selectedVariants?.['Color']}
+                onSelect={v => onVariantChange({ ...(selectedVariants || {}), Color: v })} />
+            )}
+            {sizeColorMap && selectedSize && availableColors.length === 0 && (
+              <p className="text-xs text-gray-400 dark:text-slate-500 italic">Sin colores para este talle.</p>
+            )}
+            <div className="pt-2 flex flex-col gap-2">
+              <AddToCartButton inCart={inCart} onAdd={onAdd} onRemove={onRemove}
+                hasVariants={hasAnyRequired} variantSelected={hasRequiredSelections} />
+              {vendorWhatsapp && (
+                <button onClick={handleWhatsapp}
+                  className="w-full py-2 rounded-xl border border-green-500 text-green-600 dark:text-green-400 text-sm font-medium flex items-center justify-center gap-1.5 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
+                  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                  Consultar individualmente
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -640,22 +889,23 @@ function ShareButton({ url, catalogName }) {
 }
 
 // Cart floating panel
-function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRemove, onClear }) {
+function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRemove, onClear, previewMode = false }) {
   const [showModal, setShowModal] = useState(false)
   const [customerName, setCustomerName] = useState('')
   const [customerPhone, setCustomerPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
+  const catalogDiscount = catalog.discount || 0
 
   const items = Object.values(cart)
   const total = items.reduce((sum, { product, qty }) => {
-    const price = product.offerPrice ?? product.price ?? 0
+    const price = effectiveOffer(product, catalogDiscount) ?? product.price ?? 0
     return sum + Number(price) * qty
   }, 0)
 
   function buildWhatsappMsg(name) {
     const lines = items.map(({ product, qty, variants }) => {
-      const price = product.offerPrice ?? product.price
+      const price = effectiveOffer(product, catalogDiscount) ?? product.price
       const priceStr = price != null ? ` — $${Number(price).toLocaleString('es-AR')}` : ''
       const varStr = variants && Object.keys(variants).length > 0
         ? ` (${Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})`
@@ -681,7 +931,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
         productName: product.name + (variants && Object.keys(variants).length > 0
           ? ` (${Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''),
         price: product.price,
-        offerPrice: product.offerPrice,
+        offerPrice: effectiveOffer(product, catalogDiscount),
         quantity: qty,
       })),
     }
@@ -756,7 +1006,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
                     </button>
                   </div>
                   {(() => {
-                    const price = product.offerPrice ?? product.price
+                    const price = effectiveOffer(product, catalogDiscount) ?? product.price
                     return price != null ? (
                       <span className="text-xs text-gray-500 dark:text-slate-400 w-20 text-right shrink-0">
                         ${(Number(price) * qty).toLocaleString('es-AR')}
@@ -809,7 +1059,7 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
               </div>
               <div className="bg-gray-50 dark:bg-slate-700/50 rounded-xl p-3 space-y-1.5">
                 {items.map(({ product, qty, variants }) => {
-                  const price = product.offerPrice ?? product.price
+                  const price = effectiveOffer(product, catalogDiscount) ?? product.price
                   const varStr = variants && Object.keys(variants).length > 0
                     ? ` (${Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(', ')})` : ''
                   return (
@@ -828,11 +1078,17 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
                   </div>
                 )}
               </div>
-              <button type="submit" disabled={submitting}
-                className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors">
-                <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                {submitting ? 'Enviando...' : 'Enviar y abrir WhatsApp'}
-              </button>
+              {previewMode ? (
+                <div className="w-full py-3 bg-gray-100 dark:bg-slate-700 text-gray-400 dark:text-slate-500 font-semibold rounded-xl text-center text-sm">
+                  Envío de pedidos no disponible en vista previa
+                </div>
+              ) : (
+                <button type="submit" disabled={submitting}
+                  className="w-full py-3 bg-green-500 hover:bg-green-600 disabled:opacity-50 text-white font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors">
+                  <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                  {submitting ? 'Enviando...' : 'Enviar y abrir WhatsApp'}
+                </button>
+              )}
               <button type="button" onClick={() => setShowModal(false)}
                 className="w-full py-2 text-sm text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200">
                 Cancelar
@@ -845,9 +1101,10 @@ function CartPanel({ cart, catalog, vendorWhatsapp, catalogId, onUpdateQty, onRe
   )
 }
 
-export default function PublicCatalogPage() {
+export default function PublicCatalogPage({ previewMode = false }) {
   const { isAuthenticated } = useAuth()
-  const { catalogId } = useParams()
+  const { catalogId, id } = useParams()
+  const paramId = previewMode ? id : catalogId
   const navigate = useNavigate()
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -860,10 +1117,11 @@ export default function PublicCatalogPage() {
   const [lightbox, setLightbox] = useState(null) // { items, startIndex, productName }
   const [imgModal, setImgModal] = useState(null)
   // cart: { [productId]: { product, qty, variants } }
-  const [cart, setCart] = useState(() => loadCart(catalogId))
+  const [cart, setCart] = useState(() => loadCart(paramId))
   // variants selection per product: { [productId]: { VariantName: option } }
   const [variantSelections, setVariantSelections] = useState({})
   const viewedRef = useRef(false)
+  const [detailProduct, setDetailProduct] = useState(null)
   const [showReportModal, setShowReportModal] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const [reportDetails, setReportDetails] = useState('')
@@ -871,9 +1129,12 @@ export default function PublicCatalogPage() {
   const [reportDone, setReportDone] = useState(false)
 
   useEffect(() => {
-    publicApi.getCatalog(catalogId)
+    const fetchFn = previewMode
+      ? catalogsApi.previewCatalog(paramId)
+      : publicApi.getCatalog(paramId)
+    fetchFn
       .then(({ data: d }) => {
-        if (d.available === false) {
+        if (!previewMode && d.available === false) {
           navigate(d.vendorSlug ? `/p/${d.vendorSlug}` : '/', {
             replace: true,
             state: { catalogNotFound: true, catalogName: d.catalog?.name }
@@ -881,14 +1142,13 @@ export default function PublicCatalogPage() {
           return
         }
         setData(d)
-        // SEO meta tags
         document.title = `${d.catalog.name} — ${d.vendorName}`
         setOrUpdateMeta('og:title', `${d.catalog.name} — ${d.vendorName}`)
         setOrUpdateMeta('og:description', d.catalog.description || d.catalog.aiContent || `Catálogo de ${d.vendorName}`)
-        setOrUpdateMeta('og:image', d.catalog.coverImageUrl || d.vendorProfileImageUrl)
+        setOrUpdateMeta('og:image', d.catalog.coverImageUrl || d.vendorProfileImageUrl || 'https://mercato.jafpsoft.com/og-image.jpg')
         setOrUpdateMeta('og:url', window.location.href)
         setOrUpdateMeta('og:type', 'website')
-        if (!viewedRef.current) {
+        if (!previewMode && !viewedRef.current) {
           viewedRef.current = true
           publicApi.trackCatalogView(d.catalog.id).catch(() => {})
           track('PAGE_VIEW')
@@ -896,7 +1156,7 @@ export default function PublicCatalogPage() {
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false))
-  }, [catalogId])
+  }, [paramId])
 
   function setOrUpdateMeta(property, content) {
     if (!content) return
@@ -910,7 +1170,7 @@ export default function PublicCatalogPage() {
   }
 
   // Persiste el carrito en localStorage al cambiar
-  useEffect(() => { saveCart(catalogId, cart) }, [cart, catalogId])
+  useEffect(() => { saveCart(paramId, cart) }, [cart, paramId])
 
   function addToCart(product) {
     track('CART_ADD', { metadata: JSON.stringify({ product: product.name }) })
@@ -929,7 +1189,7 @@ export default function PublicCatalogPage() {
   }
   function clearCart() {
     setCart({})
-    localStorage.removeItem(cartKey(catalogId))
+    localStorage.removeItem(cartKey(paramId))
   }
 
   function openLightbox(items, idx, productName) {
@@ -964,24 +1224,104 @@ export default function PublicCatalogPage() {
   const pageUrl = window.location.href
 
   const rubroInfo = catalog.rubro ? getRubro(catalog.rubro) : null
+  const catalogDiscount = catalog.discount || 0
   const allProducts = catalog.products || []
-  const categories = [...new Set(allProducts.map(p => p.category).filter(Boolean))]
 
   function parseProdArr(json) { try { return json ? JSON.parse(json) : [] } catch { return [] } }
+  function productCategories(p) {
+    return p.category ? p.category.split(',').map(c => c.trim()).filter(Boolean) : []
+  }
+
+  const categories = [...new Set(allProducts.flatMap(productCategories))]
+
 
   const allSizes = rubroInfo?.atributo
     ? [...new Set(allProducts.flatMap(p => parseProdArr(p.productSizes)))]
     : []
-  const allColors = [...new Set(allProducts.flatMap(p => parseProdArr(p.productColors)))]
+  const allColors = [...new Set(allProducts.flatMap(p => {
+    const scm = parseSizeColorMap(p.productColors)
+    if (scm) return Object.values(scm).flat()
+    return parseProdArr(p.productColors)
+  }))]
 
   const visibleProducts = allProducts.filter(p => {
-    const matchCat = !activeCategory || p.category === activeCategory
+    const cats = productCategories(p)
+    const matchCat = !activeCategory || cats.includes(activeCategory)
     const q = search.toLowerCase()
-    const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q) || (p.category || '').toLowerCase().includes(q)
+    const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q) || cats.some(c => c.toLowerCase().includes(q))
     const matchSize = !activeSize || parseProdArr(p.productSizes).includes(activeSize)
-    const matchColor = !activeColor || parseProdArr(p.productColors).includes(activeColor)
+    const matchColor = !activeColor || (() => { const scm = parseSizeColorMap(p.productColors); return scm ? Object.values(scm).flat().includes(activeColor) : parseProdArr(p.productColors).includes(activeColor) })()
     return matchCat && matchSearch && matchSize && matchColor
   })
+
+  let sectionOrderParsed = []
+  try { sectionOrderParsed = catalog.sectionOrder ? JSON.parse(catalog.sectionOrder) : [] } catch {}
+  const hasSections = sectionOrderParsed.length > 0 && !activeCategory && !activeSize && !activeColor && !search
+
+  function groupBySection(products) {
+    const grouped = []
+    const used = new Set()
+    sectionOrderParsed.forEach(sec => {
+      const inSection = products.filter(p => productCategories(p).includes(sec))
+      if (inSection.length > 0) {
+        grouped.push({ section: sec, products: inSection })
+        inSection.forEach(p => used.add(p.id))
+      }
+    })
+    const ungrouped = products.filter(p => !used.has(p.id))
+    if (ungrouped.length > 0) grouped.push({ section: null, products: ungrouped })
+    return grouped
+  }
+
+  function renderProducts(products, extraClass = '') {
+    if (viewMode === 'LIST') return (
+      <div className={`flex flex-col gap-4 ${extraClass}`}>
+        {products.map(p => (
+          <ProductCardList key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
+            inCart={!!cart[p.id]}
+            selectedVariants={variantSelections[p.id] || {}}
+            onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
+            onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
+            onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+            onOpenDetail={setDetailProduct}
+            rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
+          />
+        ))}
+      </div>
+    )
+    if (viewMode === 'MOSAIC') return (
+      <div className={`columns-2 sm:columns-3 gap-4 space-y-4 ${extraClass}`}>
+        {products.map(p => (
+          <div key={p.id} className="break-inside-avoid">
+            <ProductCardGrid product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
+              inCart={!!cart[p.id]}
+              selectedVariants={variantSelections[p.id] || {}}
+              onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
+              onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
+              onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+              onOpenDetail={setDetailProduct}
+              rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
+            />
+          </div>
+        ))}
+      </div>
+    )
+    return (
+      <div className={`grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 ${extraClass}`}>
+        {products.map(p => (
+          <ProductCardGrid key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
+            inCart={!!cart[p.id]}
+            selectedVariants={variantSelections[p.id] || {}}
+            onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
+            onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
+            onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
+            onOpenDetail={setDetailProduct}
+            rubroInfo={rubroInfo} catalogDiscount={catalogDiscount}
+          />
+        ))}
+      </div>
+    )
+  }
 
   return (
     <>
@@ -995,6 +1335,13 @@ export default function PublicCatalogPage() {
       `}</style>
 
       <div className="min-h-screen flex flex-col bg-gray-50">
+        {previewMode && (
+          <div className="sticky top-0 z-50 bg-amber-400 text-amber-900 text-sm font-semibold text-center py-2 px-4 flex items-center justify-center gap-3 print:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+            Vista previa — este catálogo no está visible para el público todavía
+            <a href={`/catalogs/${id}`} className="underline underline-offset-2 hover:opacity-80 ml-2">Volver a editar</a>
+          </div>
+        )}
         {/* Mercato brand bar */}
         <div className="sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-slate-800 px-4 py-2.5 flex items-center justify-between gap-3 print:hidden">
           <a href="/mercato/" title="Conocer más sobre Mercato" className="flex items-center gap-2 shrink-0">
@@ -1163,13 +1510,13 @@ export default function PublicCatalogPage() {
               {categories.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   <button onClick={() => setActiveCategory(null)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === null ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeCategory === null ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400'}`}>
                     Todos ({allProducts.length})
                   </button>
                   {categories.map(cat => (
                     <button key={cat} onClick={() => setActiveCategory(activeCategory === cat ? null : cat)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
-                      {cat} ({allProducts.filter(p => p.category === cat).length})
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeCategory === cat ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-blue-400 hover:text-blue-600 dark:hover:border-blue-500 dark:hover:text-blue-400'}`}>
+                      {cat} ({allProducts.filter(p => productCategories(p).includes(cat)).length})
                     </button>
                   ))}
                 </div>
@@ -1178,12 +1525,12 @@ export default function PublicCatalogPage() {
                 <div className="flex gap-2 flex-wrap items-center">
                   <span className="text-xs text-gray-500 dark:text-slate-400 font-medium shrink-0">{rubroInfo.atributo}:</span>
                   <button onClick={() => setActiveSize(null)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeSize === null ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeSize === null ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-indigo-400 hover:text-indigo-600 dark:hover:border-indigo-500 dark:hover:text-indigo-400'}`}>
                     Todos
                   </button>
                   {allSizes.map(s => (
                     <button key={s} onClick={() => setActiveSize(activeSize === s ? null : s)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeSize === s ? 'bg-indigo-600 border-indigo-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeSize === s ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-indigo-400 hover:text-indigo-600 dark:hover:border-indigo-500 dark:hover:text-indigo-400'}`}>
                       {s}
                     </button>
                   ))}
@@ -1193,12 +1540,12 @@ export default function PublicCatalogPage() {
                 <div className="flex gap-2 flex-wrap items-center">
                   <span className="text-xs text-gray-500 dark:text-slate-400 font-medium shrink-0">Color:</span>
                   <button onClick={() => setActiveColor(null)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeColor === null ? 'bg-pink-600 border-pink-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeColor === null ? 'bg-pink-600 border-pink-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-pink-400 hover:text-pink-600 dark:hover:border-pink-500 dark:hover:text-pink-400'}`}>
                     Todos
                   </button>
                   {allColors.map(c => (
                     <button key={c} onClick={() => setActiveColor(activeColor === c ? null : c)}
-                      className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${activeColor === c ? 'bg-pink-600 border-pink-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                      className={`px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-colors ${activeColor === c ? 'bg-pink-600 border-pink-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-300 dark:border-slate-500 text-gray-700 dark:text-slate-200 hover:border-pink-400 hover:text-pink-600 dark:hover:border-pink-500 dark:hover:text-pink-400'}`}>
                       {c}
                     </button>
                   ))}
@@ -1211,48 +1558,23 @@ export default function PublicCatalogPage() {
               <div className="text-center py-16 text-gray-400">
                 {search ? `Sin resultados para "${search}".` : 'Sin productos en este catálogo.'}
               </div>
-            ) : viewMode === 'LIST' ? (
-              <div className="flex flex-col gap-4">
-                {visibleProducts.map(p => (
-                  <ProductCardList key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
-                    inCart={!!cart[p.id]}
-                    selectedVariants={variantSelections[p.id] || {}}
-                    onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
-                    onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
-                    onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
-                    rubroInfo={rubroInfo}
-                  />
-                ))}
-              </div>
-            ) : viewMode === 'MOSAIC' ? (
-              <div className="columns-2 sm:columns-3 gap-4 space-y-4">
-                {visibleProducts.map(p => (
-                  <div key={p.id} className="break-inside-avoid">
-                    <ProductCardGrid product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
-                      inCart={!!cart[p.id]}
-                      selectedVariants={variantSelections[p.id] || {}}
-                      onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
-                      onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
-                      onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
-                      rubroInfo={rubroInfo}
-                    />
+            ) : hasSections ? (
+              <div className="space-y-8">
+                {groupBySection(visibleProducts).map(({ section, products }) => (
+                  <div key={section ?? '__ungrouped'}>
+                    {section && (
+                      <div className="flex items-center gap-3 mb-4">
+                        <span className="px-4 py-1.5 rounded-full text-sm font-bold bg-blue-600 text-white shadow-sm">
+                          {section}
+                        </span>
+                        <div className="flex-1 h-px bg-blue-200 dark:bg-blue-900/50" />
+                      </div>
+                    )}
+                    {renderProducts(products)}
                   </div>
                 ))}
               </div>
-            ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                {visibleProducts.map(p => (
-                  <ProductCardGrid key={p.id} product={p} catalogName={catalog.name} vendorWhatsapp={vendorWhatsapp}
-                    inCart={!!cart[p.id]}
-                    selectedVariants={variantSelections[p.id] || {}}
-                    onVariantChange={vs => setVariantSelections(s => ({ ...s, [p.id]: vs }))}
-                    onAdd={() => addToCart(p)} onRemove={() => removeFromCart(p.id)}
-                    onOpenGallery={(items, idx) => openLightbox(items, idx, p.name)}
-                    rubroInfo={rubroInfo}
-                  />
-                ))}
-              </div>
-            )}
+            ) : renderProducts(visibleProducts)}
           </div>
         </div>
 
@@ -1263,10 +1585,11 @@ export default function PublicCatalogPage() {
               cart={cart}
               catalog={catalog}
               vendorWhatsapp={vendorWhatsapp}
-              catalogId={catalogId}
+              catalogId={paramId}
               onUpdateQty={updateQty}
               onRemove={removeFromCart}
               onClear={clearCart}
+              previewMode={previewMode}
             />
           </div>
         )}
@@ -1289,6 +1612,23 @@ export default function PublicCatalogPage() {
           </button>
         </footer>
       </div>
+
+      {detailProduct && (
+        <ProductDetailModal
+          product={detailProduct}
+          catalogName={catalog.name}
+          vendorWhatsapp={vendorWhatsapp}
+          inCart={!!cart[detailProduct.id]}
+          selectedVariants={variantSelections[detailProduct.id] || {}}
+          onVariantChange={vs => setVariantSelections(s => ({ ...s, [detailProduct.id]: vs }))}
+          onAdd={() => addToCart(detailProduct)}
+          onRemove={() => removeFromCart(detailProduct.id)}
+          onClose={() => setDetailProduct(null)}
+          onOpenLightbox={(items, idx) => openLightbox(items, idx, detailProduct.name)}
+          rubroInfo={rubroInfo}
+          catalogDiscount={catalogDiscount}
+        />
+      )}
 
       {showQR && <QRModal url={pageUrl} catalogName={catalog.name} onClose={() => setShowQR(false)} />}
 
@@ -1358,7 +1698,7 @@ export default function PublicCatalogPage() {
                       if (!reportReason) return
                       setReportLoading(true)
                       try {
-                        await reportsApi.report(catalogId, { reason: reportReason, details: reportDetails })
+                        await reportsApi.report(paramId, { reason: reportReason, details: reportDetails })
                         setReportDone(true)
                       } catch {
                         // silent

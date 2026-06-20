@@ -11,7 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "sale_tickets")
+@Table(name = "sale_tickets", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "ticket_number"}))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class SaleTicket {
 
@@ -28,6 +28,9 @@ public class SaleTicket {
     // ── Cliente ────────────────────────────────────────────────────────────────
     @Column(name = "customer_name")
     private String customerName;
+
+    @Column(name = "customer_dni", length = 20)
+    private String customerDni;
 
     @Column(name = "customer_phone")
     private String customerPhone;
@@ -54,10 +57,21 @@ public class SaleTicket {
     @Column(name = "payment_method")
     private String paymentMethod;
 
+    // ── Tipo de comprobante ────────────────────────────────────────────────────
+    @Column(name = "tipo_doc", length = 10)
+    @Builder.Default
+    private String tipoDoc = "COMP";
+
+    @Column(name = "reference_ticket_number", length = 30)
+    private String referenceTicketNumber;
+
     // ── Estado ─────────────────────────────────────────────────────────────────
     @Column(length = 20, nullable = false)
     @Builder.Default
     private String status = "DRAFT";
+
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    private String cancellationReason;
 
     @Column(columnDefinition = "TEXT")
     private String notes;

@@ -10,6 +10,9 @@ export const adminApi = {
   userModerationLog: (id) => api.get(`/admin/users/${id}/moderation-log`),
   toggleAdmin: (id) => api.patch(`/admin/users/${id}/toggle-admin`),
   updateEmail: (id, email) => api.patch(`/admin/users/${id}/email`, { email }),
+  updateProfile: (id, data) => api.patch(`/admin/users/${id}/profile`, data),
+  uploadAvatar: (id, file) => { const f = new FormData(); f.append('file', file); return api.post(`/admin/users/${id}/upload-avatar`, f, { headers: { 'Content-Type': 'multipart/form-data' } }) },
+  uploadBanner: (id, file) => { const f = new FormData(); f.append('file', file); return api.post(`/admin/users/${id}/upload-banner`, f, { headers: { 'Content-Type': 'multipart/form-data' } }) },
   resetPassword: (id) => api.post(`/admin/users/${id}/reset-password`),
   resendVerification: (id) => api.post(`/admin/users/${id}/resend-verification`),
   verifyEmail: (id) => api.post(`/admin/users/${id}/verify-email`),
@@ -58,4 +61,10 @@ export const adminApi = {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
   },
+
+  // Rubros
+  listRubros: () => api.get('/admin/rubros'),
+  createRubro: (data) => api.post('/admin/rubros', data),
+  updateRubro: (id, data) => api.put(`/admin/rubros/${id}`, data),
+  deleteRubro: (id) => api.delete(`/admin/rubros/${id}`),
 }

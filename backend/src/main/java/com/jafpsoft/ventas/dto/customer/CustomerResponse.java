@@ -11,6 +11,7 @@ import java.time.LocalDateTime;
 public class CustomerResponse {
     private Long id;
     private String name;
+    private String dni;
     private String phone;
     private String email;
     private String notes;
@@ -22,6 +23,7 @@ public class CustomerResponse {
         return CustomerResponse.builder()
                 .id(c.getId())
                 .name(c.getName())
+                .dni(c.getDni())
                 .phone(c.getPhone())
                 .email(c.getEmail())
                 .notes(c.getNotes())

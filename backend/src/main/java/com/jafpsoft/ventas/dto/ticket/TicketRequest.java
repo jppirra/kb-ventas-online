@@ -10,12 +10,15 @@ import java.util.List;
 @Data
 public class TicketRequest {
     private String customerName;
+    private String customerDni;
     private String customerPhone;
     private String customerEmail;
     private String customerNotes;
     private String paymentMethod;
     private BigDecimal discount;
     private String notes;
+    private String tipoDoc;
+    private String referenceTicketNumber;
     @Valid @NotEmpty
     private List<TicketItemRequest> items;
 }

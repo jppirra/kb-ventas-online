@@ -4,6 +4,7 @@ import { publicApi } from '../api/profile'
 import Footer from '../components/Footer'
 import { useAuth } from '../context/AuthContext'
 import ImageModal from '../components/ImageModal'
+import { RUBROS } from '../config/rubros'
 
 const PLATFORM_ICONS = {
   WHATSAPP: { label: 'WhatsApp', color: '#25D366', icon: (
@@ -72,9 +73,9 @@ function ProductCard({ product, catalogName, vendorWhatsapp, onWhatsappClick }) 
           )}
         </div>
         {product.aiDescription ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1">{product.aiDescription}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.aiDescription}</p>
         ) : product.description ? (
-          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1">{product.description}</p>
+          <p className="text-xs text-gray-500 dark:text-slate-400 leading-relaxed flex-1 whitespace-pre-line">{product.description}</p>
         ) : null}
         {product.showStock && product.stockStatus && (
           <span className={`self-start text-xs px-2 py-0.5 rounded-full font-medium ${STOCK_COLORS[product.stockStatus] || 'bg-gray-100 text-gray-600'}`}>
@@ -92,6 +93,52 @@ function ProductCard({ product, catalogName, vendorWhatsapp, onWhatsappClick }) 
         </button>
       </div>
     </div>
+  )
+}
+
+function CatalogCard({ catalog, onView }) {
+  const viewed = useRef(false)
+  useEffect(() => {
+    if (!viewed.current) {
+      viewed.current = true
+      onView(catalog.id)
+    }
+  }, [catalog.id])
+
+  return (
+    <Link
+      to={`/c/${catalog.publicId}`}
+      className="group flex flex-col bg-white dark:bg-slate-800 rounded-2xl border border-gray-100 dark:border-slate-700 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+    >
+      <div className="aspect-[4/3] bg-gray-100 dark:bg-slate-700 overflow-hidden">
+        {catalog.coverImageUrl ? (
+          <img
+            src={catalog.coverImageUrl}
+            alt={catalog.name}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-slate-700 dark:to-slate-600">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10 text-blue-300 dark:text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 6h16M4 10h16M4 14h8M4 18h5" />
+            </svg>
+          </div>
+        )}
+      </div>
+      <div className="p-3 flex flex-col gap-1">
+        <div className="flex items-start justify-between gap-1">
+          <h3 className="font-semibold text-gray-900 dark:text-white text-sm leading-snug line-clamp-2">{catalog.name}</h3>
+          {catalog.rubro && (
+            <span className="shrink-0 text-xs px-1.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-medium">
+              {RUBROS.find(r => r.value === catalog.rubro)?.label || catalog.rubro}
+            </span>
+          )}
+        </div>
+        {catalog.description && (
+          <p className="text-xs text-gray-500 dark:text-slate-400 line-clamp-2 leading-relaxed">{catalog.description}</p>
+        )}
+      </div>
+    </Link>
   )
 }
 
@@ -321,15 +368,18 @@ export default function PublicProfilePage() {
             <p>Este vendedor aún no publicó catálogos.</p>
           </div>
         ) : (
-          profile.catalogs?.map(catalog => (
-            <CatalogSection
-              key={catalog.id}
-              catalog={catalog}
-              vendorWhatsapp={profile.whatsappNumber}
-              onWhatsappClick={publicApi.trackWhatsappClick}
-              onView={publicApi.trackCatalogView}
-            />
-          ))
+          <>
+            <h2 className="text-base font-semibold text-gray-700 dark:text-slate-300 mb-3">Catálogos</h2>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 mb-8">
+              {profile.catalogs?.map(catalog => (
+                <CatalogCard
+                  key={catalog.id}
+                  catalog={catalog}
+                  onView={publicApi.trackCatalogView}
+                />
+              ))}
+            </div>
+          </>
         )}
       </div>
 

@@ -48,6 +48,27 @@ public class SaleTicketController {
         return service.updateStatus(id, user.getUserId(), body.get("status"));
     }
 
+    @PatchMapping("/{id}/cancel")
+    public TicketResponse cancel(@PathVariable Long id,
+                                 @RequestBody Map<String, String> body,
+                                 @AuthenticationPrincipal CustomUserDetails user) {
+        return service.cancel(id, user.getUserId(), body.get("reason"));
+    }
+
+    @PostMapping("/{id}/send-email")
+    public ResponseEntity<Map<String, String>> sendEmail(@PathVariable Long id,
+                                                         @AuthenticationPrincipal CustomUserDetails user) {
+        service.sendTicketEmail(id, user.getUserId());
+        return ResponseEntity.ok(Map.of("status", "sent"));
+    }
+
+    @PatchMapping("/{id}/customer")
+    public TicketResponse updateCustomer(@PathVariable Long id,
+                                         @RequestBody Map<String, String> body,
+                                         @AuthenticationPrincipal CustomUserDetails user) {
+        return service.updateCustomer(id, user.getUserId(), body);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails user) {

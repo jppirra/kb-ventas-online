@@ -14,6 +14,7 @@ export const catalogsApi = {
   toggleProductActive: (catalogId, productId) => api.put(`/catalogs/${catalogId}/products/${productId}/toggle-active`),
   unlinkProduct: (catalogId, productId) => api.put(`/catalogs/${catalogId}/products/${productId}/unlink`),
   assignProduct: (catalogId, productId) => api.put(`/catalogs/${catalogId}/assign/${productId}`),
+  ownerStock: (catalogId) => api.get(`/catalogs/${catalogId}/owner-stock`),
 
   uploadTempProductImage: (catalogId, file) => {
     const form = new FormData()
@@ -47,6 +48,28 @@ export const catalogsApi = {
     })
   },
 
+  reorderProducts: (catalogId, order) => api.put(`/catalogs/${catalogId}/products/reorder`, order),
+  renameCategory: (catalogId, from, to) => api.put(`/catalogs/${catalogId}/categories/rename`, { from, to }),
+  previewCatalog: (id) => api.get(`/catalogs/${id}/preview`),
+  createFromStock: (data) => api.post('/catalogs/from-stock', data).then(r => { track('CATALOG_CREATED'); return r }),
   generate: (catalogId) => api.post(`/catalogs/${catalogId}/generate`).then(r => { track('CATALOG_AI_GENERATED'); return r }),
   publish: (catalogId) => api.post(`/catalogs/${catalogId}/publish`).then(r => { track('CATALOG_PUBLISHED'); return r }),
+  revert: (catalogId) => api.post(`/catalogs/${catalogId}/revert`),
+
+  uploadCoverImage: (catalogId, file) => {
+    const form = new FormData()
+    form.append('file', file)
+    return api.post(`/catalogs/${catalogId}/upload-cover`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    })
+  },
+
+  searchCatalogs: (rubro, q) => {
+    const params = new URLSearchParams()
+    if (rubro) params.set('rubro', rubro)
+    if (q) params.set('q', q)
+    return api.get(`/public/catalogs/search?${params.toString()}`)
+  },
+
+  listPublicRubros: () => api.get('/public/rubros'),
 }

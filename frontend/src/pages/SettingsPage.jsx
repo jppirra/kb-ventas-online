@@ -28,6 +28,31 @@ export default function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
 
+  const [reportFreq, setReportFreq] = useState('NONE')
+  const [reportDow, setReportDow] = useState(1)
+  const [reportDom, setReportDom] = useState(1)
+  const [reportLoading, setReportLoading] = useState(false)
+
+  useEffect(() => {
+    settingsApi.getStockReportConfig()
+      .then(r => {
+        setReportFreq(r.data.frequency || 'NONE')
+        setReportDow(r.data.dayOfWeek || 1)
+        setReportDom(r.data.dayOfMonth || 1)
+      })
+      .catch(() => {})
+  }, [])
+
+  async function handleSaveReport(e) {
+    e.preventDefault()
+    setReportLoading(true)
+    try {
+      await settingsApi.saveStockReportConfig({ frequency: reportFreq, dayOfWeek: reportDow, dayOfMonth: reportDom })
+      toast.success('Configuración guardada')
+    } catch { toast.error('Error al guardar') }
+    finally { setReportLoading(false) }
+  }
+
   const [npsScore, setNpsScore] = useState(0)
   const [npsHover, setNpsHover] = useState(0)
   const [npsComment, setNpsComment] = useState('')
@@ -227,6 +252,49 @@ export default function SettingsPage() {
               </div>
             </form>
           )}
+        </Section>
+
+        {/* Informe de stock */}
+        <Section title="Informe de stock" description="Recibí un resumen de tu stock por email de forma automática.">
+          <form onSubmit={handleSaveReport} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">Frecuencia</label>
+              <div className="flex flex-wrap gap-2">
+                {[['NONE','Sin envío'],['DAILY','Diario'],['WEEKLY','Semanal'],['MONTHLY','Mensual']].map(([val, label]) => (
+                  <button key={val} type="button" onClick={() => setReportFreq(val)}
+                    className={`px-4 py-1.5 rounded-xl border text-sm font-medium transition-colors ${reportFreq === val ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {reportFreq === 'WEEKLY' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">Día de la semana</label>
+                <select value={reportDow} onChange={e => setReportDow(Number(e.target.value))}
+                  className="px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {[['Lunes',1],['Martes',2],['Miércoles',3],['Jueves',4],['Viernes',5],['Sábado',6],['Domingo',7]].map(([d,v]) => (
+                    <option key={v} value={v}>{d}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {reportFreq === 'MONTHLY' && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-slate-400 mb-2">Día del mes</label>
+                <select value={reportDom} onChange={e => setReportDom(Number(e.target.value))}
+                  className="px-3 py-2 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {Array.from({length: 28}, (_, i) => i + 1).map(d => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <button type="submit" disabled={reportLoading}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+              {reportLoading ? 'Guardando...' : 'Guardar'}
+            </button>
+          </form>
         </Section>
 
         {/* Zona peligrosa */}

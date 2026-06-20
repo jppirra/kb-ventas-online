@@ -1,7 +1,9 @@
 package com.jafpsoft.ventas.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.jafpsoft.ventas.dto.profile.CatalogSearchResultResponse;
 import com.jafpsoft.ventas.dto.profile.CatalogSnapshotData;
+import com.jafpsoft.ventas.dto.profile.ExplorarResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogPageResponse;
 import com.jafpsoft.ventas.dto.profile.PublicCatalogResponse;
 import com.jafpsoft.ventas.dto.profile.PublicProfileResponse;
@@ -18,10 +20,14 @@ import com.jafpsoft.ventas.repository.StoreRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import com.jafpsoft.ventas.model.Product;
 
 @Service
 @RequiredArgsConstructor
@@ -85,7 +91,7 @@ public class PublicProfileService {
         User owner = userRepository.findById(catalog.getUserId())
                 .orElseThrow(() -> new EntityNotFoundException("Catálogo no disponible"));
 
-        if (!catalog.isActive() || !owner.isEnabled()) {
+        if (!catalog.isActive() || !owner.isEnabled() || catalog.getPublishedSnapshotJson() == null) {
             return PublicCatalogPageResponse.unavailable(catalog, owner);
         }
 
@@ -94,6 +100,19 @@ public class PublicProfileService {
         if (catalog.getPublishedSnapshotJson() != null) {
             try {
                 CatalogSnapshotData snapshot = objectMapper.readValue(catalog.getPublishedSnapshotJson(), CatalogSnapshotData.class);
+                // Overlay live product prices so price/offerPrice changes apply without republishing
+                Map<Long, Product> liveById = productRepository
+                        .findByCatalogIdOrderBySortOrderAscCreatedAtAsc(catalog.getId())
+                        .stream().collect(Collectors.toMap(Product::getId, p -> p));
+                if (snapshot.getProducts() != null) {
+                    snapshot.getProducts().forEach(sp -> {
+                        Product live = liveById.get(sp.getId());
+                        if (live != null) {
+                            sp.setPrice(live.getPrice());
+                            sp.setOfferPrice(live.getOfferPrice());
+                        }
+                    });
+                }
                 PublicCatalogPageResponse response = PublicCatalogPageResponse.fromSnapshot(catalog, owner, socialLinks, snapshot);
                 if ("PREDEFINED".equals(snapshot.getBackgroundType()) && catalog.getBackgroundTemplateId() != null) {
                     backgroundTemplateRepository.findById(catalog.getBackgroundTemplateId()).ifPresent(t ->
@@ -115,12 +134,63 @@ public class PublicProfileService {
         return response;
     }
 
+    @Transactional(readOnly = true)
+    public PublicCatalogPageResponse getCatalogPreviewById(Long id) {
+        Catalog catalog = catalogRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Catálogo no encontrado"));
+        User owner = userRepository.findById(catalog.getUserId())
+                .orElseThrow(() -> new EntityNotFoundException("Catálogo no disponible"));
+        List<SocialLink> socialLinks = socialLinkRepository.findByUserIdOrderBySortOrderAsc(owner.getId());
+        PublicCatalogPageResponse response = PublicCatalogPageResponse.from(catalog, owner, socialLinks);
+        if ("PREDEFINED".equals(catalog.getBackgroundType()) && catalog.getBackgroundTemplateId() != null) {
+            backgroundTemplateRepository.findById(catalog.getBackgroundTemplateId()).ifPresent(t ->
+                    response.getCatalog().setBackgroundImageUrl(t.getImageUrl())
+            );
+        }
+        return response;
+    }
+
     @Transactional
     public void registerWhatsappClick(Long productId) {
         productRepository.findById(productId).ifPresent(p -> {
             p.setWhatsappClicks(p.getWhatsappClicks() + 1);
             productRepository.save(p);
         });
+    }
+
+    @Transactional(readOnly = true)
+    public ExplorarResponse searchCatalogs(String rubro, String q) {
+        final String rubroFilter = (rubro == null || rubro.isBlank()) ? null : rubro.trim();
+        final String qFilter = (q == null || q.isBlank()) ? null : q.trim().toLowerCase();
+
+        List<CatalogSearchResultResponse> results = catalogRepository
+                .findAllPublished(PageRequest.of(0, 200))
+                .stream()
+                .filter(c -> rubroFilter == null || rubroFilter.equals(c.getRubro()))
+                .filter(c -> qFilter == null
+                        || (c.getName() != null && c.getName().toLowerCase().contains(qFilter))
+                        || (c.getDescription() != null && c.getDescription().toLowerCase().contains(qFilter)))
+                .limit(60)
+                .map(c -> {
+                    User owner = userRepository.findById(c.getUserId()).orElse(null);
+                    if (owner == null) return null;
+                    return CatalogSearchResultResponse.from(c, owner);
+                })
+                .filter(r -> r != null)
+                .toList();
+
+        List<CatalogSearchResultResponse> featured = catalogRepository
+                .findTopFeatured(PageRequest.of(0, 5))
+                .stream()
+                .map(c -> {
+                    User owner = userRepository.findById(c.getUserId()).orElse(null);
+                    if (owner == null) return null;
+                    return CatalogSearchResultResponse.from(c, owner);
+                })
+                .filter(r -> r != null)
+                .toList();
+
+        return new ExplorarResponse(featured, results);
     }
 
     @Transactional

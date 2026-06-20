@@ -1,6 +1,7 @@
 package com.jafpsoft.ventas.controller;
 
 import com.jafpsoft.ventas.dto.settings.ChangePasswordRequest;
+import com.jafpsoft.ventas.dto.settings.StockReportConfigRequest;
 import com.jafpsoft.ventas.security.CustomUserDetails;
 import com.jafpsoft.ventas.service.SettingsService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,18 @@ public class SettingsController {
             @AuthenticationPrincipal CustomUserDetails user) {
         settingsService.changePassword(userId(user), req);
         return ResponseEntity.ok(Map.of("message", "Contraseña actualizada correctamente"));
+    }
+
+    @GetMapping("/stock-report")
+    public Map<String, Object> getStockReportConfig(@AuthenticationPrincipal CustomUserDetails user) {
+        return settingsService.getStockReportConfig(userId(user));
+    }
+
+    @PutMapping("/stock-report")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void saveStockReportConfig(@RequestBody StockReportConfigRequest req,
+                                      @AuthenticationPrincipal CustomUserDetails user) {
+        settingsService.saveStockReportConfig(userId(user), req);
     }
 
     @DeleteMapping("/account")
