@@ -48,6 +48,13 @@ public class SaleTicketController {
         return service.updateStatus(id, user.getUserId(), body.get("status"));
     }
 
+    @PatchMapping("/{id}/cancel")
+    public TicketResponse cancel(@PathVariable Long id,
+                                 @RequestBody Map<String, String> body,
+                                 @AuthenticationPrincipal CustomUserDetails user) {
+        return service.cancel(id, user.getUserId(), body.get("reason"));
+    }
+
     @PatchMapping("/{id}/customer")
     public TicketResponse updateCustomer(@PathVariable Long id,
                                          @RequestBody Map<String, String> body,

@@ -127,6 +127,17 @@ public class SaleTicketService {
     }
 
     @Transactional
+    public TicketResponse cancel(Long id, Long userId, String reason) {
+        SaleTicket ticket = findOwned(id, userId);
+        if ("CANCELLED".equals(ticket.getStatus())) return TicketResponse.from(ticket);
+        ticket.setStatus("CANCELLED");
+        ticket.setCancellationReason(reason != null ? reason.trim() : null);
+        SaleTicket saved = ticketRepository.save(ticket);
+        adjustStock(saved.getItems(), 1, userId);
+        return TicketResponse.from(saved);
+    }
+
+    @Transactional
     public TicketResponse updateCustomer(Long id, Long userId, Map<String, String> data) {
         SaleTicket ticket = findOwned(id, userId);
         if (data.containsKey("customerName"))  ticket.setCustomerName(data.get("customerName"));

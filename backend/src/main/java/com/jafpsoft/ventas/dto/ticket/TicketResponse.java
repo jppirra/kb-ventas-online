@@ -21,6 +21,7 @@ public class TicketResponse {
     private BigDecimal total;
     private String paymentMethod;
     private String status;
+    private String cancellationReason;
     private String notes;
     private String tipoDoc;
     private String referenceTicketNumber;
@@ -41,6 +42,7 @@ public class TicketResponse {
         r.total = t.getTotal();
         r.paymentMethod = t.getPaymentMethod();
         r.status = t.getStatus();
+        r.cancellationReason = t.getCancellationReason();
         r.notes = t.getNotes();
         r.tipoDoc = t.getTipoDoc() != null ? t.getTipoDoc() : "COMP";
         r.referenceTicketNumber = t.getReferenceTicketNumber();

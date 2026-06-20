@@ -70,6 +70,9 @@ public class SaleTicket {
     @Builder.Default
     private String status = "DRAFT";
 
+    @Column(name = "cancellation_reason", columnDefinition = "TEXT")
+    private String cancellationReason;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 

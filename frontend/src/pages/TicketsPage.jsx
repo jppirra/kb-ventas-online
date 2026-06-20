@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
@@ -7,6 +7,88 @@ import { productsApi } from '../api/products'
 import { customersApi } from '../api/customers'
 import { fmtDate } from '../utils/date'
 import { useAuth } from '../context/AuthContext'
+
+function buildWaText(ticket, config) {
+  const cur = config?.currency || '$'
+  const biz = config?.businessName || 'Tienda'
+  let text = `*Comprobante — ${biz}*\n`
+  if (ticket.ticketNumber) text += `N°: ${ticket.ticketNumber}\n`
+  text += `Fecha: ${fmtDate(ticket.createdAt)}\n\n*Detalle:*\n`
+  ticket.items?.forEach(it => {
+    const sub = (Number(it.unitPrice) * it.quantity).toLocaleString('es-AR')
+    text += `• ${it.productName}${it.size ? ` (${it.size})` : ''} × ${it.quantity} — ${cur}${sub}\n`
+  })
+  text += `\n*Subtotal:* ${cur}${Number(ticket.subtotal).toLocaleString('es-AR')}\n`
+  if (Number(ticket.discount) > 0) text += `*Descuento:* ${cur}${Number(ticket.discount).toLocaleString('es-AR')}\n`
+  text += `*Total: ${cur}${Number(ticket.total).toLocaleString('es-AR')}*\n`
+  if (ticket.paymentMethod) text += `\nForma de pago: ${ticket.paymentMethod}\n`
+  if (config?.footer) text += `\n${config.footer}`
+  return encodeURIComponent(text)
+}
+
+function RowMenu({ ticket, config, onAction }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handler(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [open])
+
+  const isCancelled = ticket.status === 'CANCELLED'
+  const isNC = ticket.tipoDoc === 'NC'
+  const phone = ticket.customerPhone?.replace(/\D/g, '')
+
+  const items = [
+    { label: 'Abrir', icon: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14', action: 'open', always: true },
+    phone && { label: 'WhatsApp', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', action: 'wa', always: true, color: 'text-green-600 dark:text-green-400' },
+    { label: 'Imprimir', icon: 'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z', action: 'print', always: true },
+    { label: 'Editar comprador', icon: 'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z', action: 'customer', always: true },
+    !isCancelled && !isNC && { label: 'Nota de crédito', icon: 'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6', action: 'nc', color: 'text-orange-500' },
+    !isCancelled && { label: 'Nota de débito', icon: 'M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z', action: 'nd', color: 'text-blue-500' },
+    !isCancelled && { label: 'Anular', icon: 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z', action: 'cancel', color: 'text-red-500' },
+  ].filter(Boolean)
+
+  function handleItem(action) {
+    setOpen(false)
+    if (action === 'wa') {
+      const waText = buildWaText(ticket, config)
+      window.open(`https://wa.me/${phone}?text=${waText}`, '_blank')
+      return
+    }
+    if (action === 'print') {
+      window.open(`/tickets/${ticket.id}`, '_blank')
+      return
+    }
+    onAction(action, ticket)
+  }
+
+  return (
+    <div ref={ref} className="relative" onClick={e => e.stopPropagation()}>
+      <button onClick={() => setOpen(v => !v)}
+        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-slate-700 text-gray-400 hover:text-gray-600 dark:hover:text-slate-300 transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 z-30 mt-1 w-48 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden">
+          {items.map(item => (
+            <button key={item.action} onClick={() => handleItem(item.action)}
+              className={`w-full flex items-center gap-2.5 px-3 py-2.5 text-sm hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors text-left ${item.color || 'text-gray-700 dark:text-slate-300'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
+              </svg>
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
 const STATUS_COLORS = {
@@ -331,24 +413,87 @@ export default function TicketsPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [tickets, setTickets] = useState([])
+  const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' })
+  const [modal, setModal] = useState(null) // { type: 'cancel'|'customer'|'nc'|'nd', ticket }
+  const [cancelReason, setCancelReason] = useState('')
+  const [customerForm, setCustomerForm] = useState({})
+  const [savingAction, setSavingAction] = useState(false)
 
   function setFilter(k, v) { setFilters(f => ({ ...f, [k]: v })) }
   function clearFilters() { setFilters({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' }) }
   const hasFilters = Object.values(filters).some(v => v !== '')
 
+  function openAction(type, ticket) {
+    if (type === 'open') { navigate(`/tickets/${ticket.id}`); return }
+    if (type === 'customer') {
+      setCustomerForm({ customerName: ticket.customerName || '', customerDni: ticket.customerDni || '', customerPhone: ticket.customerPhone || '', customerEmail: ticket.customerEmail || '', customerNotes: ticket.customerNotes || '' })
+    }
+    if (type === 'cancel') setCancelReason('')
+    setModal({ type, ticket })
+  }
+
   const isBeta = user?.appAdmin
 
   useEffect(() => {
     if (!isBeta) return
-    ticketsApi.list()
-      .then(r => setTickets(r.data))
+    Promise.all([ticketsApi.list(), ticketsApi.getConfig()])
+      .then(([tr, cr]) => { setTickets(tr.data); setConfig(cr.data) })
       .catch(() => toast.error('Error al cargar tickets'))
       .finally(() => setLoading(false))
   }, [isBeta])
+
+  async function handleCancelTicket() {
+    setSavingAction(true)
+    try {
+      const { data } = await ticketsApi.cancel(modal.ticket.id, cancelReason)
+      setTickets(ts => ts.map(t => t.id === data.id ? data : t))
+      toast.success(`Comprobante ${data.ticketNumber} anulado`)
+      setModal(null)
+    } catch { toast.error('Error al anular') }
+    finally { setSavingAction(false) }
+  }
+
+  async function handleSaveCustomer() {
+    setSavingAction(true)
+    try {
+      const { data } = await ticketsApi.updateCustomer(modal.ticket.id, customerForm)
+      setTickets(ts => ts.map(t => t.id === data.id ? data : t))
+      toast.success('Comprador actualizado')
+      setModal(null)
+    } catch { toast.error('Error al actualizar') }
+    finally { setSavingAction(false) }
+  }
+
+  async function handleCreateDoc(tipo) {
+    setSavingAction(true)
+    const src = modal.ticket
+    try {
+      const payload = {
+        customerName: src.customerName, customerDni: src.customerDni,
+        customerPhone: src.customerPhone, customerEmail: src.customerEmail,
+        customerNotes: src.customerNotes, paymentMethod: src.paymentMethod,
+        tipoDoc: tipo, referenceTicketNumber: src.ticketNumber,
+        discount: 0,
+        notes: `${tipo === 'NC' ? 'Nota de crédito' : 'Nota de débito'} de ${src.ticketNumber}`,
+        items: src.items.map((it, idx) => ({
+          productId: it.productId || null, productName: it.productName,
+          productSku: it.productSku || null, size: it.size || null,
+          color: it.color || null, quantity: it.quantity,
+          unitPrice: Number(it.unitPrice), sortOrder: idx,
+        }))
+      }
+      const { data } = await ticketsApi.create(payload)
+      setTickets(ts => [data, ...ts])
+      toast.success(`${tipo} ${data.ticketNumber} creada`)
+      setModal(null)
+      navigate(`/tickets/${data.id}`)
+    } catch { toast.error('Error al crear documento') }
+    finally { setSavingAction(false) }
+  }
 
   if (!isBeta) {
     return (
@@ -539,6 +684,7 @@ export default function TicketsPage() {
                   <th className="px-4 py-3">Total</th>
                   <th className="px-4 py-3">Estado</th>
                   <th className="px-4 py-3">Fecha</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
@@ -564,6 +710,12 @@ export default function TicketsPage() {
                     </td>
                     <td className="px-4 py-3 text-xs text-gray-400 dark:text-slate-500">
                       {fmtDate(t.createdAt)}
+                      {t.cancellationReason && (
+                        <p className="text-xs text-red-400 truncate max-w-[120px]" title={t.cancellationReason}>{t.cancellationReason}</p>
+                      )}
+                    </td>
+                    <td className="px-2 py-3" onClick={e => e.stopPropagation()}>
+                      <RowMenu ticket={t} config={config} onAction={openAction} />
                     </td>
                   </tr>
                 ))}
@@ -572,6 +724,101 @@ export default function TicketsPage() {
           </div>
         )}
       </div>
+
+      {/* Modal: Anular */}
+      {modal?.type === 'cancel' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-1">Anular comprobante</h3>
+            <p className="text-xs text-gray-400 dark:text-slate-500 mb-3">
+              N° <span className="font-mono font-semibold">{modal.ticket.ticketNumber}</span> — el número <strong>no</strong> se reutilizará y el comprobante quedará visible como anulado.
+            </p>
+            <textarea
+              value={cancelReason}
+              onChange={e => setCancelReason(e.target.value)}
+              placeholder="Motivo de anulación (obligatorio)..."
+              rows={3}
+              className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 resize-none mb-4"
+            />
+            <div className="flex gap-2">
+              <button onClick={() => setModal(null)}
+                className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={handleCancelTicket} disabled={!cancelReason.trim() || savingAction}
+                className="flex-1 py-2 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+                {savingAction ? 'Anulando...' : 'Anular'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Editar comprador */}
+      {modal?.type === 'customer' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100 dark:border-slate-700">
+              <h3 className="font-semibold text-gray-900 dark:text-white">Editar comprador</h3>
+              <button onClick={() => setModal(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-slate-300">✕</button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <input type="text" placeholder="Nombre" value={customerForm.customerName}
+                  onChange={e => setCustomerForm(f => ({ ...f, customerName: e.target.value }))}
+                  className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                <input type="text" placeholder="DNI / CUIT" value={customerForm.customerDni}
+                  onChange={e => setCustomerForm(f => ({ ...f, customerDni: e.target.value }))}
+                  className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <input type="tel" placeholder="Teléfono WhatsApp" value={customerForm.customerPhone}
+                onChange={e => setCustomerForm(f => ({ ...f, customerPhone: e.target.value }))}
+                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="email" placeholder="Email" value={customerForm.customerEmail}
+                onChange={e => setCustomerForm(f => ({ ...f, customerEmail: e.target.value }))}
+                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="text" placeholder="Notas" value={customerForm.customerNotes}
+                onChange={e => setCustomerForm(f => ({ ...f, customerNotes: e.target.value }))}
+                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <div className="flex gap-2 pt-1">
+                <button onClick={() => setModal(null)}
+                  className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                  Cancelar
+                </button>
+                <button onClick={handleSaveCustomer} disabled={savingAction}
+                  className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+                  {savingAction ? 'Guardando...' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: NC / ND */}
+      {(modal?.type === 'nc' || modal?.type === 'nd') && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+              {modal.type === 'nc' ? 'Nota de crédito' : 'Nota de débito'}
+            </h3>
+            <p className="text-sm text-gray-500 dark:text-slate-400 mb-4">
+              Se creará una <strong>{modal.type === 'nc' ? 'nota de crédito' : 'nota de débito'}</strong> referenciando el comprobante <span className="font-mono font-semibold">{modal.ticket.ticketNumber}</span>.
+              {modal.type === 'nc' && ' El stock de los productos se repondrá automáticamente.'}
+            </p>
+            <div className="flex gap-2">
+              <button onClick={() => setModal(null)}
+                className="flex-1 py-2 border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 text-sm rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                Cancelar
+              </button>
+              <button onClick={() => handleCreateDoc(modal.type.toUpperCase())} disabled={savingAction}
+                className="flex-1 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors">
+                {savingAction ? 'Creando...' : `Confirmar ${modal.type.toUpperCase()}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   )
 }

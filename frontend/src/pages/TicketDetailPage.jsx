@@ -133,6 +133,9 @@ function InvoiceDocument({ ticket, config }) {
             style={{ background: STATUS_COLORS[ticket.status] + '22', color: STATUS_COLORS[ticket.status] }}>
             {STATUS_LABELS[ticket.status] || ticket.status}
           </span>
+          {ticket.cancellationReason && (
+            <p className="text-xs text-red-400 mt-1 italic">Motivo: {ticket.cancellationReason}</p>
+          )}
         </div>
 
         {/* Cliente */}
