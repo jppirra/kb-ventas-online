@@ -10,6 +10,7 @@ import java.util.List;
 @Data
 public class TicketRequest {
     private String customerName;
+    private String customerDni;
     private String customerPhone;
     private String customerEmail;
     private String customerNotes;

@@ -29,6 +29,9 @@ public class SaleTicket {
     @Column(name = "customer_name")
     private String customerName;
 
+    @Column(name = "customer_dni", length = 20)
+    private String customerDni;
+
     @Column(name = "customer_phone")
     private String customerPhone;
 

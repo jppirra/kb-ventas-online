@@ -69,6 +69,7 @@ public class SaleTicketService {
                 .tipoDoc(tipoDoc)
                 .referenceTicketNumber(req.getReferenceTicketNumber())
                 .customerName(req.getCustomerName())
+                .customerDni(req.getCustomerDni())
                 .customerPhone(req.getCustomerPhone())
                 .customerEmail(req.getCustomerEmail())
                 .customerNotes(req.getCustomerNotes())
@@ -129,6 +130,7 @@ public class SaleTicketService {
     public TicketResponse updateCustomer(Long id, Long userId, Map<String, String> data) {
         SaleTicket ticket = findOwned(id, userId);
         if (data.containsKey("customerName"))  ticket.setCustomerName(data.get("customerName"));
+        if (data.containsKey("customerDni"))   ticket.setCustomerDni(data.get("customerDni"));
         if (data.containsKey("customerPhone")) ticket.setCustomerPhone(data.get("customerPhone"));
         if (data.containsKey("customerEmail")) ticket.setCustomerEmail(data.get("customerEmail"));
         if (data.containsKey("customerNotes")) ticket.setCustomerNotes(data.get("customerNotes"));

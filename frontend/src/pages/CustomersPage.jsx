@@ -3,7 +3,7 @@ import Layout from '../components/Layout'
 import api from '../api/axios'
 import { toast } from 'sonner'
 
-const emptyForm = { name: '', phone: '', email: '', notes: '' }
+const emptyForm = { name: '', dni: '', phone: '', email: '', notes: '' }
 
 function CustomerForm({ initial, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial || emptyForm)
@@ -19,6 +19,12 @@ function CustomerForm({ initial, onSave, onCancel, saving }) {
         <div className="sm:col-span-2">
           <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Nombre *</label>
           <input required value={form.name} onChange={e => set('name', e.target.value)}
+            className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">DNI / CUIT</label>
+          <input value={form.dni} onChange={e => set('dni', e.target.value)}
+            placeholder="20-12345678-9"
             className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
@@ -116,7 +122,7 @@ export default function CustomersPage() {
 
   const filtered = customers.filter(c => {
     const q = search.toLowerCase()
-    return !q || c.name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q)
+    return !q || c.name?.toLowerCase().includes(q) || c.dni?.includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q)
   })
 
   const sourceLabel = { manual: 'Manual', order: 'Pedido', message: 'Mensaje' }
@@ -166,7 +172,7 @@ export default function CustomersPage() {
               <div key={c.id}>
                 {editingCustomer?.id === c.id ? (
                   <CustomerForm
-                    initial={{ name: c.name, phone: c.phone || '', email: c.email || '', notes: c.notes || '' }}
+                    initial={{ name: c.name, dni: c.dni || '', phone: c.phone || '', email: c.email || '', notes: c.notes || '' }}
                     onSave={handleSave}
                     onCancel={() => { setEditingCustomer(null); setShowForm(false) }}
                     saving={saving}
@@ -181,6 +187,9 @@ export default function CustomersPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{c.name}</p>
+                        {c.dni && (
+                          <span className="text-xs font-mono text-gray-500 dark:text-slate-400 bg-gray-100 dark:bg-slate-700 px-1.5 py-0.5 rounded">{c.dni}</span>
+                        )}
                         {c.source && c.source !== 'manual' && (
                           <span className="text-xs bg-gray-100 dark:bg-slate-700 text-gray-500 dark:text-slate-400 px-1.5 py-0.5 rounded">
                             {sourceLabel[c.source] || c.source}

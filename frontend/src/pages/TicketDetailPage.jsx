@@ -142,6 +142,7 @@ function InvoiceDocument({ ticket, config }) {
             ? <p className="text-sm font-semibold text-gray-900">{ticket.customerName}</p>
             : <p className="text-xs text-gray-400 italic">Consumidor Final</p>
           }
+          {ticket.customerDni && <p className="text-xs text-gray-600 font-mono mt-0.5">DNI/CUIT: {ticket.customerDni}</p>}
           {ticket.customerPhone && <p className="text-xs text-gray-600 mt-0.5">{ticket.customerPhone}</p>}
           {ticket.customerEmail && <p className="text-xs text-gray-600">{ticket.customerEmail}</p>}
           {ticket.customerNotes && <p className="text-xs text-gray-500 mt-1 italic">{ticket.customerNotes}</p>}
@@ -228,7 +229,7 @@ export default function TicketDetailPage() {
   const [loading, setLoading] = useState(true)
   const [sendingEmail, setSendingEmail] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState(false)
-  const [customerForm, setCustomerForm] = useState({ customerName: '', customerPhone: '', customerEmail: '', customerNotes: '' })
+  const [customerForm, setCustomerForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerEmail: '', customerNotes: '' })
   const [savingCustomer, setSavingCustomer] = useState(false)
   const [showNC, setShowNC] = useState(false)
   const [creatingNC, setCreatingNC] = useState(false)
@@ -240,6 +241,7 @@ export default function TicketDetailPage() {
         setConfig(cr.data)
         setCustomerForm({
           customerName: tr.data.customerName || '',
+          customerDni: tr.data.customerDni || '',
           customerPhone: tr.data.customerPhone || '',
           customerEmail: tr.data.customerEmail || '',
           customerNotes: tr.data.customerNotes || '',
@@ -254,6 +256,7 @@ export default function TicketDetailPage() {
     try {
       const payload = {
         customerName: ticket.customerName,
+        customerDni: ticket.customerDni,
         customerPhone: ticket.customerPhone,
         customerEmail: ticket.customerEmail,
         customerNotes: ticket.customerNotes,
@@ -360,8 +363,12 @@ export default function TicketDetailPage() {
                   </button>
                 </div>
                 <form onSubmit={handleSaveCustomer} className="p-5 space-y-3">
-                  <input type="text" placeholder="Nombre" value={customerForm.customerName}
-                    onChange={e => setCustomerForm(f => ({ ...f, customerName: e.target.value }))} className={inputCls} />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input type="text" placeholder="Nombre" value={customerForm.customerName}
+                      onChange={e => setCustomerForm(f => ({ ...f, customerName: e.target.value }))} className={inputCls} />
+                    <input type="text" placeholder="DNI / CUIT" value={customerForm.customerDni}
+                      onChange={e => setCustomerForm(f => ({ ...f, customerDni: e.target.value }))} className={inputCls} />
+                  </div>
                   <input type="tel" placeholder="Teléfono WhatsApp" value={customerForm.customerPhone}
                     onChange={e => setCustomerForm(f => ({ ...f, customerPhone: e.target.value }))} className={inputCls} />
                   <input type="email" placeholder="Email" value={customerForm.customerEmail}

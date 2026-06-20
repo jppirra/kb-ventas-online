@@ -27,7 +27,7 @@ function NewTicketModal({ onClose, onCreated }) {
   const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerResults, setShowCustomerResults] = useState(false)
   const [items, setItems] = useState([])
-  const [form, setForm] = useState({ customerName: '', customerPhone: '', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
+  const [form, setForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -49,7 +49,7 @@ function NewTicketModal({ onClose, onCreated }) {
   }, [allCustomers, customerSearch])
 
   function selectCustomer(c) {
-    setForm(f => ({ ...f, customerName: c.name, customerPhone: c.phone || '', customerEmail: c.email || '', customerNotes: c.notes || '' }))
+    setForm(f => ({ ...f, customerName: c.name, customerDni: c.dni || '', customerPhone: c.phone || '', customerEmail: c.email || '', customerNotes: c.notes || '' }))
     setCustomerSearch('')
     setShowCustomerResults(false)
   }
@@ -300,12 +300,14 @@ function NewTicketModal({ onClose, onCreated }) {
             <div className="grid grid-cols-2 gap-3">
               <input type="text" placeholder="Nombre" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <input type="text" placeholder="DNI / CUIT" value={form.customerDni} onChange={e => setForm(f => ({ ...f, customerDni: e.target.value }))}
+                className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <input type="tel" placeholder="Teléfono WhatsApp" value={form.customerPhone} onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <input type="email" placeholder="Email (opcional)" value={form.customerEmail} onChange={e => setForm(f => ({ ...f, customerEmail: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <input type="text" placeholder="Notas del cliente" value={form.customerNotes} onChange={e => setForm(f => ({ ...f, customerNotes: e.target.value }))}
-                className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                className="col-span-2 px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
           </div>
 
@@ -331,6 +333,12 @@ export default function TicketsPage() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
+  const [showFilters, setShowFilters] = useState(false)
+  const [filters, setFilters] = useState({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' })
+
+  function setFilter(k, v) { setFilters(f => ({ ...f, [k]: v })) }
+  function clearFilters() { setFilters({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' }) }
+  const hasFilters = Object.values(filters).some(v => v !== '')
 
   const isBeta = user?.appAdmin
 
@@ -374,6 +382,23 @@ export default function TicketsPage() {
       return acc
     }, {})
 
+  const ticketsFiltered = useMemo(() => {
+    return tickets.filter(t => {
+      if (filters.q) {
+        const q = filters.q.toLowerCase()
+        const match = t.ticketNumber?.toLowerCase().includes(q) ||
+          t.customerName?.toLowerCase().includes(q) ||
+          t.customerDni?.toLowerCase().includes(q)
+        if (!match) return false
+      }
+      if (filters.dateFrom && t.createdAt < filters.dateFrom) return false
+      if (filters.dateTo && t.createdAt.slice(0, 10) > filters.dateTo) return false
+      if (filters.minTotal !== '' && Number(t.total) < Number(filters.minTotal)) return false
+      if (filters.maxTotal !== '' && Number(t.total) > Number(filters.maxTotal)) return false
+      return true
+    })
+  }, [tickets, filters])
+
   return (
     <Layout>
       {showNew && (
@@ -397,6 +422,13 @@ export default function TicketsPage() {
             <p className="text-sm text-gray-500 dark:text-slate-400">{tickets.length} comprobantes</p>
           </div>
           <div className="flex gap-2">
+            <button onClick={() => setShowFilters(v => !v)}
+              className={`px-3 py-2 border text-sm font-medium rounded-xl transition-colors flex items-center gap-1.5 ${hasFilters ? 'border-blue-400 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+              </svg>
+              Filtros{hasFilters ? ` (activos)` : ''}
+            </button>
             <Link to="/tickets/config" className="px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
               Configurar
             </Link>
@@ -406,6 +438,58 @@ export default function TicketsPage() {
             </button>
           </div>
         </div>
+
+        {/* Panel de filtros */}
+        {showFilters && (
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="sm:col-span-2 lg:col-span-2">
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Cliente / DNI / N° comprobante</label>
+                <input
+                  value={filters.q}
+                  onChange={e => setFilter('q', e.target.value)}
+                  placeholder="Buscar..."
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Desde</label>
+                <input type="date" value={filters.dateFrom} onChange={e => setFilter('dateFrom', e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Hasta</label>
+                <input type="date" value={filters.dateTo} onChange={e => setFilter('dateTo', e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Total mínimo</label>
+                <input type="number" value={filters.minTotal} onChange={e => setFilter('minTotal', e.target.value)}
+                  placeholder="0"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Total máximo</label>
+                <input type="number" value={filters.maxTotal} onChange={e => setFilter('maxTotal', e.target.value)}
+                  placeholder="Sin límite"
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              {hasFilters && (
+                <div className="flex items-end">
+                  <button onClick={clearFilters}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 hover:bg-gray-50 dark:hover:bg-slate-700 rounded-xl transition-colors">
+                    Limpiar filtros
+                  </button>
+                </div>
+              )}
+            </div>
+            {hasFilters && (
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-3">
+                Mostrando {ticketsFiltered.length} de {tickets.length} comprobantes
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Resumen de ventas */}
         {!loading && tickets.length > 0 && (
@@ -439,6 +523,11 @@ export default function TicketsPage() {
               Registrar primera venta
             </button>
           </div>
+        ) : ticketsFiltered.length === 0 ? (
+          <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700">
+            <p className="text-gray-400 dark:text-slate-500 text-sm">Sin resultados para los filtros aplicados.</p>
+            <button onClick={clearFilters} className="mt-2 text-xs text-blue-500 hover:underline">Limpiar filtros</button>
+          </div>
         ) : (
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 overflow-hidden">
             <table className="w-full text-sm">
@@ -453,7 +542,7 @@ export default function TicketsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 dark:divide-slate-700/50">
-                {tickets.map(t => (
+                {ticketsFiltered.map(t => (
                   <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors"
                     onClick={() => navigate(`/tickets/${t.id}`)}>
                     <td className="px-4 py-3">

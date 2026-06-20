@@ -12,6 +12,7 @@ public class TicketResponse {
     private Long id;
     private String ticketNumber;
     private String customerName;
+    private String customerDni;
     private String customerPhone;
     private String customerEmail;
     private String customerNotes;
@@ -31,6 +32,7 @@ public class TicketResponse {
         r.id = t.getId();
         r.ticketNumber = t.getTicketNumber();
         r.customerName = t.getCustomerName();
+        r.customerDni = t.getCustomerDni();
         r.customerPhone = t.getCustomerPhone();
         r.customerEmail = t.getCustomerEmail();
         r.customerNotes = t.getCustomerNotes();
