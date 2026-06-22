@@ -13,8 +13,8 @@
     "@react-oauth/google": "^0.13.5",
     "@stomp/stompjs": "^7.3.0",
     "axios": "^1.6.7",
-    "qrcode": "^1.5.4",
     "date-fns": "^3.3.1",
+    "qrcode": "^1.5.4",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.22.0",
@@ -23,6 +23,7 @@
     "sonner": "^2.0.7"
   },
   "devDependencies": {
+    "@vitejs/plugin-basic-ssl": "^1.2.0",
     "@vitejs/plugin-react": "^4.2.1",
     "autoprefixer": "^10.4.17",
     "postcss": "^8.4.35",
