@@ -27,6 +27,10 @@ public class TicketResponse {
     private String referenceTicketNumber;
     private List<TicketItemResponse> items;
     private LocalDateTime createdAt;
+    // Mercado Pago
+    private String mpStatus;
+    private String mpPreferenceId;
+    private String mpPaymentId;
 
     public static TicketResponse from(SaleTicket t) {
         TicketResponse r = new TicketResponse();
@@ -47,6 +51,9 @@ public class TicketResponse {
         r.tipoDoc = t.getTipoDoc() != null ? t.getTipoDoc() : "COMP";
         r.referenceTicketNumber = t.getReferenceTicketNumber();
         r.createdAt = t.getCreatedAt();
+        r.mpStatus = t.getMpStatus();
+        r.mpPreferenceId = t.getMpPreferenceId();
+        r.mpPaymentId = t.getMpPaymentId();
         r.items = t.getItems().stream()
                 .sorted((a, b) -> Integer.compare(
                         a.getSortOrder() != null ? a.getSortOrder() : 0,

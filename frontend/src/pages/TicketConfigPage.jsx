@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
+import MercadoPagoConnect from '../components/MercadoPagoConnect'
 import { ticketsApi } from '../api/tickets'
+import { paymentsApi } from '../api/payments'
 
 const CONDICIONES_IVA = [
   'Responsable Inscripto',
@@ -43,11 +45,38 @@ export default function TicketConfigPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [mpStatus, setMpStatus] = useState(null)
+  const [connectingMp, setConnectingMp] = useState(false)
 
   useEffect(() => {
-    ticketsApi.getConfig()
-      .then(r => setForm(f => ({ ...f, ...r.data, puntoVenta: r.data.puntoVenta ?? '' })))
-      .finally(() => setLoading(false))
+    const searchParams = new URLSearchParams(window.location.search)
+    const mpCode = searchParams.get('mp_code') || searchParams.get('code')
+    const mpState = searchParams.get('state')
+
+    // Limpiar query params del URL antes de procesar (evita re-procesamiento en refresh)
+    if (mpCode) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+
+    Promise.all([
+      ticketsApi.getConfig(),
+      paymentsApi.getMpStatus().catch(() => ({ data: null })),
+    ]).then(([configRes, statusRes]) => {
+      setForm(f => ({ ...f, ...configRes.data, puntoVenta: configRes.data.puntoVenta ?? '' }))
+      setMpStatus(statusRes.data)
+    }).finally(() => setLoading(false))
+
+    // Procesar callback OAuth de MP si hay code en la URL
+    if (mpCode && mpState) {
+      setConnectingMp(true)
+      paymentsApi.connectMp(mpCode, mpState)
+        .then(({ data }) => {
+          setMpStatus(data)
+          toast.success('¡Cuenta de Mercado Pago conectada!')
+        })
+        .catch(() => toast.error('Error al conectar con Mercado Pago. Intentá nuevamente.'))
+        .finally(() => setConnectingMp(false))
+    }
   }, [])
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
@@ -235,6 +264,18 @@ export default function TicketConfigPage() {
             {saving ? 'Guardando...' : 'Guardar configuración'}
           </button>
         </form>
+
+        {/* Medios de pago digital */}
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Medios de pago digital</h2>
+          {connectingMp ? (
+            <div className="rounded-2xl border border-gray-200 dark:border-slate-700 p-5 bg-white dark:bg-slate-800 text-sm text-gray-500 dark:text-slate-400">
+              Conectando tu cuenta de Mercado Pago...
+            </div>
+          ) : (
+            <MercadoPagoConnect status={mpStatus} onStatusChange={setMpStatus} />
+          )}
+        </div>
       </div>
     </Layout>
   )

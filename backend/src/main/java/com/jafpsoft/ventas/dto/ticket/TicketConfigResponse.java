@@ -3,6 +3,8 @@ package com.jafpsoft.ventas.dto.ticket;
 import com.jafpsoft.ventas.model.TicketConfig;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class TicketConfigResponse {
     private String businessName;
@@ -21,6 +23,11 @@ public class TicketConfigResponse {
     private String condicionIva;
     private String ingresosBrutos;
     private String inicioActividades;
+    // Mercado Pago — solo campos públicos (nunca tokens)
+    private boolean mpEnabled;
+    private Long mpUserId;
+    private String mpPublicKey;
+    private LocalDateTime mpConnectedAt;
 
     public static TicketConfigResponse from(TicketConfig c) {
         TicketConfigResponse r = new TicketConfigResponse();
@@ -40,6 +47,10 @@ public class TicketConfigResponse {
         r.condicionIva = c.getCondicionIva();
         r.ingresosBrutos = c.getIngresosBrutos();
         r.inicioActividades = c.getInicioActividades();
+        r.mpEnabled = c.isMpEnabled();
+        r.mpUserId = c.getMpUserId();
+        r.mpPublicKey = c.getMpPublicKey();
+        r.mpConnectedAt = c.getMpConnectedAt();
         return r;
     }
 }

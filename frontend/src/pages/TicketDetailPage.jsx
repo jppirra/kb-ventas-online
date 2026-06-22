@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
+import MercadoPagoButton from '../components/MercadoPagoButton'
 import { ticketsApi } from '../api/tickets'
 import { adminApi } from '../api/admin'
 import { fmtDate, fmtDateLong } from '../utils/date'
@@ -238,6 +239,11 @@ export default function TicketDetailPage() {
   const [savingCustomer, setSavingCustomer] = useState(false)
   const [showNcNd, setShowNcNd] = useState(null) // 'NC' | 'ND' | null
 
+  function handleMpTicketUpdate(newStatus, partialData) {
+    setTicket(prev => prev ? { ...prev, status: newStatus, ...partialData } : prev)
+    if (newStatus === 'PAID') ticketsApi.get(id).then(r => setTicket(r.data)).catch(() => {})
+  }
+
   useEffect(() => {
     Promise.all([ticketsApi.get(id), ticketsApi.getConfig()])
       .then(([tr, cr]) => {
@@ -425,6 +431,17 @@ export default function TicketDetailPage() {
               </button>
             </div>
           </div>
+
+          {/* Pago con Mercado Pago — visible para tickets DRAFT/PAYMENT_PENDING/PAYMENT_FAILED */}
+          {config?.mpEnabled && ['DRAFT', 'PAYMENT_PENDING', 'PAYMENT_FAILED'].includes(ticket.status) && (
+            <div className="mb-4 no-print">
+              <MercadoPagoButton
+                ticket={ticket}
+                mpEnabled={config.mpEnabled}
+                onTicketUpdate={handleMpTicketUpdate}
+              />
+            </div>
+          )}
 
           <InvoiceDocument ticket={ticket} config={config} />
         </div>
