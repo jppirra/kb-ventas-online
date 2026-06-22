@@ -8,6 +8,7 @@ export default defineConfig({
   plugins: [react()],
   server: { port: 5173 },
   define: {
+    global: 'globalThis',
     __APP_VERSION__: JSON.stringify('v' + (pkg.appVersion || pkg.version))
   }
 })
