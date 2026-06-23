@@ -50,6 +50,9 @@ public class MercadoPagoPaymentService {
     @Value("${app.base-url:http://localhost:5173}")
     private String baseUrl;
 
+    @Value("${mp.notification-url:http://localhost:8080}")
+    private String mpNotificationUrl;
+
     // ── Crear preferencia de pago en MP ──────────────────────────────────────
 
     @Transactional
@@ -290,6 +293,15 @@ public class MercadoPagoPaymentService {
         backUrls.put("failure", baseUrl + "/tickets/" + ticket.getId() + "?mp=failure");
         backUrls.put("pending", baseUrl + "/tickets/" + ticket.getId() + "?mp=pending");
         body.put("back_urls", backUrls);
+        body.put("auto_return", "approved");
+
+        // notification_url solo si apunta a un host accesible (no localhost)
+        if (!mpNotificationUrl.contains("localhost")) {
+            body.put("notification_url", mpNotificationUrl + "/api/webhooks/mercadopago");
+        }
+
+        log.info("MP preference body — baseUrl=[{}] notifUrl=[{}] backSuccess=[{}]",
+                baseUrl, mpNotificationUrl, backUrls.get("success"));
 
         if (ticket.getCustomerName() != null || ticket.getCustomerEmail() != null) {
             Map<String, String> payer = new HashMap<>();
