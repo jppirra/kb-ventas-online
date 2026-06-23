@@ -10,8 +10,8 @@ export default function MpSuccessPage() {
     <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-blue-50 flex flex-col items-center justify-center px-4 py-16">
 
       {/* Logo Mercato */}
-      <Link to="/" className="mb-8">
-        <img src="/logo-text.png" alt="Mercato" className="h-10 object-contain" />
+      <Link to="/" className="mb-10 block">
+        <img src="/logo-text.png" alt="Mercato" className="h-16 sm:h-20 object-contain drop-shadow-sm" />
       </Link>
 
       {/* Card pago exitoso */}
