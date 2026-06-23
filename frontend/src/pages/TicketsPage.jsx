@@ -43,9 +43,11 @@ function RowMenu({ ticket, config, onAction }) {
   const isNC = ticket.tipoDoc === 'NC'
   const phone = ticket.customerPhone?.replace(/\D/g, '')
   const email = ticket.customerEmail
+  const canPayWithMp = config?.mpEnabled && ['DRAFT', 'PAYMENT_PENDING', 'PAYMENT_FAILED'].includes(ticket.status) && ticket.paymentMethod === 'Mercado Pago'
 
   const items = [
     { label: 'Abrir', icon: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14', action: 'open', always: true },
+    canPayWithMp && { label: 'Cobrar con MP', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', action: 'mpPayment', color: 'text-blue-600 dark:text-blue-400' },
     phone && { label: 'WhatsApp', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', action: 'wa', always: true, color: 'text-green-600 dark:text-green-400' },
     email && { label: 'Enviar email', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', action: 'email', always: true, color: 'text-blue-500 dark:text-blue-400' },
     { label: 'Imprimir', icon: 'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z', action: 'print', always: true },
@@ -195,8 +197,10 @@ function NewTicketModal({ onClose, onCreated }) {
     if (items.some(it => !it.productName.trim())) { toast.error('Completá el nombre de todos los productos'); return }
     setSaving(true)
     try {
+      const isMp = form.paymentMethod === 'Mercado Pago'
       const payload = {
         ...form,
+        draft: isMp ? true : undefined,
         discount: discount || null,
         items: items.map((it, idx) => {
           let size = null, color = null
@@ -209,7 +213,7 @@ function NewTicketModal({ onClose, onCreated }) {
         })
       }
       const { data } = await ticketsApi.create(payload)
-      toast.success(`Ticket ${data.ticketNumber} creado`)
+      if (!isMp) toast.success(`Ticket ${data.ticketNumber} creado`)
       onCreated(data)
     } catch { toast.error('Error al crear el ticket') }
     finally { setSaving(false) }
@@ -440,6 +444,7 @@ export default function TicketsPage() {
 
   function openAction(type, ticket) {
     if (type === 'open') { navigate(`/tickets/${ticket.id}`); return }
+    if (type === 'mpPayment') { setMpPaymentTicket(ticket); return }
     if (type === 'email') {
       ticketsApi.sendEmail(ticket.id)
         .then(() => toast.success(`Email enviado a ${ticket.customerEmail}`))
@@ -554,9 +559,9 @@ export default function TicketsPage() {
       {mpPaymentTicket && (
         <MpCheckoutModal
           ticket={mpPaymentTicket}
-          onClose={() => {
+          onClose={(updatedTicket) => {
+            if (updatedTicket) setTickets(ts => ts.map(t => t.id === updatedTicket.id ? updatedTicket : t))
             setMpPaymentTicket(null)
-            navigate(`/tickets/${mpPaymentTicket.id}`)
           }}
         />
       )}

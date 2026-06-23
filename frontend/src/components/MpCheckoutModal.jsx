@@ -12,6 +12,7 @@ export default function MpCheckoutModal({ ticket, onClose }) {
   const [checkoutUrl, setCheckoutUrl] = useState(null)
   const [qrDataUrl, setQrDataUrl] = useState(null)
   const [mpPaymentId, setMpPaymentId] = useState(null)
+  const [paidTicket, setPaidTicket] = useState(null)
   const pollRef = useRef(null)
   const pollStartRef = useRef(null)
 
@@ -44,6 +45,7 @@ export default function MpCheckoutModal({ ticket, onClose }) {
         if (data.ticketStatus === 'PAID') {
           stopPolling()
           setMpPaymentId(data.mpPaymentId)
+          setPaidTicket({ ...ticket, status: 'PAID', mpPaymentId: data.mpPaymentId, mpStatus: data.mpStatus })
           setState('paid')
           toast.success('¡Pago recibido!')
         }
@@ -57,13 +59,33 @@ export default function MpCheckoutModal({ ticket, onClose }) {
 
   function handleClose() {
     stopPolling()
-    onClose()
+    onClose(paidTicket)
   }
 
   function handleViewTicket() {
     stopPolling()
     navigate(`/tickets/${ticket.id}`)
-    onClose()
+    onClose(paidTicket)
+  }
+
+  async function handleRetry() {
+    setState('loading')
+    setQrDataUrl(null)
+    setCheckoutUrl(null)
+    try {
+      const { data } = await paymentsApi.createPreference(ticket.id)
+      const url = data.sandboxInitPoint || data.initPoint
+      setCheckoutUrl(url)
+      import('qrcode').then(QRCode =>
+        QRCode.toDataURL(url, { width: 220, margin: 2, color: { dark: '#1e3a5f', light: '#ffffff' } })
+          .then(setQrDataUrl).catch(() => {})
+      ).catch(() => {})
+      setState('ready')
+      startPolling()
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'Error al generar el link de pago')
+      setState('error')
+    }
   }
 
   const cur = '$'
@@ -102,9 +124,14 @@ export default function MpCheckoutModal({ ticket, onClose }) {
           {state === 'error' && (
             <div className="text-center py-6 space-y-3">
               <p className="text-sm text-red-600 dark:text-red-400">No se pudo generar el link de pago.</p>
-              <button onClick={handleViewTicket} className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
-                Ver comprobante
-              </button>
+              <div className="flex gap-3 justify-center">
+                <button onClick={handleRetry} className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-xl transition-colors">
+                  Reintentar
+                </button>
+                <button onClick={handleViewTicket} className="px-4 py-2 border border-gray-300 dark:border-slate-600 text-sm text-gray-700 dark:text-slate-300 rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors">
+                  Ver comprobante
+                </button>
+              </div>
             </div>
           )}
 
