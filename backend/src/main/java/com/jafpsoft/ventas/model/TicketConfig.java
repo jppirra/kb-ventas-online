@@ -82,14 +82,14 @@ public class TicketConfig {
     private Long mpUserId;
 
     // public key va al frontend: no requiere cifrado
-    @Column(name = "mp_public_key", length = 100)
+    @Column(name = "mp_public_key", columnDefinition = "TEXT")
     private String mpPublicKey;
 
     @Column(name = "mp_enabled", columnDefinition = "boolean not null default false")
     @Builder.Default
     private boolean mpEnabled = false;
 
-    @Column(name = "mp_scope", length = 200)
+    @Column(name = "mp_scope", columnDefinition = "TEXT")
     private String mpScope;
 
     @Column(name = "mp_connected_at")
