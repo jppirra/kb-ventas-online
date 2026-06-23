@@ -55,6 +55,18 @@ public class MercadoPagoPaymentService {
         SaleTicket ticket = findOwned(ticketId, userId);
 
         TicketStatus current = TicketStatus.fromString(ticket.getStatus());
+
+        // Idempotencia: si ya tiene preferencia activa la reutilizamos
+        if (current == TicketStatus.PAYMENT_PENDING && ticket.getMpPreferenceId() != null) {
+            log.info("Ticket {} ya en PAYMENT_PENDING con preferencia {}, reutilizando", ticketId, ticket.getMpPreferenceId());
+            String prefId = ticket.getMpPreferenceId();
+            return MercadoPagoPreferenceResponse.builder()
+                    .preferenceId(prefId)
+                    .initPoint("https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=" + prefId)
+                    .sandboxInitPoint("https://sandbox.mercadopago.com.ar/checkout/v1/redirect?pref_id=" + prefId)
+                    .build();
+        }
+
         current.assertCanTransitionTo(TicketStatus.PAYMENT_PENDING);
 
         TicketConfig config = configRepository.findById(userId)
