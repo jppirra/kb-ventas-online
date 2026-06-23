@@ -319,9 +319,7 @@ public class MercadoPagoPaymentService {
         metadata.put("userId", userId);
         body.put("metadata", metadata);
 
-        if (ticket.getDiscount() != null && ticket.getDiscount().compareTo(BigDecimal.ZERO) > 0) {
-            body.put("marketplace_fee", 0);
-        }
+        body.put("marketplace_fee", 0);
 
         return body;
     }
