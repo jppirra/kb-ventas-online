@@ -293,7 +293,11 @@ public class MercadoPagoPaymentService {
 
         if (ticket.getCustomerName() != null || ticket.getCustomerEmail() != null) {
             Map<String, String> payer = new HashMap<>();
-            if (ticket.getCustomerName() != null) payer.put("name", ticket.getCustomerName());
+            if (ticket.getCustomerName() != null) {
+                String[] parts = ticket.getCustomerName().trim().split(" ", 2);
+                payer.put("first_name", parts[0]);
+                if (parts.length > 1) payer.put("last_name", parts[1]);
+            }
             if (ticket.getCustomerEmail() != null) payer.put("email", ticket.getCustomerEmail());
             body.put("payer", payer);
         }
