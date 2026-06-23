@@ -57,7 +57,20 @@ export default function TermsPage() {
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">8. Contacto</h2>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">8. Pagos con Mercado Pago</h2>
+            <p>Mercato ofrece integración opcional con <strong>Mercado Pago</strong> para que los vendedores puedan cobrar en línea. Al conectar tu cuenta de Mercado Pago mediante OAuth, aceptás lo siguiente:</p>
+            <ul className="list-disc ml-5 mt-2 space-y-1">
+              <li>Autorizás a Mercato a generar preferencias de pago y procesar cobros en tu nombre a través de la API de Mercado Pago.</li>
+              <li>Mercato <strong>no almacena datos de tarjetas</strong> ni información financiera sensible de los compradores. Todo el procesamiento de pagos es realizado exclusivamente por Mercado Pago.</li>
+              <li>Tus credenciales de acceso a Mercado Pago (tokens OAuth) son almacenadas con cifrado AES-256-GCM y nunca son expuestas.</li>
+              <li>Podés desconectar tu cuenta de Mercado Pago en cualquier momento desde la configuración de la plataforma, lo que revocará el acceso de Mercato.</li>
+              <li>Al utilizar esta integración también aceptás los <a href="https://www.mercadopago.com.ar/ayuda/terminos-y-condiciones_299" target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 hover:underline">Términos y Condiciones de Mercado Pago</a>.</li>
+              <li>Mercato actúa como intermediario tecnológico y no es responsable por disputas, contracargos o decisiones tomadas por Mercado Pago respecto a las transacciones.</li>
+            </ul>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">9. Contacto</h2>
             <p>Para consultas sobre estos términos, contactanos a través de la plataforma o al email de soporte indicado en el sitio.</p>
           </section>
 
