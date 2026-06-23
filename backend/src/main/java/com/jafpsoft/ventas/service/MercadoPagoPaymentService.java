@@ -44,6 +44,7 @@ public class MercadoPagoPaymentService {
     private final MercadoPagoApiClient apiClient;
     private final MercadoPagoTokenManager tokenManager;
     private final EmailService emailService;
+    private final NotificationService notificationService;
 
     @Value("${app.base-url:http://localhost:5173}")
     private String baseUrl;
@@ -149,12 +150,23 @@ public class MercadoPagoPaymentService {
 
         logPayment(ticketId, ticket.getUserId(), mpPaymentId, "PAYMENT_APPROVED", oldStatus, TicketStatus.PAID.name(), correlationId);
 
+        TicketConfig config = configRepository.findById(ticket.getUserId())
+                .orElse(TicketConfig.builder().userId(ticket.getUserId()).build());
+
         // Enviar email de confirmación al comprador (async, non-blocking)
         if (ticket.getCustomerEmail() != null && !ticket.getCustomerEmail().isBlank()) {
-            TicketConfig config = configRepository.findById(ticket.getUserId())
-                    .orElse(TicketConfig.builder().userId(ticket.getUserId()).build());
             emailService.sendPaymentConfirmationEmail(ticket, config);
         }
+
+        String customerLabel = ticket.getCustomerName() != null ? ticket.getCustomerName() : "un cliente";
+        String cur = config.getCurrency() != null ? config.getCurrency() : "$";
+        notificationService.create(
+                ticket.getUserId(),
+                "PAYMENT_RECEIVED",
+                "Pago recibido",
+                String.format("Pago de %s confirmado — %s %s", customerLabel, ticket.getTicketNumber(), cur + ticket.getTotal().toPlainString()),
+                ticketId
+        );
 
         log.info("Payment confirmed ticketId={} mpPaymentId={} correlationId={}", ticketId, mpPaymentId, correlationId);
     }
