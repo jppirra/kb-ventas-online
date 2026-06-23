@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
-import QrPaymentModal from '../components/QrPaymentModal'
+import MpCheckoutModal from '../components/MpCheckoutModal'
 import { ticketsApi } from '../api/tickets'
 import { productsApi } from '../api/products'
 import { customersApi } from '../api/customers'
@@ -144,9 +144,11 @@ function NewTicketModal({ onClose, onCreated }) {
     setShowCustomerResults(false)
   }
 
-  const paymentOptions = useMemo(() =>
-    (config.paymentMethods || 'Efectivo').split(',').map(s => s.trim()).filter(Boolean)
-  , [config.paymentMethods])
+  const paymentOptions = useMemo(() => {
+    const methods = (config.paymentMethods || 'Efectivo').split(',').map(s => s.trim()).filter(Boolean)
+    if (config.mpEnabled && !methods.includes('Mercado Pago')) methods.push('Mercado Pago')
+    return methods
+  }, [config.paymentMethods, config.mpEnabled])
 
   const categories = useMemo(() =>
     [...new Set(allProducts.map(p => p.category).filter(Boolean))].sort()
@@ -424,7 +426,7 @@ export default function TicketsPage() {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
-  const [showQr, setShowQr] = useState(false)
+  const [mpPaymentTicket, setMpPaymentTicket] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' })
   const [modal, setModal] = useState(null) // { type: 'cancel'|'customer'|'nc'|'nd', ticket }
@@ -541,11 +543,23 @@ export default function TicketsPage() {
           onCreated={(ticket) => {
             setTickets(prev => [ticket, ...prev])
             setShowNew(false)
-            navigate(`/tickets/${ticket.id}`)
+            if (ticket.paymentMethod === 'Mercado Pago' && config?.mpEnabled) {
+              setMpPaymentTicket(ticket)
+            } else {
+              navigate(`/tickets/${ticket.id}`)
+            }
           }}
         />
       )}
-      {showQr && <QrPaymentModal onClose={() => setShowQr(false)} />}
+      {mpPaymentTicket && (
+        <MpCheckoutModal
+          ticket={mpPaymentTicket}
+          onClose={() => {
+            setMpPaymentTicket(null)
+            navigate(`/tickets/${mpPaymentTicket.id}`)
+          }}
+        />
+      )}
 
       <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-4">
@@ -567,15 +581,6 @@ export default function TicketsPage() {
             <Link to="/tickets/config" className="px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
               Configurar
             </Link>
-            {config?.mpEnabled && (
-              <button onClick={() => setShowQr(true)}
-                className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z" />
-                </svg>
-                Cobrar QR
-              </button>
-            )}
             <button onClick={() => setShowNew(true)}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-xl transition-colors">
               + Nueva venta
