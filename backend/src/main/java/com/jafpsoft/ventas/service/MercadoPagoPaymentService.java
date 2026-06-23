@@ -274,15 +274,15 @@ public class MercadoPagoPaymentService {
 
     private Map<String, Object> buildPreferenceBody(SaleTicket ticket, TicketConfig config,
                                                     Long userId, String correlationId) {
-        List<Map<String, Object>> items = new ArrayList<>();
-        for (SaleTicketItem item : ticket.getItems()) {
-            Map<String, Object> mpItem = new HashMap<>();
-            mpItem.put("title", item.getProductName());
-            mpItem.put("quantity", item.getQuantity());
-            mpItem.put("unit_price", item.getUnitPrice().doubleValue());
-            mpItem.put("currency_id", "ARS");
-            items.add(mpItem);
-        }
+        String itemTitle = (config.getBusinessName() != null && !config.getBusinessName().isBlank())
+                ? config.getBusinessName()
+                : "Venta";
+        Map<String, Object> singleItem = new HashMap<>();
+        singleItem.put("title", itemTitle + " — " + ticket.getTicketNumber());
+        singleItem.put("quantity", 1);
+        singleItem.put("unit_price", ticket.getTotal().doubleValue());
+        singleItem.put("currency_id", "ARS");
+        List<Map<String, Object>> items = List.of(singleItem);
 
         Map<String, Object> body = new HashMap<>();
         body.put("items", items);
