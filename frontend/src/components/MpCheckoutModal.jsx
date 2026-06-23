@@ -19,7 +19,7 @@ export default function MpCheckoutModal({ ticket, onClose }) {
   useEffect(() => {
     paymentsApi.createPreference(ticket.id)
       .then(({ data }) => {
-        const url = data.sandboxInitPoint || data.initPoint
+        const url = data.initPoint || data.sandboxInitPoint
         setCheckoutUrl(url)
         import('qrcode').then(QRCode =>
           QRCode.toDataURL(url, { width: 220, margin: 2, color: { dark: '#1e3a5f', light: '#ffffff' } })
@@ -74,7 +74,7 @@ export default function MpCheckoutModal({ ticket, onClose }) {
     setCheckoutUrl(null)
     try {
       const { data } = await paymentsApi.createPreference(ticket.id)
-      const url = data.sandboxInitPoint || data.initPoint
+      const url = data.initPoint || data.sandboxInitPoint
       setCheckoutUrl(url)
       import('qrcode').then(QRCode =>
         QRCode.toDataURL(url, { width: 220, margin: 2, color: { dark: '#1e3a5f', light: '#ffffff' } })
