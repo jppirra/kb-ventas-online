@@ -288,8 +288,11 @@ public class MercadoPagoPaymentService {
         body.put("items", items);
         body.put("external_reference", "ticket:" + ticket.getId());
 
+        String biz = config.getBusinessName() != null
+                ? java.net.URLEncoder.encode(config.getBusinessName(), java.nio.charset.StandardCharsets.UTF_8)
+                : "";
         Map<String, String> backUrls = new HashMap<>();
-        backUrls.put("success", baseUrl + "/tickets/" + ticket.getId() + "?mp=success");
+        backUrls.put("success", baseUrl + "/mp/success?ticketId=" + ticket.getId() + "&shop=" + biz);
         backUrls.put("failure", baseUrl + "/tickets/" + ticket.getId() + "?mp=failure");
         backUrls.put("pending", baseUrl + "/tickets/" + ticket.getId() + "?mp=pending");
         body.put("back_urls", backUrls);
