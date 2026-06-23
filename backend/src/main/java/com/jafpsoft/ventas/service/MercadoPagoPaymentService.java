@@ -45,6 +45,7 @@ public class MercadoPagoPaymentService {
     private final MercadoPagoTokenManager tokenManager;
     private final EmailService emailService;
     private final NotificationService notificationService;
+    private final com.jafpsoft.ventas.repository.UserRepository userRepository;
 
     @Value("${app.base-url:http://localhost:5173}")
     private String baseUrl;
@@ -157,6 +158,11 @@ public class MercadoPagoPaymentService {
         if (ticket.getCustomerEmail() != null && !ticket.getCustomerEmail().isBlank()) {
             emailService.sendPaymentConfirmationEmail(ticket, config);
         }
+
+        // Notificar al vendedor por email
+        userRepository.findById(ticket.getUserId()).ifPresent(vendor ->
+                emailService.sendPaymentReceivedVendorEmail(ticket, config, vendor.getEmail()));
+
 
         String customerLabel = ticket.getCustomerName() != null ? ticket.getCustomerName() : "un cliente";
         String cur = config.getCurrency() != null ? config.getCurrency() : "$";

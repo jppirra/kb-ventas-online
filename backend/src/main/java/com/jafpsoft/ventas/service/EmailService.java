@@ -191,6 +191,29 @@ public class EmailService {
     }
 
     @Async
+    public void sendPaymentReceivedVendorEmail(SaleTicket ticket, TicketConfig config, String vendorEmail) {
+        if (vendorEmail == null || vendorEmail.isBlank()) return;
+        String biz = config.getBusinessName() != null ? config.getBusinessName() : fromName();
+        String cur = config.getCurrency() != null ? config.getCurrency() : "$";
+        String customer = ticket.getCustomerName() != null ? ticket.getCustomerName() : "un cliente";
+        String body = String.format(
+            "<p>Recibiste un pago via <strong>Mercado Pago</strong>.</p>" +
+            "<table width='100%%' style='font-size:14px;border-collapse:collapse;margin:16px 0;'>" +
+            "<tr><td style='color:#6b7280;padding:4px 0;'>Comprobante</td><td style='font-weight:600;padding:4px 0 4px 16px;'>%s</td></tr>" +
+            "<tr><td style='color:#6b7280;padding:4px 0;'>Cliente</td><td style='padding:4px 0 4px 16px;'>%s</td></tr>" +
+            "<tr><td style='color:#6b7280;padding:4px 0;'>Monto</td><td style='font-weight:700;font-size:16px;color:#1d4ed8;padding:4px 0 4px 16px;'>%s%.2f</td></tr>" +
+            "<tr><td style='color:#6b7280;padding:4px 0;'>N.º de operación MP</td><td style='font-family:monospace;padding:4px 0 4px 16px;'>%s</td></tr>" +
+            "</table>",
+            esc(ticket.getTicketNumber()), esc(customer),
+            cur, ticket.getTotal().doubleValue(),
+            ticket.getMpPaymentId() != null ? esc(ticket.getMpPaymentId()) : "-");
+        String actionUrl = baseUrl + "/tickets/" + ticket.getId();
+        String html = buildActionEmail("¡Pago recibido!", body, actionUrl, "Ver comprobante", biz);
+        String subject = "Pago recibido — " + esc(ticket.getTicketNumber()) + " — " + customer;
+        send(vendorEmail, "PAYMENT_RECEIVED_VENDOR", subject, html);
+    }
+
+    @Async
     public void sendContactNotification(String name, String email, String subject, String message) {
         String html = buildActionEmail(
                 "Nuevo mensaje de contacto",
