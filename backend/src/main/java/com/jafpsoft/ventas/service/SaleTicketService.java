@@ -7,6 +7,7 @@ import com.jafpsoft.ventas.model.TicketConfig;
 import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.SaleTicketRepository;
 import com.jafpsoft.ventas.repository.TicketConfigRepository;
+import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,7 @@ public class SaleTicketService {
     private final SaleTicketRepository ticketRepository;
     private final TicketConfigRepository configRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
     private final EmailService emailService;
 
     // ── Tickets ───────────────────────────────────────────────────────────────
@@ -184,7 +186,9 @@ public class SaleTicketService {
     public TicketConfigResponse getConfig(Long userId) {
         TicketConfig config = configRepository.findById(userId)
                 .orElse(TicketConfig.builder().userId(userId).build());
-        return TicketConfigResponse.from(config);
+        TicketConfigResponse r = TicketConfigResponse.from(config);
+        userRepository.findById(userId).ifPresent(u -> r.setCatalogSlug(u.getSlug()));
+        return r;
     }
 
     @Transactional
@@ -207,7 +211,9 @@ public class SaleTicketService {
         if (req.getCondicionIva() != null) config.setCondicionIva(req.getCondicionIva());
         if (req.getIngresosBrutos() != null) config.setIngresosBrutos(req.getIngresosBrutos());
         if (req.getInicioActividades() != null) config.setInicioActividades(req.getInicioActividades());
-        return TicketConfigResponse.from(configRepository.save(config));
+        TicketConfigResponse r = TicketConfigResponse.from(configRepository.save(config));
+        userRepository.findById(userId).ifPresent(u -> r.setCatalogSlug(u.getSlug()));
+        return r;
     }
 
     // ── Confirmar pago local (transferencia / tarjeta / otro) ────────────────

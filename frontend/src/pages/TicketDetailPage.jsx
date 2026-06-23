@@ -52,6 +52,17 @@ function buildTicketHtml(ticket, config) {
 
 // Comprobante imprimible con formato AFIP cuando puntoVenta está configurado
 function InvoiceDocument({ ticket, config }) {
+  const [catalogQrUrl, setCatalogQrUrl] = useState(null)
+
+  useEffect(() => {
+    if (!config?.showCatalogQr || !config?.catalogSlug) return
+    const url = `${window.location.origin}/p/${config.catalogSlug}`
+    import('qrcode').then(QRCode =>
+      QRCode.toDataURL(url, { width: 120, margin: 1, color: { dark: '#1e3a5f', light: '#ffffff' } })
+        .then(setCatalogQrUrl).catch(() => {})
+    ).catch(() => {})
+  }, [config?.showCatalogQr, config?.catalogSlug])
+
   const cur = config?.currency || '$'
   const isAfip = !!config?.puntoVenta
   const tipo = config?.tipoComprobante || 'B'
@@ -205,7 +216,7 @@ function InvoiceDocument({ ticket, config }) {
       </div>
 
       {/* ── Pie ── */}
-      {(config?.footer || isAfip) && (
+      {(config?.footer || isAfip || catalogQrUrl) && (
         <div className="border-t border-gray-200 px-5 py-3 bg-gray-50">
           {isAfip && !esTc && (
             <div className="flex gap-6 text-xs text-gray-400 mb-2">
@@ -220,6 +231,12 @@ function InvoiceDocument({ ticket, config }) {
           )}
           {config?.footer && (
             <p className="text-xs text-gray-400 text-center">{config.footer}</p>
+          )}
+          {catalogQrUrl && (
+            <div className="flex flex-col items-center gap-1 mt-3 pt-3 border-t border-gray-100">
+              <img src={catalogQrUrl} alt="QR catálogo" className="w-20 h-20" />
+              <p className="text-xs text-gray-400">Visitá nuestro catálogo</p>
+            </div>
           )}
         </div>
       )}

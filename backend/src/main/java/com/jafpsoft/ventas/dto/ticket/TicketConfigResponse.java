@@ -24,6 +24,7 @@ public class TicketConfigResponse {
     private String condicionIva;
     private String ingresosBrutos;
     private String inicioActividades;
+    private String catalogSlug;
     // Mercado Pago — solo campos públicos (nunca tokens)
     private boolean mpEnabled;
     private Long mpUserId;
