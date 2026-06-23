@@ -56,6 +56,10 @@ public class MercadoPagoTokenManager {
 
     @Transactional
     public String exchangeAuthorizationCode(String code, String redirectUri) {
+        String maskedSecret = clientSecret != null && clientSecret.length() > 12
+                ? clientSecret.substring(0, 12) + "..." : "(vacío)";
+        log.info("MP OAuth exchange — client_id=[{}] secret_prefix=[{}] redirect=[{}]",
+                clientId, maskedSecret, redirectUri);
         try {
             String response = restClient.post()
                     .uri("/oauth/token")
