@@ -12,10 +12,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestClient;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
 @Slf4j
 @Component
@@ -34,7 +35,6 @@ public class MercadoPagoTokenManager {
     @Value("${mp.client-secret:}")
     private String clientSecret;
 
-    // Renueva el token si expira en menos de 5 minutos
     private static final int REFRESH_THRESHOLD_MINUTES = 5;
 
     @Transactional
@@ -50,7 +50,6 @@ public class MercadoPagoTokenManager {
             return config.getMpAccessToken();
         }
 
-        // Token expirado o por expirar — refrescar con lock pesimista
         return refreshTokenLocked(userId);
     }
 
@@ -61,16 +60,17 @@ public class MercadoPagoTokenManager {
         log.info("MP OAuth exchange — client_id=[{}] secret_prefix=[{}] redirect=[{}]",
                 clientId, maskedSecret, redirectUri);
         try {
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("client_id", clientId);
+            body.add("client_secret", clientSecret);
+            body.add("grant_type", "authorization_code");
+            body.add("code", code);
+            body.add("redirect_uri", redirectUri);
+
             String response = restClient.post()
                     .uri("/oauth/token")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of(
-                            "client_id", clientId,
-                            "client_secret", clientSecret,
-                            "grant_type", "authorization_code",
-                            "code", code,
-                            "redirect_uri", redirectUri
-                    ))
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(body)
                     .retrieve()
                     .body(String.class);
 
@@ -87,11 +87,9 @@ public class MercadoPagoTokenManager {
     }
 
     private String refreshTokenLocked(Long userId) {
-        // Adquirir lock pesimista para evitar refresh concurrente
         TicketConfig config = configRepository.findByIdForUpdate(userId)
                 .orElseThrow(() -> new MercadoPagoTokenException("TicketConfig no encontrado"));
 
-        // Re-verificar después del lock — otro thread pudo haber refrescado ya
         if (isTokenValid(config)) {
             return config.getMpAccessToken();
         }
@@ -101,15 +99,16 @@ public class MercadoPagoTokenManager {
         }
 
         try {
+            MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+            body.add("client_id", clientId);
+            body.add("client_secret", clientSecret);
+            body.add("grant_type", "refresh_token");
+            body.add("refresh_token", config.getMpRefreshToken());
+
             String response = restClient.post()
                     .uri("/oauth/token")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(Map.of(
-                            "client_id", clientId,
-                            "client_secret", clientSecret,
-                            "grant_type", "refresh_token",
-                            "refresh_token", config.getMpRefreshToken()
-                    ))
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(body)
                     .retrieve()
                     .body(String.class);
 
@@ -118,7 +117,6 @@ public class MercadoPagoTokenManager {
             String newRefreshToken = node.path("refresh_token").asText(config.getMpRefreshToken());
             long expiresIn = node.path("expires_in").asLong(21600);
 
-            // JPA @Convert cifra automáticamente al guardar
             config.setMpAccessToken(newAccessToken);
             config.setMpRefreshToken(newRefreshToken);
             config.setMpTokenExpiresAt(LocalDateTime.now().plusSeconds(expiresIn));
