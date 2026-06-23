@@ -27,6 +27,9 @@ public class TicketResponse {
     private String referenceTicketNumber;
     private List<TicketItemResponse> items;
     private LocalDateTime createdAt;
+    // Pago local
+    private String paymentReference;
+    private String paymentProofUrl;
     // Mercado Pago
     private String mpStatus;
     private String mpPreferenceId;
@@ -51,6 +54,8 @@ public class TicketResponse {
         r.tipoDoc = t.getTipoDoc() != null ? t.getTipoDoc() : "COMP";
         r.referenceTicketNumber = t.getReferenceTicketNumber();
         r.createdAt = t.getCreatedAt();
+        r.paymentReference = t.getPaymentReference();
+        r.paymentProofUrl = t.getPaymentProofUrl();
         r.mpStatus = t.getMpStatus();
         r.mpPreferenceId = t.getMpPreferenceId();
         r.mpPaymentId = t.getMpPaymentId();

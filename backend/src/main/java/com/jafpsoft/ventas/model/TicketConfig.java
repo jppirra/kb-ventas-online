@@ -41,6 +41,9 @@ public class TicketConfig {
     @Column(name = "payment_methods")
     private String paymentMethods;
 
+    @Column(name = "bank_accounts", columnDefinition = "TEXT")
+    private String bankAccounts;
+
     @Column(columnDefinition = "TEXT")
     private String footer;
 

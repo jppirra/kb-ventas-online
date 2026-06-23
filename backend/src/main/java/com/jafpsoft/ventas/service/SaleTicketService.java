@@ -199,6 +199,7 @@ public class SaleTicketService {
         if (req.getLogoUrl() != null) config.setLogoUrl(req.getLogoUrl());
         if (req.getCurrency() != null) config.setCurrency(req.getCurrency());
         if (req.getPaymentMethods() != null) config.setPaymentMethods(req.getPaymentMethods());
+        config.setBankAccounts(req.getBankAccounts());
         if (req.getFooter() != null) config.setFooter(req.getFooter());
         if (req.getShowCatalogQr() != null) config.setShowCatalogQr(req.getShowCatalogQr());
         if (req.getTipoComprobante() != null) config.setTipoComprobante(req.getTipoComprobante());
@@ -207,6 +208,22 @@ public class SaleTicketService {
         if (req.getIngresosBrutos() != null) config.setIngresosBrutos(req.getIngresosBrutos());
         if (req.getInicioActividades() != null) config.setInicioActividades(req.getInicioActividades());
         return TicketConfigResponse.from(configRepository.save(config));
+    }
+
+    // ── Confirmar pago local (transferencia / tarjeta / otro) ────────────────
+
+    @Transactional
+    public TicketResponse confirmLocalPayment(Long id, Long userId, String reference, String proofUrl) {
+        SaleTicket ticket = findOwned(id, userId);
+        if (!"DRAFT".equals(ticket.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "El ticket ya fue procesado (estado: " + ticket.getStatus() + ")");
+        }
+        ticket.setStatus("PAID");
+        if (reference != null && !reference.isBlank()) ticket.setPaymentReference(reference);
+        if (proofUrl != null && !proofUrl.isBlank()) ticket.setPaymentProofUrl(proofUrl);
+        adjustStock(ticket.getItems(), "NC".equals(ticket.getTipoDoc()) ? 1 : -1, userId);
+        return TicketResponse.from(ticketRepository.save(ticket));
     }
 
     // ── Email ─────────────────────────────────────────────────────────────────

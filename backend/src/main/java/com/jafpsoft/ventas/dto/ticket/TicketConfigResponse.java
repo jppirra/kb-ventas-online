@@ -15,6 +15,7 @@ public class TicketConfigResponse {
     private String logoUrl;
     private String currency;
     private String paymentMethods;
+    private String bankAccounts;
     private String footer;
     private boolean showCatalogQr;
     private Integer nextTicketNumber;
@@ -39,6 +40,7 @@ public class TicketConfigResponse {
         r.logoUrl = c.getLogoUrl();
         r.currency = c.getCurrency() != null ? c.getCurrency() : "$";
         r.paymentMethods = c.getPaymentMethods();
+        r.bankAccounts = c.getBankAccounts();
         r.footer = c.getFooter();
         r.showCatalogQr = c.isShowCatalogQr();
         r.nextTicketNumber = c.getNextTicketNumber();

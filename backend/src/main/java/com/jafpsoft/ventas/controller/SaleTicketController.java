@@ -85,6 +85,24 @@ public class SaleTicketController {
         service.delete(id, user.getUserId());
     }
 
+    @PostMapping("/{id}/confirm-payment")
+    public TicketResponse confirmLocalPayment(@PathVariable Long id,
+                                              @RequestBody(required = false) Map<String, String> body,
+                                              @AuthenticationPrincipal CustomUserDetails user) {
+        String ref = body != null ? body.get("reference") : null;
+        String proofUrl = body != null ? body.get("proofUrl") : null;
+        return service.confirmLocalPayment(id, user.getUserId(), ref, proofUrl);
+    }
+
+    @PostMapping("/{id}/payment-proof")
+    public ResponseEntity<Map<String, String>> uploadPaymentProof(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            @AuthenticationPrincipal CustomUserDetails user) throws IOException {
+        String url = storageService.uploadImage(file, "payment-proofs");
+        return ResponseEntity.ok(Map.of("proofUrl", url));
+    }
+
     // ── Ticket config ─────────────────────────────────────────────────────────
 
     @GetMapping("/config")

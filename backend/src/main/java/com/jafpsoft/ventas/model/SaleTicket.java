@@ -81,6 +81,13 @@ public class SaleTicket {
     @Builder.Default
     private List<SaleTicketItem> items = new ArrayList<>();
 
+    // ── Pago local (transferencia / tarjeta / otro) ───────────────────────────
+    @Column(name = "payment_reference", columnDefinition = "TEXT")
+    private String paymentReference;
+
+    @Column(name = "payment_proof_url", columnDefinition = "TEXT")
+    private String paymentProofUrl;
+
     // ── Mercado Pago ───────────────────────────────────────────────────────────
     @Column(name = "mp_preference_id", length = 100)
     private String mpPreferenceId;

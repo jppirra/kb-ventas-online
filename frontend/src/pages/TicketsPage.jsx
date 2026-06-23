@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import MpCheckoutModal from '../components/MpCheckoutModal'
+import PaymentConfirmModal from '../components/PaymentConfirmModal'
 import { ticketsApi } from '../api/tickets'
 import { productsApi } from '../api/products'
 import { customersApi } from '../api/customers'
@@ -44,10 +45,12 @@ function RowMenu({ ticket, config, onAction }) {
   const phone = ticket.customerPhone?.replace(/\D/g, '')
   const email = ticket.customerEmail
   const canPayWithMp = config?.mpEnabled && ['DRAFT', 'PAYMENT_PENDING', 'PAYMENT_FAILED'].includes(ticket.status) && ticket.paymentMethod === 'Mercado Pago'
+  const canConfirmLocal = ticket.status === 'DRAFT' && ticket.paymentMethod !== 'Mercado Pago' && ticket.paymentMethod !== 'Efectivo'
 
   const items = [
     { label: 'Abrir', icon: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14', action: 'open', always: true },
     canPayWithMp && { label: 'Cobrar con MP', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', action: 'mpPayment', color: 'text-blue-600 dark:text-blue-400' },
+    canConfirmLocal && { label: 'Confirmar pago', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', action: 'localPayment', color: 'text-green-600 dark:text-green-400' },
     phone && { label: 'WhatsApp', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', action: 'wa', always: true, color: 'text-green-600 dark:text-green-400' },
     email && { label: 'Enviar email', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', action: 'email', always: true, color: 'text-blue-500 dark:text-blue-400' },
     { label: 'Imprimir', icon: 'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z', action: 'print', always: true },
@@ -198,9 +201,11 @@ function NewTicketModal({ onClose, onCreated }) {
     setSaving(true)
     try {
       const isMp = form.paymentMethod === 'Mercado Pago'
+      const isCash = form.paymentMethod === 'Efectivo'
+      const needsDraft = !isCash // todo método excepto efectivo arranca en DRAFT
       const payload = {
         ...form,
-        draft: isMp ? true : undefined,
+        draft: needsDraft ? true : undefined,
         discount: discount || null,
         items: items.map((it, idx) => {
           let size = null, color = null
@@ -213,7 +218,7 @@ function NewTicketModal({ onClose, onCreated }) {
         })
       }
       const { data } = await ticketsApi.create(payload)
-      if (!isMp) toast.success(`Ticket ${data.ticketNumber} creado`)
+      if (isCash) toast.success(`Ticket ${data.ticketNumber} creado`)
       onCreated(data)
     } catch { toast.error('Error al crear el ticket') }
     finally { setSaving(false) }
@@ -431,6 +436,7 @@ export default function TicketsPage() {
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
   const [mpPaymentTicket, setMpPaymentTicket] = useState(null)
+  const [localPaymentTicket, setLocalPaymentTicket] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
   const [filters, setFilters] = useState({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' })
   const [modal, setModal] = useState(null) // { type: 'cancel'|'customer'|'nc'|'nd', ticket }
@@ -445,6 +451,7 @@ export default function TicketsPage() {
   function openAction(type, ticket) {
     if (type === 'open') { navigate(`/tickets/${ticket.id}`); return }
     if (type === 'mpPayment') { setMpPaymentTicket(ticket); return }
+    if (type === 'localPayment') { setLocalPaymentTicket(ticket); return }
     if (type === 'email') {
       ticketsApi.sendEmail(ticket.id)
         .then(() => toast.success(`Email enviado a ${ticket.customerEmail}`))
@@ -550,6 +557,8 @@ export default function TicketsPage() {
             setShowNew(false)
             if (ticket.paymentMethod === 'Mercado Pago' && config?.mpEnabled) {
               setMpPaymentTicket(ticket)
+            } else if (ticket.status === 'DRAFT') {
+              setLocalPaymentTicket(ticket)
             } else {
               navigate(`/tickets/${ticket.id}`)
             }
@@ -562,6 +571,17 @@ export default function TicketsPage() {
           onClose={(updatedTicket) => {
             if (updatedTicket) setTickets(ts => ts.map(t => t.id === updatedTicket.id ? updatedTicket : t))
             setMpPaymentTicket(null)
+          }}
+        />
+      )}
+      {localPaymentTicket && (
+        <PaymentConfirmModal
+          ticket={localPaymentTicket}
+          config={config}
+          onClose={(updatedTicket) => {
+            if (updatedTicket) setTickets(ts => ts.map(t => t.id === updatedTicket.id ? updatedTicket : t))
+            setLocalPaymentTicket(null)
+            if (updatedTicket) navigate(`/tickets/${updatedTicket.id}`)
           }}
         />
       )}
