@@ -76,8 +76,37 @@ export default function InvoiceDocument({ ticket, config }) {
   return (
     <div
       className="ticket-paper bg-white"
-      style={{ fontFamily: ff, fontSize: '12px', color: '#111827', border: B }}
+      style={{ fontFamily: ff, fontSize: '12px', color: '#111827', border: B, position: 'relative', overflow: 'hidden' }}
     >
+      {/* Marca de agua */}
+      <div
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      >
+        <span style={{
+          transform: 'rotate(-35deg)',
+          fontSize: '62px',
+          fontWeight: 900,
+          color: 'rgba(0,0,0,0.045)',
+          letterSpacing: '0.04em',
+          textTransform: 'uppercase',
+          whiteSpace: 'nowrap',
+          userSelect: 'none',
+        }}>
+          Sin validez fiscal
+        </span>
+      </div>
+
+      {/* Contenido sobre la marca de agua */}
+      <div style={{ position: 'relative', zIndex: 1 }}>
 
       {/* ═══ CABECERA TRIPARTITA ═══ */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 200px 1fr', borderBottom: B }}>
@@ -442,9 +471,11 @@ export default function InvoiceDocument({ ticket, config }) {
       {/* Aviso legal */}
       <div style={{ padding: '5px 16px', textAlign: 'center', background: '#f9fafb' }}>
         <p style={{ fontSize: '10px', color: '#9ca3af', margin: 0 }}>
-          Este documento no es válido como factura oficial
+          Sin validez fiscal — Este documento no es válido como factura oficial
         </p>
       </div>
+
+      </div>{/* /contenido */}
     </div>
   )
 }

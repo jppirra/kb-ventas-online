@@ -14,6 +14,7 @@ export default function Footer() {
           JAFPSoft
         </a>
         {' — '}Todos los derechos reservados
+        <span className="ml-3 opacity-50">{__APP_VERSION__}</span>
       </p>
     </footer>
   )
