@@ -13,7 +13,7 @@ const MP_STATUS_LABELS = {
   cancelled: { label: 'Cancelado', color: 'text-gray-600 dark:text-slate-400 bg-gray-100 dark:bg-slate-700' },
 }
 
-export default function MercadoPagoButton({ ticket, mpEnabled, onTicketUpdate }) {
+export default function MercadoPagoButton({ ticket, mpEnabled, onTicketUpdate, onOpenCheckout }) {
   const [generating, setGenerating] = useState(false)
   const [resetting, setResetting] = useState(false)
   const pollRef = useRef(null)
@@ -148,10 +148,7 @@ export default function MercadoPagoButton({ ticket, mpEnabled, onTicketUpdate })
         </div>
         {ticket.mpPreferenceId && (
           <button
-            onClick={() => {
-              const url = `https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${ticket.mpPreferenceId}`
-              window.open(url, '_blank')
-            }}
+            onClick={() => onOpenCheckout ? onOpenCheckout() : window.open(`https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=${ticket.mpPreferenceId}`, '_blank')}
             className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
           >
             Abrir link de pago nuevamente
