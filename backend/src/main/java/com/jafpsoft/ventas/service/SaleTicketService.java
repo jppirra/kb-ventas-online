@@ -187,7 +187,10 @@ public class SaleTicketService {
         TicketConfig config = configRepository.findById(userId)
                 .orElse(TicketConfig.builder().userId(userId).build());
         TicketConfigResponse r = TicketConfigResponse.from(config);
-        userRepository.findById(userId).ifPresent(u -> r.setCatalogSlug(u.getSlug()));
+        userRepository.findById(userId).ifPresent(u -> {
+            r.setCatalogSlug(u.getSlug());
+            r.setCountryCode(u.getCountryCode() != null ? u.getCountryCode() : "AR");
+        });
         return r;
     }
 
@@ -212,7 +215,14 @@ public class SaleTicketService {
         if (req.getIngresosBrutos() != null) config.setIngresosBrutos(req.getIngresosBrutos());
         if (req.getInicioActividades() != null) config.setInicioActividades(req.getInicioActividades());
         TicketConfigResponse r = TicketConfigResponse.from(configRepository.save(config));
-        userRepository.findById(userId).ifPresent(u -> r.setCatalogSlug(u.getSlug()));
+        userRepository.findById(userId).ifPresent(u -> {
+            if (req.getCountryCode() != null && !req.getCountryCode().isBlank()) {
+                u.setCountryCode(req.getCountryCode().toUpperCase());
+                userRepository.save(u);
+            }
+            r.setCatalogSlug(u.getSlug());
+            r.setCountryCode(u.getCountryCode() != null ? u.getCountryCode() : "AR");
+        });
         return r;
     }
 

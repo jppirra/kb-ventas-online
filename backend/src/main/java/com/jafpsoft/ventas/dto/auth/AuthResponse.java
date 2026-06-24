@@ -12,5 +12,7 @@ public class AuthResponse {
     private boolean appAdmin;
     private boolean emailVerified;
     private boolean termsAccepted;
+    private String countryCode;
+    private boolean newUser;
 }
 

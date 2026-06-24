@@ -5,6 +5,7 @@ import Layout from '../components/Layout'
 import MercadoPagoConnect from '../components/MercadoPagoConnect'
 import { ticketsApi } from '../api/tickets'
 import { paymentsApi } from '../api/payments'
+import { COUNTRIES } from '../utils/countries'
 
 const PREDEFINED_METHODS = ['Efectivo', 'Transferencia', 'Tarjetas', 'Mercado Pago']
 
@@ -43,6 +44,7 @@ export default function TicketConfigPage() {
     businessEmail: '', taxId: '', logoUrl: '', currency: '$',
     paymentMethods: 'Efectivo', bankAccounts: '[]', footer: '', showCatalogQr: false,
     tipoComprobante: 'B', puntoVenta: '', condicionIva: '', ingresosBrutos: '', inicioActividades: '',
+    countryCode: 'AR',
   })
   const [customMethodInput, setCustomMethodInput] = useState('')
   const [loading, setLoading] = useState(true)
@@ -306,6 +308,21 @@ export default function TicketConfigPage() {
                 onChange={e => set('showCatalogQr', e.target.checked)} className="rounded" />
               <label htmlFor="showQr" className="text-sm text-gray-700 dark:text-slate-300">Mostrar QR del catálogo en el comprobante</label>
             </div>
+          </div>
+
+          {/* País / Región */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 space-y-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">País / Región</h2>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                Determina las reglas de facturación, normalización de teléfonos y medios de pago disponibles.
+              </p>
+            </div>
+            <Field label="País">
+              <select value={form.countryCode} onChange={e => set('countryCode', e.target.value)} className={inputCls}>
+                {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
+            </Field>
           </div>
 
           {/* Factura electrónica Argentina */}

@@ -20,4 +20,5 @@ public class TicketConfigRequest {
     private String condicionIva;
     private String ingresosBrutos;
     private String inicioActividades;
+    private String countryCode;
 }

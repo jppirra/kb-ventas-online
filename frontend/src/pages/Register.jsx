@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import api from '../api/axios'
+import { COUNTRIES } from '../utils/countries'
 
 function TermsModal({ onAccept, onDecline }) {
   return (
@@ -69,7 +70,7 @@ export default function Register() {
   const navigate = useNavigate()
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [showTermsModal, setShowTermsModal] = useState(true)
-  const [form, setForm] = useState({ name: '', email: '', password: '' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', countryCode: 'AR' })
   const [loading, setLoading] = useState(false)
   const [done, setDone] = useState(false)
 
@@ -131,6 +132,13 @@ export default function Register() {
                   required className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl text-gray-900 dark:text-white bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500" />
               </div>
             ))}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">País</label>
+              <select value={form.countryCode} onChange={e => setForm(p => ({ ...p, countryCode: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl text-gray-900 dark:text-white bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
+            </div>
             <button type="submit" disabled={loading || !termsAccepted}
               className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors">
               {loading ? 'Creando cuenta...' : 'Registrarse'}

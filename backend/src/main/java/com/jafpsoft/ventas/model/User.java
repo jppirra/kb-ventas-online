@@ -89,5 +89,9 @@ public class User {
 
     @Column(name = "stock_report_day_of_month")
     private Integer stockReportDayOfMonth;
+
+    @Column(name = "country_code", length = 2)
+    @Builder.Default
+    private String countryCode = "AR";
 }
 
