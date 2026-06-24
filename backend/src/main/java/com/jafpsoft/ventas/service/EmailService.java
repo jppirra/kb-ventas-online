@@ -430,8 +430,8 @@ public class EmailService {
         return """
             <tr><td style="text-align:center;padding-bottom:28px;">
               <a href="https://mercato.jafpsoft.com" style="text-decoration:none;display:inline-block;">
-                <img src="%s/logo-icon.png" alt="" style="width:70px;height:auto;vertical-align:middle;margin-right:12px;">
-                <img src="%s/logo-text.png" alt="Mercato" style="width:200px;height:auto;vertical-align:middle;">
+                <img src="%s/logo-icon.png" alt="" style="width:200px;height:auto;display:block;margin:0 auto 12px;">
+                <img src="%s/logo-text.png" alt="Mercato" style="width:200px;height:auto;display:block;margin:0 auto;">
               </a>
             </td></tr>""".formatted(baseUrl, baseUrl);
     }
