@@ -40,6 +40,10 @@ public class Customer {
     @Builder.Default
     private String source = "manual";
 
+    @Column(name = "phone_country", length = 2)
+    @Builder.Default
+    private String phoneCountry = "AR";
+
     @Column(name = "order_id")
     private Long orderId;
 

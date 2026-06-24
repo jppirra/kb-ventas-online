@@ -34,6 +34,7 @@ public class CustomerService {
                 .name(req.getName())
                 .dni(req.getDni())
                 .phone(req.getPhone())
+                .phoneCountry(req.getPhoneCountry() != null ? req.getPhoneCountry() : "AR")
                 .email(req.getEmail())
                 .notes(req.getNotes())
                 .source(req.getSource() != null ? req.getSource() : "manual")
@@ -50,6 +51,7 @@ public class CustomerService {
         customer.setName(req.getName());
         customer.setDni(req.getDni());
         customer.setPhone(req.getPhone());
+        customer.setPhoneCountry(req.getPhoneCountry() != null ? req.getPhoneCountry() : "AR");
         customer.setEmail(req.getEmail());
         customer.setNotes(req.getNotes());
         return CustomerResponse.from(customerRepository.save(customer));

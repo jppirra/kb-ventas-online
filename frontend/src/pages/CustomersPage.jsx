@@ -2,8 +2,10 @@ import React, { useEffect, useState } from 'react'
 import Layout from '../components/Layout'
 import api from '../api/axios'
 import { toast } from 'sonner'
+import PhoneInput from '../components/PhoneInput'
+import { flagEmoji } from '../utils/countries'
 
-const emptyForm = { name: '', dni: '', phone: '', email: '', notes: '' }
+const emptyForm = { name: '', dni: '', phone: '', phoneCountry: 'AR', email: '', notes: '' }
 
 function CustomerForm({ initial, onSave, onCancel, saving }) {
   const [form, setForm] = useState(initial || emptyForm)
@@ -28,9 +30,13 @@ function CustomerForm({ initial, onSave, onCancel, saving }) {
             className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
         </div>
         <div>
-          <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Telefono</label>
-          <input value={form.phone} onChange={e => set('phone', e.target.value)}
-            className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Teléfono</label>
+          <PhoneInput
+            phone={form.phone}
+            onPhoneChange={v => set('phone', v)}
+            country={form.phoneCountry}
+            onCountryChange={v => set('phoneCountry', v)}
+          />
         </div>
         <div>
           <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Email</label>
@@ -172,7 +178,7 @@ export default function CustomersPage() {
               <div key={c.id}>
                 {editingCustomer?.id === c.id ? (
                   <CustomerForm
-                    initial={{ name: c.name, dni: c.dni || '', phone: c.phone || '', email: c.email || '', notes: c.notes || '' }}
+                    initial={{ name: c.name, dni: c.dni || '', phone: c.phone || '', phoneCountry: c.phoneCountry || 'AR', email: c.email || '', notes: c.notes || '' }}
                     onSave={handleSave}
                     onCancel={() => { setEditingCustomer(null); setShowForm(false) }}
                     saving={saving}
@@ -199,8 +205,9 @@ export default function CustomersPage() {
                       <div className="flex items-center gap-3 mt-0.5 flex-wrap">
                         {c.phone && (
                           <a href={`https://wa.me/${c.phone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer"
-                            className="text-xs text-green-600 dark:text-green-400 hover:underline">
-                            {c.phone}
+                            className="text-xs text-green-600 dark:text-green-400 hover:underline flex items-center gap-1">
+                            <span>{flagEmoji(c.phoneCountry || 'AR')}</span>
+                            <span>{c.phone}</span>
                           </a>
                         )}
                         {c.email && (

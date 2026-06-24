@@ -5,6 +5,8 @@ import Layout from '../components/Layout'
 import { settingsApi } from '../api/settings'
 import { ratingsApi } from '../api/ratings'
 import { useAuth } from '../context/AuthContext'
+import api from '../api/axios'
+import { COUNTRIES } from '../utils/countries'
 
 function Section({ title, description, children }) {
   return (
@@ -20,7 +22,23 @@ function Section({ title, description, children }) {
 
 export default function SettingsPage() {
   const navigate = useNavigate()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
+
+  const [countryCode, setCountryCode] = useState(user?.countryCode || 'AR')
+  const [countrySaving, setCountrySaving] = useState(false)
+
+  async function handleSaveCountry(e) {
+    e.preventDefault()
+    setCountrySaving(true)
+    try {
+      await api.put('/profile', { countryCode })
+      toast.success('País guardado')
+    } catch {
+      toast.error('Error al guardar el país')
+    } finally {
+      setCountrySaving(false)
+    }
+  }
 
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
   const [pwLoading, setPwLoading] = useState(false)
@@ -140,6 +158,32 @@ export default function SettingsPage() {
     <Layout>
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Configuración</h1>
+
+        {/* País de residencia */}
+        <Section
+          title="País de residencia"
+          description="Se usa para configurar facturación y medios de pago disponibles."
+        >
+          <form onSubmit={handleSaveCountry} className="flex items-end gap-3">
+            <div className="flex-1">
+              <label className="block text-sm text-gray-600 dark:text-slate-400 mb-1">País</label>
+              <select
+                value={countryCode}
+                onChange={e => setCountryCode(e.target.value)}
+                className={inputClass}
+              >
+                {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
+            </div>
+            <button
+              type="submit"
+              disabled={countrySaving}
+              className="px-5 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-medium rounded-xl transition-colors shrink-0"
+            >
+              {countrySaving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </form>
+        </Section>
 
         {/* Cambiar contraseña */}
         <Section

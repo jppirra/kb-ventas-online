@@ -12,6 +12,7 @@ public class TicketRequest {
     private String customerName;
     private String customerDni;
     private String customerPhone;
+    private String customerPhoneCountry;
     private String customerEmail;
     private String customerNotes;
     private String paymentMethod;

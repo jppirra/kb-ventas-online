@@ -1,9 +1,11 @@
 package com.jafpsoft.ventas.service;
 
 import com.jafpsoft.ventas.dto.ticket.*;
+import com.jafpsoft.ventas.model.Customer;
 import com.jafpsoft.ventas.model.SaleTicket;
 import com.jafpsoft.ventas.model.SaleTicketItem;
 import com.jafpsoft.ventas.model.TicketConfig;
+import com.jafpsoft.ventas.repository.CustomerRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.SaleTicketRepository;
 import com.jafpsoft.ventas.repository.TicketConfigRepository;
@@ -29,6 +31,7 @@ public class SaleTicketService {
     private final TicketConfigRepository configRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final CustomerRepository customerRepository;
     private final EmailService emailService;
 
     // ── Tickets ───────────────────────────────────────────────────────────────
@@ -130,7 +133,35 @@ public class SaleTicketService {
         if (!isDraft) {
             adjustStock(saved.getItems(), "NC".equals(tipoDoc) ? 1 : -1, userId);
         }
+        autoSaveCustomer(userId, req);
         return TicketResponse.from(saved);
+    }
+
+    private void autoSaveCustomer(Long userId, TicketRequest req) {
+        String name = req.getCustomerName();
+        if (name == null || name.isBlank()) return;
+        String phone = req.getCustomerPhone();
+        String email = req.getCustomerEmail();
+        boolean exists = false;
+        if (phone != null && !phone.isBlank()) {
+            exists = customerRepository.existsByVendorUserIdAndPhone(userId, phone);
+        } else if (email != null && !email.isBlank()) {
+            exists = customerRepository.existsByVendorUserIdAndEmail(userId, email);
+        } else {
+            return;
+        }
+        if (!exists) {
+            customerRepository.save(Customer.builder()
+                    .vendorUserId(userId)
+                    .name(name)
+                    .dni(req.getCustomerDni())
+                    .phone(phone)
+                    .phoneCountry(req.getCustomerPhoneCountry() != null ? req.getCustomerPhoneCountry() : "AR")
+                    .email(email)
+                    .notes(req.getCustomerNotes())
+                    .source("ticket")
+                    .build());
+        }
     }
 
     @Transactional

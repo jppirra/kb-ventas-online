@@ -4,6 +4,7 @@ import { toast } from 'sonner'
 import Layout from '../components/Layout'
 import MpCheckoutModal from '../components/MpCheckoutModal'
 import PaymentConfirmModal from '../components/PaymentConfirmModal'
+import PhoneInput from '../components/PhoneInput'
 import { ticketsApi } from '../api/tickets'
 import { productsApi } from '../api/products'
 import { customersApi } from '../api/customers'
@@ -122,7 +123,7 @@ function NewTicketModal({ onClose, onCreated }) {
   const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerResults, setShowCustomerResults] = useState(false)
   const [items, setItems] = useState([])
-  const [form, setForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
+  const [form, setForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerPhoneCountry: 'AR', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -139,12 +140,12 @@ function NewTicketModal({ onClose, onCreated }) {
     if (!customerSearch.trim()) return []
     const q = customerSearch.toLowerCase()
     return allCustomers.filter(c =>
-      c.name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q)
+      c.name?.toLowerCase().includes(q) || c.dni?.includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q)
     ).slice(0, 6)
   }, [allCustomers, customerSearch])
 
   function selectCustomer(c) {
-    setForm(f => ({ ...f, customerName: c.name, customerDni: c.dni || '', customerPhone: c.phone || '', customerEmail: c.email || '', customerNotes: c.notes || '' }))
+    setForm(f => ({ ...f, customerName: c.name, customerDni: c.dni || '', customerPhone: c.phone || '', customerPhoneCountry: c.phoneCountry || 'AR', customerEmail: c.email || '', customerNotes: c.notes || '' }))
     setCustomerSearch('')
     setShowCustomerResults(false)
   }
@@ -403,8 +404,13 @@ function NewTicketModal({ onClose, onCreated }) {
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <input type="text" placeholder="DNI / CUIT" value={form.customerDni} onChange={e => setForm(f => ({ ...f, customerDni: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <input type="tel" placeholder="Teléfono WhatsApp" value={form.customerPhone} onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))}
-                className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <PhoneInput
+                phone={form.customerPhone}
+                onPhoneChange={v => setForm(f => ({ ...f, customerPhone: v }))}
+                country={form.customerPhoneCountry}
+                onCountryChange={v => setForm(f => ({ ...f, customerPhoneCountry: v }))}
+                placeholder="Teléfono WhatsApp"
+              />
               <input type="email" placeholder="Email (opcional)" value={form.customerEmail} onChange={e => setForm(f => ({ ...f, customerEmail: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <input type="text" placeholder="Notas del cliente" value={form.customerNotes} onChange={e => setForm(f => ({ ...f, customerNotes: e.target.value }))}
