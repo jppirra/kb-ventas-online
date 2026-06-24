@@ -172,6 +172,100 @@ public class MigrationRunner implements ApplicationRunner {
         } catch (Exception e) {
             log.warn("Migration skipped for app_settings table: {}", e.getMessage());
         }
+
+        // ── Módulo facturación fiscal ────────────────────────────────────────
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ticket_configs' AND column_name='afip_enabled'",
+            "ALTER TABLE ticket_configs ADD COLUMN IF NOT EXISTS afip_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+            "ticket_configs.afip_enabled"
+        );
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ticket_configs' AND column_name='afip_ambiente'",
+            "ALTER TABLE ticket_configs ADD COLUMN IF NOT EXISTS afip_ambiente VARCHAR(15) DEFAULT 'HOMOLOGACION'",
+            "ticket_configs.afip_ambiente"
+        );
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ticket_configs' AND column_name='afip_cert_p12'",
+            "ALTER TABLE ticket_configs ADD COLUMN IF NOT EXISTS afip_cert_p12 TEXT",
+            "ticket_configs.afip_cert_p12"
+        );
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ticket_configs' AND column_name='afip_cert_password'",
+            "ALTER TABLE ticket_configs ADD COLUMN IF NOT EXISTS afip_cert_password TEXT",
+            "ticket_configs.afip_cert_password"
+        );
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ticket_configs' AND column_name='afip_cert_expiry'",
+            "ALTER TABLE ticket_configs ADD COLUMN IF NOT EXISTS afip_cert_expiry DATE",
+            "ticket_configs.afip_cert_expiry"
+        );
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ticket_configs' AND column_name='afip_cert_subject'",
+            "ALTER TABLE ticket_configs ADD COLUMN IF NOT EXISTS afip_cert_subject VARCHAR(300)",
+            "ticket_configs.afip_cert_subject"
+        );
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='ticket_configs' AND column_name='afip_cert_notified_expiry'",
+            "ALTER TABLE ticket_configs ADD COLUMN IF NOT EXISTS afip_cert_notified_expiry BOOLEAN NOT NULL DEFAULT FALSE",
+            "ticket_configs.afip_cert_notified_expiry"
+        );
+
+        try {
+            jdbc.execute(
+                "CREATE TABLE IF NOT EXISTS invoice_records (" +
+                "  id               BIGSERIAL PRIMARY KEY," +
+                "  user_id          BIGINT NOT NULL," +
+                "  sale_ticket_id   BIGINT," +
+                "  correlation_id   VARCHAR(36) NOT NULL UNIQUE," +
+                "  tipo_cbte        INTEGER NOT NULL," +
+                "  punto_venta      INTEGER NOT NULL," +
+                "  nro_cbte         BIGINT," +
+                "  cuit_emisor      VARCHAR(11)," +
+                "  doc_tipo         INTEGER," +
+                "  doc_nro          BIGINT," +
+                "  concepto         INTEGER," +
+                "  cbte_fecha       VARCHAR(8)," +
+                "  imp_total        NUMERIC(15,2)," +
+                "  imp_neto         NUMERIC(15,2)," +
+                "  imp_iva          NUMERIC(15,2)," +
+                "  aliciva_id       INTEGER," +
+                "  moneda           VARCHAR(3) DEFAULT 'PES'," +
+                "  cae              VARCHAR(14)," +
+                "  cae_expiry       DATE," +
+                "  status           VARCHAR(20) NOT NULL," +
+                "  afip_result_code INTEGER," +
+                "  afip_result_msg  VARCHAR(1000)," +
+                "  qr_data          TEXT," +
+                "  xml_request      TEXT," +
+                "  xml_response     TEXT," +
+                "  ambiente         VARCHAR(15)," +
+                "  requested_at     TIMESTAMP NOT NULL DEFAULT NOW()" +
+                ")"
+            );
+            log.info("Migration applied: invoice_records table");
+        } catch (Exception e) {
+            log.warn("Migration skipped for invoice_records table: {}", e.getMessage());
+        }
+
+        try {
+            jdbc.execute(
+                "CREATE TABLE IF NOT EXISTS billing_audit_logs (" +
+                "  id             BIGSERIAL PRIMARY KEY," +
+                "  user_id        BIGINT," +
+                "  correlation_id VARCHAR(36)," +
+                "  operation      VARCHAR(50)," +
+                "  status         VARCHAR(20)," +
+                "  ambiente       VARCHAR(15)," +
+                "  duration_ms    BIGINT," +
+                "  error_message  VARCHAR(2000)," +
+                "  detail         TEXT," +
+                "  created_at     TIMESTAMP NOT NULL DEFAULT NOW()" +
+                ")"
+            );
+            log.info("Migration applied: billing_audit_logs table");
+        } catch (Exception e) {
+            log.warn("Migration skipped for billing_audit_logs table: {}", e.getMessage());
+        }
     }
 
     private void applyIfNeeded(String checkSql, String migrationSql, String label) {
