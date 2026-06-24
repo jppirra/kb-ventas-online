@@ -419,6 +419,24 @@ public class EmailService {
         send(toEmail, "TICKET_AUTO_CREATED", "Comprobante " + ticketNumber + " generado — " + fromName(), html);
     }
 
+    // ── Alerta vencimiento certificado AFIP ───────────────────────────────────
+
+    @Async
+    public void sendAfipCertExpirationWarning(String toEmail, String userName,
+                                               java.time.LocalDate expiry, long daysLeft) {
+        String dayStr = daysLeft <= 0 ? "ya venció" : "vence en " + daysLeft + " día" + (daysLeft == 1 ? "" : "s");
+        String body = "Hola <strong>" + esc(userName) + "</strong>,<br><br>" +
+            "El certificado digital AFIP configurado en tu cuenta <strong>" + dayStr + "</strong> " +
+            "(<strong>" + expiry + "</strong>).<br><br>" +
+            "Para evitar interrupciones en la facturación electrónica, renovalo antes de esa fecha " +
+            "desde el panel de Configuración Fiscal → Certificado Digital.";
+        String html = buildActionEmail(
+            "Certificado AFIP por vencer", body,
+            baseUrl + "/billing/config", "Renovar certificado →",
+            "Este es un recordatorio automático. Tu configuración actual sigue activa hasta la fecha indicada.");
+        send(toEmail, "AFIP_CERT_EXPIRY", "Certificado AFIP vence en " + daysLeft + " días — " + fromName(), html);
+    }
+
     private static String esc(String s) {
         if (s == null) return "";
         return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");

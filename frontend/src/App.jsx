@@ -48,6 +48,7 @@ import InviteAcceptPage from './pages/InviteAcceptPage'
 import ExplorarPage from './pages/ExplorarPage'
 import MpSuccessPage from './pages/MpSuccessPage'
 import PublicTicketPage from './pages/PublicTicketPage'
+import FiscalConfigPage from './pages/FiscalConfigPage'
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
@@ -125,6 +126,9 @@ export default function App() {
               } />
               <Route path="/tickets/config" element={
                 <ProtectedRoute><TicketConfigPage /></ProtectedRoute>
+              } />
+              <Route path="/billing/config" element={
+                <ProtectedRoute><FiscalConfigPage /></ProtectedRoute>
               } />
               <Route path="/settings" element={
                 <ProtectedRoute><SettingsPage /></ProtectedRoute>

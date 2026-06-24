@@ -145,12 +145,34 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- WireMock for testing MP API -->
+        <!-- WireMock for testing MP API and AFIP SOAP -->
         <dependency>
             <groupId>org.wiremock</groupId>
             <artifactId>wiremock-standalone</artifactId>
             <version>3.5.4</version>
             <scope>test</scope>
+        </dependency>
+
+        <!-- BouncyCastle: CMS/PKCS7 signing for WSAA (AFIP) -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcpkix-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+            <version>1.78.1</version>
+        </dependency>
+
+        <!-- Spring Cache (Caffeine) para token WSAA TTL -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.github.ben-manes.caffeine</groupId>
+            <artifactId>caffeine</artifactId>
         </dependency>
     </dependencies>
 

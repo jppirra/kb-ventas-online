@@ -116,6 +116,33 @@ public class TicketConfig {
     @Column(name = "mp_token_expires_at")
     private LocalDateTime mpTokenExpiresAt;
 
+    // ── Facturación electrónica AFIP — certificado digital (cifrado AES-256-GCM) ─
+    @Column(name = "afip_enabled", nullable = false)
+    @Builder.Default
+    private boolean afipEnabled = false;
+
+    @Column(name = "afip_ambiente", length = 15)
+    @Builder.Default
+    private String afipAmbiente = "HOMOLOGACION";
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "afip_cert_p12", columnDefinition = "TEXT")
+    private String afipCertP12;          // base64 del .p12, cifrado
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "afip_cert_password", columnDefinition = "TEXT")
+    private String afipCertPassword;
+
+    @Column(name = "afip_cert_expiry")
+    private java.time.LocalDate afipCertExpiry;
+
+    @Column(name = "afip_cert_subject", length = 300)
+    private String afipCertSubject;
+
+    @Column(name = "afip_cert_notified_expiry", nullable = false)
+    @Builder.Default
+    private boolean afipCertNotifiedExpiry = false;
+
     @UpdateTimestamp
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;

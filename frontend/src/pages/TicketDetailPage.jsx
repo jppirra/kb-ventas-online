@@ -11,6 +11,7 @@ import { adminApi } from '../api/admin'
 import { fmtDate, fmtDateLong } from '../utils/date'
 import NCNDModal from '../components/NCNDModal'
 import InvoiceDocument from '../components/InvoiceDocument'
+import IssueBillingButton from '../components/IssueBillingButton'
 
 const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
 const STATUS_COLORS = { PAID: '#16a34a', DRAFT: '#ca8a04', CANCELLED: '#dc2626' }
@@ -281,6 +282,9 @@ export default function TicketDetailPage() {
                 </svg>
                 Comprador
               </button>
+              {config?.afipEnabled && ticket.status === 'PAID' && (
+                <IssueBillingButton ticketId={ticket.id} ticketTotal={ticket.total} />
+              )}
               <button onClick={() => window.print()}
                 className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
