@@ -36,6 +36,9 @@ public class SaleTicket {
     @Column(name = "customer_phone")
     private String customerPhone;
 
+    @Column(name = "customer_phone_country", length = 2)
+    private String customerPhoneCountry;
+
     @Column(name = "customer_email")
     private String customerEmail;
 

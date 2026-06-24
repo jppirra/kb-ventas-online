@@ -99,6 +99,7 @@ public class SaleTicketService {
                 .customerName(req.getCustomerName())
                 .customerDni(req.getCustomerDni())
                 .customerPhone(req.getCustomerPhone())
+                .customerPhoneCountry(req.getCustomerPhoneCountry() != null ? req.getCustomerPhoneCountry() : "AR")
                 .customerEmail(req.getCustomerEmail())
                 .customerNotes(req.getCustomerNotes())
                 .paymentMethod(req.getPaymentMethod())
@@ -202,6 +203,7 @@ public class SaleTicketService {
         if (data.containsKey("customerName"))  ticket.setCustomerName(data.get("customerName"));
         if (data.containsKey("customerDni"))   ticket.setCustomerDni(data.get("customerDni"));
         if (data.containsKey("customerPhone")) ticket.setCustomerPhone(data.get("customerPhone"));
+        if (data.containsKey("customerPhoneCountry")) ticket.setCustomerPhoneCountry(data.get("customerPhoneCountry"));
         if (data.containsKey("customerEmail")) ticket.setCustomerEmail(data.get("customerEmail"));
         if (data.containsKey("customerNotes")) ticket.setCustomerNotes(data.get("customerNotes"));
         return TicketResponse.from(ticketRepository.save(ticket));

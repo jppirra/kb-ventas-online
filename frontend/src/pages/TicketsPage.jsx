@@ -463,7 +463,7 @@ export default function TicketsPage() {
       return
     }
     if (type === 'customer') {
-      setCustomerForm({ customerName: ticket.customerName || '', customerDni: ticket.customerDni || '', customerPhone: ticket.customerPhone || '', customerEmail: ticket.customerEmail || '', customerNotes: ticket.customerNotes || '' })
+      setCustomerForm({ customerName: ticket.customerName || '', customerDni: ticket.customerDni || '', customerPhone: ticket.customerPhone || '', customerPhoneCountry: ticket.customerPhoneCountry || 'AR', customerEmail: ticket.customerEmail || '', customerNotes: ticket.customerNotes || '' })
     }
     if (type === 'cancel') setCancelReason('')
     setModal({ type, ticket })
@@ -804,9 +804,13 @@ export default function TicketsPage() {
                   onChange={e => setCustomerForm(f => ({ ...f, customerDni: e.target.value }))}
                   className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-              <input type="tel" placeholder="Teléfono WhatsApp" value={customerForm.customerPhone}
-                onChange={e => setCustomerForm(f => ({ ...f, customerPhone: e.target.value }))}
-                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <PhoneInput
+                phone={customerForm.customerPhone}
+                onPhoneChange={v => setCustomerForm(f => ({ ...f, customerPhone: v }))}
+                country={customerForm.customerPhoneCountry}
+                onCountryChange={v => setCustomerForm(f => ({ ...f, customerPhoneCountry: v }))}
+                placeholder="Teléfono WhatsApp"
+              />
               <input type="email" placeholder="Email" value={customerForm.customerEmail}
                 onChange={e => setCustomerForm(f => ({ ...f, customerEmail: e.target.value }))}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />

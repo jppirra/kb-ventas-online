@@ -14,6 +14,7 @@ public class TicketResponse {
     private String customerName;
     private String customerDni;
     private String customerPhone;
+    private String customerPhoneCountry;
     private String customerEmail;
     private String customerNotes;
     private BigDecimal subtotal;
@@ -44,6 +45,7 @@ public class TicketResponse {
         r.customerName = t.getCustomerName();
         r.customerDni = t.getCustomerDni();
         r.customerPhone = t.getCustomerPhone();
+        r.customerPhoneCountry = t.getCustomerPhoneCountry() != null ? t.getCustomerPhoneCountry() : "AR";
         r.customerEmail = t.getCustomerEmail();
         r.customerNotes = t.getCustomerNotes();
         r.subtotal = t.getSubtotal();
