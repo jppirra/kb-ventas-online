@@ -300,7 +300,7 @@ public class MercadoPagoPaymentService {
 
         // notification_url solo si apunta a un host accesible (no localhost)
         if (!mpNotificationUrl.contains("localhost")) {
-            body.put("notification_url", mpNotificationUrl + "/api/webhooks/mercadopago");
+            body.put("notification_url", mpNotificationUrl + "/api/webhooks/mercadopago?userId=" + userId);
         }
 
         log.info("MP preference body — baseUrl=[{}] notifUrl=[{}] backSuccess=[{}]",
