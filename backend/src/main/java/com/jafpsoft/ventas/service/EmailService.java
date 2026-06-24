@@ -429,9 +429,9 @@ public class EmailService {
     private String emailHeader() {
         return """
             <tr><td style="text-align:center;padding-bottom:28px;">
-              <a href="https://mercato.jafpsoft.com" style="text-decoration:none;display:inline-block;vertical-align:middle;">
-                <img src="%s/logo-icon.png" alt="" style="height:40px;width:auto;vertical-align:middle;margin-right:10px;">
-                <img src="%s/logo-text.png" alt="Mercato" style="height:26px;width:auto;vertical-align:middle;">
+              <a href="https://mercato.jafpsoft.com" style="text-decoration:none;display:inline-block;">
+                <img src="%s/logo-icon.png" alt="" style="width:70px;height:auto;vertical-align:middle;margin-right:12px;">
+                <img src="%s/logo-text.png" alt="Mercato" style="width:200px;height:auto;vertical-align:middle;">
               </a>
             </td></tr>""".formatted(baseUrl, baseUrl);
     }
