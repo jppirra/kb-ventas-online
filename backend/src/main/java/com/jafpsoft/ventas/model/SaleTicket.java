@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+
 @Entity
 @Table(name = "sale_tickets", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "ticket_number"}))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -104,6 +105,10 @@ public class SaleTicket {
 
     @Column(name = "mp_paid_at")
     private LocalDateTime mpPaidAt;
+
+    // ── Link público ──────────────────────────────────────────────────────────
+    @Column(name = "public_token", unique = true, length = 36)
+    private String publicToken;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

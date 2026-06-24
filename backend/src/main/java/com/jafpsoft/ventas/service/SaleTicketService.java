@@ -21,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
@@ -42,9 +43,14 @@ public class SaleTicketService {
                 .stream().map(TicketResponse::from).toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public TicketResponse getById(Long id, Long userId) {
-        return TicketResponse.from(findOwned(id, userId));
+        SaleTicket ticket = findOwned(id, userId);
+        if (ticket.getPublicToken() == null) {
+            ticket.setPublicToken(UUID.randomUUID().toString());
+            ticket = ticketRepository.save(ticket);
+        }
+        return TicketResponse.from(ticket);
     }
 
     @Transactional
@@ -86,6 +92,7 @@ public class SaleTicketService {
         boolean isDraft = Boolean.TRUE.equals(req.getDraft());
         SaleTicket ticket = SaleTicket.builder()
                 .userId(userId)
+                .publicToken(UUID.randomUUID().toString())
                 .ticketNumber(ticketNumber)
                 .tipoDoc(tipoDoc)
                 .referenceTicketNumber(req.getReferenceTicketNumber())

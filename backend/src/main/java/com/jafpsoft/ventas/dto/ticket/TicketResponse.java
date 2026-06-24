@@ -34,6 +34,8 @@ public class TicketResponse {
     private String mpStatus;
     private String mpPreferenceId;
     private String mpPaymentId;
+    // Link público
+    private String publicToken;
 
     public static TicketResponse from(SaleTicket t) {
         TicketResponse r = new TicketResponse();
@@ -59,6 +61,7 @@ public class TicketResponse {
         r.mpStatus = t.getMpStatus();
         r.mpPreferenceId = t.getMpPreferenceId();
         r.mpPaymentId = t.getMpPaymentId();
+        r.publicToken = t.getPublicToken();
         r.items = t.getItems().stream()
                 .sorted((a, b) -> Integer.compare(
                         a.getSortOrder() != null ? a.getSortOrder() : 0,

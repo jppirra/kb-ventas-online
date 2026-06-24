@@ -216,30 +216,37 @@ function InvoiceDocument({ ticket, config }) {
       </div>
 
       {/* ── Pie ── */}
-      {(config?.footer || isAfip || catalogQrUrl) && (
-        <div className="border-t border-gray-200 px-5 py-3 bg-gray-50">
-          {isAfip && !esTc && (
-            <div className="flex gap-6 text-xs text-gray-400 mb-2">
-              <span>CAE: <span className="text-gray-500 italic">— pendiente —</span></span>
-              <span>Vto. CAE: <span className="text-gray-500 italic">— —</span></span>
-            </div>
-          )}
-          {isAfip && esTc && (
-            <p className="text-xs text-gray-500 text-center font-medium mb-2">
-              Este comprobante no es válido como factura
-            </p>
-          )}
-          {config?.footer && (
-            <p className="text-xs text-gray-400 text-center">{config.footer}</p>
-          )}
-          {catalogQrUrl && (
-            <div className="flex flex-col items-center gap-1 mt-3 pt-3 border-t border-gray-100">
-              <img src={catalogQrUrl} alt="QR catálogo" className="w-20 h-20" />
-              <p className="text-xs text-gray-400">Visitá nuestro catálogo</p>
-            </div>
-          )}
-        </div>
-      )}
+      <div className="border-t border-gray-200 px-5 py-3 bg-gray-50 space-y-2">
+        {isAfip && !esTc && (
+          <div className="flex gap-6 text-xs text-gray-400">
+            <span>CAE: <span className="text-gray-500 italic">— pendiente —</span></span>
+            <span>Vto. CAE: <span className="text-gray-500 italic">— —</span></span>
+          </div>
+        )}
+        {config?.footer && (
+          <p className="text-xs text-gray-400 text-center">{config.footer}</p>
+        )}
+        {catalogQrUrl && (
+          <div className="flex flex-col items-center gap-1 pt-2 border-t border-gray-100">
+            <img src={catalogQrUrl} alt="QR catálogo" className="w-20 h-20" />
+            <p className="text-xs text-gray-400">Visitá nuestros catálogos</p>
+          </div>
+        )}
+        {ticket?.publicToken && (
+          <div className="flex items-center justify-center gap-1.5 pt-2 border-t border-gray-100">
+            <svg className="w-3 h-3 text-gray-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+            </svg>
+            <a href={`/ver/${ticket.publicToken}`} target="_blank" rel="noreferrer"
+              className="text-xs text-blue-500 hover:underline truncate">
+              Ver comprobante online
+            </a>
+          </div>
+        )}
+        <p className="text-xs text-gray-400 text-center pt-1 border-t border-gray-100">
+          Este documento no es válido como factura oficial
+        </p>
+      </div>
     </div>
   )
 }
