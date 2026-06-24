@@ -296,9 +296,7 @@ public class EmailService {
               <table width="100%%" cellpadding="0" cellspacing="0" style="padding:48px 20px;">
                 <tr><td align="center">
                   <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%%;">
-                    <tr><td style="text-align:center;padding-bottom:20px;">
-                      <span style="font-size:24px;font-weight:800;color:%s;letter-spacing:-0.5px;">%s</span>
-                    </td></tr>
+                    %s
                     <tr><td style="background:#fff;border-radius:20px;padding:44px 48px;box-shadow:0 2px 20px rgba(99,102,241,0.10);">
                       <div style="text-align:center;margin-bottom:24px;">
                         %s
@@ -313,14 +311,14 @@ public class EmailService {
                           <a href="%s" style="display:block;padding:14px 36px;font-size:16px;font-weight:700;color:#fff;text-decoration:none;letter-spacing:0.2px;">Aceptar invitación →</a>
                         </td>
                       </tr></table>
-                      <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;text-align:center;">Si no esperabas esta invitación, podés ignorar este mensaje.</p>
-                      <p style="margin:0;font-size:12px;color:#c4b5fd;text-align:center;font-weight:600;">%s · jafpsoft</p>
+                      <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Si no esperabas esta invitación, podés ignorar este mensaje.</p>
                     </td></tr>
+                    %s
                   </table>
                 </td></tr>
               </table>
             </body></html>
-            """.formatted(color, fromName(), avatarBlock, ownerName, color, acceptUrl, fromName());
+            """.formatted(emailHeader(), avatarBlock, ownerName, color, acceptUrl, emailFooter());
 
         send(toEmail, "COLLABORATOR_INVITE", "Te invitaron a colaborar en " + fromName(), html);
     }
@@ -330,7 +328,6 @@ public class EmailService {
                                  java.util.List<com.jafpsoft.ventas.model.Product> agotados,
                                  java.util.List<com.jafpsoft.ventas.model.Product> enStock,
                                  int totalUnidades) {
-        String color = primaryColor();
         String nombre = userName != null ? userName : "vendedor";
 
         StringBuilder rows = new StringBuilder();
@@ -363,20 +360,19 @@ public class EmailService {
               <table width="100%%" cellpadding="0" cellspacing="0" style="padding:48px 20px;">
                 <tr><td align="center">
                   <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%%;">
-                    <tr><td style="text-align:center;padding-bottom:20px;">
-                      <span style="font-size:22px;font-weight:700;color:%s;">%s</span>
-                    </td></tr>
+                    %s
                     <tr><td style="background:#fff;border-radius:20px;padding:36px 40px;box-shadow:0 2px 20px rgba(99,102,241,0.10);">
                       <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1e1b4b;">Informe de stock</h1>
                       <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Hola %s, este es tu resumen de stock.</p>
                       %s
                       <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;">Podés cambiar la frecuencia de este informe en Configuración → Informe de stock.</p>
                     </td></tr>
+                    %s
                   </table>
                 </td></tr>
               </table>
             </body></html>
-            """.formatted(color, fromName(), esc(nombre), rows);
+            """.formatted(emailHeader(), esc(nombre), rows, emailFooter());
 
         send(toEmail, "STOCK_REPORT", "Informe de stock — " + fromName(), html);
     }
@@ -430,6 +426,29 @@ public class EmailService {
 
     // ── HTML builder ──────────────────────────────────────────────────────────
 
+    private String emailHeader() {
+        return """
+            <tr><td style="text-align:center;padding-bottom:28px;">
+              <a href="https://mercato.jafpsoft.com" style="text-decoration:none;display:inline-block;vertical-align:middle;">
+                <img src="%s/logo-icon.png" alt="" style="height:40px;width:auto;vertical-align:middle;margin-right:10px;">
+                <img src="%s/logo-text.png" alt="Mercato" style="height:26px;width:auto;vertical-align:middle;">
+              </a>
+            </td></tr>""".formatted(baseUrl, baseUrl);
+    }
+
+    private String emailFooter() {
+        int year = java.time.Year.now().getValue();
+        return """
+            <tr><td style="text-align:center;padding-top:28px;">
+              <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;">
+                Powered by <a href="https://mercato.jafpsoft.com" style="color:#6366f1;text-decoration:none;font-weight:600;">Mercato</a>
+                &nbsp;&middot;&nbsp;
+                Desarrollado por <a href="https://jafpsoft.com" style="color:#6366f1;text-decoration:none;font-weight:600;">JAFPSoft</a>
+              </p>
+              <p style="margin:0;font-size:11px;color:#c4b5fd;">&copy; %d JAFPSoft. Todos los derechos reservados.</p>
+            </td></tr>""".formatted(year);
+    }
+
     private String buildActionEmail(String heading, String body, String ctaUrl, String ctaText, String footer) {
         String color = primaryColor();
         String cta = ctaUrl != null ? """
@@ -439,25 +458,27 @@ public class EmailService {
               </td>
             </tr></table>""".formatted(color, ctaUrl, ctaText) : "";
 
+        String footerNote = (footer != null && !footer.isBlank())
+            ? "<p style=\"margin:24px 0 0;font-size:12px;color:#9ca3af;\">%s</p>".formatted(footer) : "";
+
         return """
             <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
             <body style="margin:0;padding:0;background:#f5f3ff;font-family:'Segoe UI',Arial,sans-serif;">
               <table width="100%%" cellpadding="0" cellspacing="0" style="padding:48px 20px;">
                 <tr><td align="center">
                   <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%%;">
-                    <tr><td style="text-align:center;padding-bottom:20px;">
-                      <span style="font-size:22px;font-weight:700;color:%s;">%s</span>
-                    </td></tr>
+                    %s
                     <tr><td style="background:#fff;border-radius:20px;padding:44px 48px;box-shadow:0 2px 20px rgba(99,102,241,0.10);">
                       <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#1e1b4b;">%s</h1>
-                      <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.7;">%s</p>
+                      <div style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.7;">%s</div>
                       %s
-                      <p style="margin:0;font-size:12px;color:#9ca3af;">%s</p>
+                      %s
                     </td></tr>
+                    %s
                   </table>
                 </td></tr>
               </table>
             </body></html>
-            """.formatted(color, fromName(), heading, body, cta, footer);
+            """.formatted(emailHeader(), heading, body, cta, footerNote, emailFooter());
     }
 }
