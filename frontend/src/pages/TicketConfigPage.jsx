@@ -325,13 +325,12 @@ export default function TicketConfigPage() {
             </Field>
           </div>
 
-          {/* Factura electrónica Argentina */}
+          {/* Datos fiscales */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 space-y-5">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Factura electrónica Argentina (AFIP)</h2>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Datos fiscales</h2>
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                Completá estos datos para que el comprobante siga el formato requerido por AFIP.
-                La integración directa con el web service de AFIP para emitir CAE está en desarrollo.
+                Estos datos se imprimen en el encabezado del comprobante.
               </p>
             </div>
 
@@ -345,7 +344,7 @@ export default function TicketConfigPage() {
                 </Field>
               </div>
 
-              <Field label="Punto de venta AFIP" hint="Dejá vacío para usar numeración simple (T-0001)">
+              <Field label="Punto de venta" hint="Dejá vacío para usar numeración simple (T-0001)">
                 <input type="number" min="1" max="9999" value={form.puntoVenta}
                   onChange={e => set('puntoVenta', e.target.value)}
                   placeholder="1" className={inputCls} />
@@ -372,8 +371,8 @@ export default function TicketConfigPage() {
             {afipEnabled && (
               <div className="text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-amber-700 dark:text-amber-400">
                 {form.tipoComprobante === 'TC'
-                  ? <>Con punto de venta activo y tipo TC, los comprobantes se numerarán como <strong>TC {String(form.puntoVenta).padStart(4,'0')}-00000001</strong> y mostrarán el aviso de que no son válidos como factura.</>
-                  : <>Con punto de venta activo, los comprobantes se numerarán como <strong>{form.tipoComprobante} {String(form.puntoVenta).padStart(4,'0')}-00000001</strong>. Para emitir facturas electrónicas válidas (con CAE) se requiere la integración con AFIP WSFE — próximamente.</>
+                  ? <>Con punto de venta activo y tipo TC, los comprobantes se numerarán como <strong>TC {String(form.puntoVenta).padStart(4,'0')}-00000001</strong>.</>
+                  : <>Con punto de venta activo, los comprobantes se numerarán como <strong>{form.tipoComprobante} {String(form.puntoVenta).padStart(4,'0')}-00000001</strong>.</>
                 }
               </div>
             )}

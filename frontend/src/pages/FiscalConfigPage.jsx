@@ -79,7 +79,7 @@ export default function FiscalConfigPage() {
 
   return (
     <div className="max-w-2xl mx-auto p-6 space-y-8">
-      <h1 className="text-2xl font-bold text-gray-900">Configuración Fiscal AFIP</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Configuración Fiscal</h1>
 
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
@@ -125,7 +125,7 @@ export default function FiscalConfigPage() {
           </select>
           {config.afipAmbiente === 'PRODUCCION' && (
             <p className="text-xs text-amber-600 mt-1">
-              En producción cada comprobante se envía a AFIP y genera una obligación fiscal real.
+              En producción los comprobantes se envían al organismo fiscal y generan obligación real.
             </p>
           )}
         </div>
@@ -193,13 +193,13 @@ export default function FiscalConfigPage() {
 
       {/* Test de conexión */}
       <section className="bg-white border border-gray-200 rounded-lg p-5 space-y-3">
-        <h2 className="font-semibold text-gray-700">Probar conexión con AFIP</h2>
+        <h2 className="font-semibold text-gray-700">Probar conexión con el organismo fiscal</h2>
         <button
           onClick={handleTest}
           disabled={testing || !config.certLoaded}
           className="border border-indigo-500 text-indigo-700 px-4 py-2 rounded-md text-sm font-medium hover:bg-indigo-50 disabled:opacity-40"
         >
-          {testing ? 'Probando...' : 'Probar conexión'}
+          {testing ? 'Verificando...' : 'Probar conexión'}
         </button>
         {testResult && (
           <div className={`text-sm rounded p-3 ${testResult.success ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}>

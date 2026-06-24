@@ -1,10 +1,7 @@
 import { useState } from 'react';
 import { getInvoiceByTicket, issueInvoice } from '../api/billing';
 
-/**
- * Botón para emitir factura electrónica AFIP desde el detalle del ticket.
- * Muestra el CAE si ya existe uno autorizado.
- */
+/** Botón de emisión de comprobante fiscal desde el detalle del ticket. */
 export default function IssueBillingButton({ ticketId, ticketTotal }) {
   const [loading, setLoading] = useState(false);
   const [invoice, setInvoice] = useState(null);
@@ -48,7 +45,7 @@ export default function IssueBillingButton({ ticketId, ticketTotal }) {
       setInvoice(result);
       setShowForm(false);
     } catch (e) {
-      setError(e?.response?.data?.message || 'Error al emitir el comprobante AFIP.');
+      setError(e?.response?.data?.message || 'Error al emitir el comprobante.');
     } finally {
       setLoading(false);
     }
@@ -57,21 +54,11 @@ export default function IssueBillingButton({ ticketId, ticketTotal }) {
   if (invoice) {
     return (
       <div className="border border-green-300 bg-green-50 rounded-lg p-4 space-y-1 text-sm">
-        <p className="font-semibold text-green-800">Comprobante AFIP emitido</p>
-        <p className="text-green-700">CAE: <span className="font-mono">{invoice.cae}</span></p>
+        <p className="font-semibold text-green-800">Comprobante fiscal emitido</p>
+        <p className="text-green-700 font-mono text-xs">{invoice.cae}</p>
         <p className="text-green-600 text-xs">
-          Vence: {new Date(invoice.caeExpiry).toLocaleDateString('es-AR')} · {invoice.ambiente}
+          Validez: {invoice.caeExpiry ? new Date(invoice.caeExpiry).toLocaleDateString('es-AR') : '—'}
         </p>
-        {invoice.qrUrl && (
-          <a
-            href={invoice.qrUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-xs text-indigo-600 underline"
-          >
-            Ver en AFIP
-          </a>
-        )}
       </div>
     );
   }
@@ -84,7 +71,7 @@ export default function IssueBillingButton({ ticketId, ticketTotal }) {
           disabled={loading}
           className="flex items-center gap-2 border border-gray-300 text-gray-700 px-3 py-1.5 rounded text-sm hover:bg-gray-50 disabled:opacity-50"
         >
-          {loading ? 'Consultando...' : 'Emitir factura AFIP'}
+          {loading ? 'Consultando...' : 'Emitir comprobante fiscal'}
         </button>
       )}
 
