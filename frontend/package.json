@@ -1,7 +1,7 @@
 {
   "name": "my-app-frontend",
   "version": "1.0.0",
-  "appVersion": "1.005.00",
+  "appVersion": "1.005.04",
   "private": true,
   "scripts": {
     "dev": "vite",
