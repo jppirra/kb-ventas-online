@@ -13,8 +13,20 @@ import NCNDModal from '../components/NCNDModal'
 import InvoiceDocument from '../components/InvoiceDocument'
 import IssueBillingButton from '../components/IssueBillingButton'
 
-const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
-const STATUS_COLORS = { PAID: '#16a34a', DRAFT: '#ca8a04', CANCELLED: '#dc2626' }
+const STATUS_LABELS = {
+  PAID:            'Cobrado',
+  DRAFT:           'Borrador',
+  CANCELLED:       'Anulado',
+  PAYMENT_PENDING: 'Esperando pago',
+  PAYMENT_FAILED:  'Pago rechazado',
+}
+const STATUS_COLORS = {
+  PAID:            '#16a34a',
+  DRAFT:           '#ca8a04',
+  CANCELLED:       '#dc2626',
+  PAYMENT_PENDING: '#2563eb',
+  PAYMENT_FAILED:  '#ea580c',
+}
 
 function buildWhatsAppText(ticket, config) {
   const cur = config?.currency || '$'

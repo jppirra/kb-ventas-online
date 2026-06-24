@@ -1,9 +1,27 @@
 import React, { useEffect, useState } from 'react'
 import { fmtDate } from '../utils/date'
 
-const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Anulado' }
-const STATUS_BG     = { PAID: '#dcfce7', DRAFT: '#fef9c3', CANCELLED: '#fee2e2' }
-const STATUS_COLOR  = { PAID: '#15803d', DRAFT: '#a16207', CANCELLED: '#b91c1c' }
+const STATUS_LABELS = {
+  PAID:            'Cobrado',
+  DRAFT:           'Borrador',
+  CANCELLED:       'Anulado',
+  PAYMENT_PENDING: 'Esperando pago',
+  PAYMENT_FAILED:  'Pago rechazado',
+}
+const STATUS_BG = {
+  PAID:            '#dcfce7',
+  DRAFT:           '#fef9c3',
+  CANCELLED:       '#fee2e2',
+  PAYMENT_PENDING: '#dbeafe',
+  PAYMENT_FAILED:  '#ffedd5',
+}
+const STATUS_COLOR = {
+  PAID:            '#15803d',
+  DRAFT:           '#a16207',
+  CANCELLED:       '#b91c1c',
+  PAYMENT_PENDING: '#1d4ed8',
+  PAYMENT_FAILED:  '#c2410c',
+}
 
 const B  = '2px solid #374151'   // heavy border
 const M  = '1px solid #9ca3af'   // medium border

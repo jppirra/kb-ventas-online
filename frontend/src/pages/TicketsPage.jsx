@@ -104,12 +104,21 @@ function RowMenu({ ticket, config, onAction }) {
   )
 }
 
-const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
-const STATUS_COLORS = {
-  PAID: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  DRAFT: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+const STATUS_LABELS = {
+  PAID:            'Cobrado',
+  DRAFT:           'Borrador',
+  CANCELLED:       'Anulado',
+  PAYMENT_PENDING: 'Esperando pago',
+  PAYMENT_FAILED:  'Pago rechazado',
 }
+const STATUS_COLORS = {
+  PAID:            'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  DRAFT:           'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  CANCELLED:       'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  PAYMENT_PENDING: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  PAYMENT_FAILED:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+}
+const ALL_STATUSES = Object.entries(STATUS_LABELS)
 const TIPODOC_LABELS = { COMP: null, NC: 'NC', ND: 'ND', TC: null }
 
 const emptyItem = { productId: null, productName: '', productSku: '', variant: '', quantity: 1, unitPrice: '' }
@@ -442,14 +451,14 @@ export default function TicketsPage() {
   const [mpPaymentTicket, setMpPaymentTicket] = useState(null)
   const [localPaymentTicket, setLocalPaymentTicket] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' })
+  const [filters, setFilters] = useState({ q: '', status: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' })
   const [modal, setModal] = useState(null) // { type: 'cancel'|'customer'|'nc'|'nd', ticket }
   const [cancelReason, setCancelReason] = useState('')
   const [customerForm, setCustomerForm] = useState({})
   const [savingAction, setSavingAction] = useState(false)
 
   function setFilter(k, v) { setFilters(f => ({ ...f, [k]: v })) }
-  function clearFilters() { setFilters({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' }) }
+  function clearFilters() { setFilters({ q: '', status: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' }) }
   const hasFilters = Object.values(filters).some(v => v !== '')
 
   function openAction(type, ticket) {
@@ -543,6 +552,7 @@ export default function TicketsPage() {
           t.customerDni?.toLowerCase().includes(q)
         if (!match) return false
       }
+      if (filters.status && t.status !== filters.status) return false
       if (filters.dateFrom && t.createdAt < filters.dateFrom) return false
       if (filters.dateTo && t.createdAt.slice(0, 10) > filters.dateTo) return false
       if (filters.minTotal !== '' && Number(t.total) < Number(filters.minTotal)) return false
@@ -622,7 +632,7 @@ export default function TicketsPage() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 mb-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="sm:col-span-2 lg:col-span-2">
-                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Cliente / DNI / N° comprobante</label>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">N° comprobante / Cliente / DNI</label>
                 <input
                   value={filters.q}
                   onChange={e => setFilter('q', e.target.value)}
@@ -631,12 +641,25 @@ export default function TicketsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Desde</label>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Estado</label>
+                <select
+                  value={filters.status}
+                  onChange={e => setFilter('status', e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Todos</option>
+                  {ALL_STATUSES.map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Emisión desde</label>
                 <input type="date" value={filters.dateFrom} onChange={e => setFilter('dateFrom', e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Hasta</label>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Emisión hasta</label>
                 <input type="date" value={filters.dateTo} onChange={e => setFilter('dateTo', e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
