@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { paymentsApi } from '../api/payments'
+import PhoneInput from './PhoneInput'
+import { COUNTRIES } from '../utils/countries'
 
 const POLL_INTERVAL_MS = 3000
 const POLL_MAX_MS = 10 * 60 * 1000
@@ -13,6 +15,9 @@ export default function MpCheckoutModal({ ticket, onClose }) {
   const [qrDataUrl, setQrDataUrl] = useState(null)
   const [mpPaymentId, setMpPaymentId] = useState(null)
   const [paidTicket, setPaidTicket] = useState(null)
+  const [showWaForm, setShowWaForm] = useState(false)
+  const [waPhone, setWaPhone] = useState(ticket?.customerPhone || '')
+  const [waCountry, setWaCountry] = useState('AR')
   const pollRef = useRef(null)
   const pollStartRef = useRef(null)
 
@@ -66,6 +71,16 @@ export default function MpCheckoutModal({ ticket, onClose }) {
     stopPolling()
     navigate(`/tickets/${ticket.id}`)
     onClose(paidTicket)
+  }
+
+  function openWhatsApp(phone, country) {
+    const entry = COUNTRIES.find(c => c.code === country)
+    const dialDigits = entry?.dial?.replace(/\D/g, '') || ''
+    const phoneDigits = phone.replace(/\D/g, '')
+    const fullNum = dialDigits ? dialDigits + phoneDigits : phoneDigits
+    const msg = encodeURIComponent(`Hola! Te comparto el link de pago: ${checkoutUrl}`)
+    window.open(`https://wa.me/${fullNum}?text=${msg}`, '_blank')
+    setShowWaForm(false)
   }
 
   async function handleRetry() {
@@ -152,12 +167,14 @@ export default function MpCheckoutModal({ ticket, onClose }) {
               </span>
 
               {/* WhatsApp */}
-              {ticket?.customerPhone && (
+              {!showWaForm ? (
                 <button
                   onClick={() => {
-                    const digits = ticket.customerPhone.replace(/\D/g, '')
-                    const msg = encodeURIComponent(`Hola! Te comparto el link de pago: ${checkoutUrl}`)
-                    window.open(`https://wa.me/${digits}?text=${msg}`, '_blank')
+                    if (ticket?.customerPhone) {
+                      openWhatsApp(ticket.customerPhone, 'AR')
+                    } else {
+                      setShowWaForm(true)
+                    }
                   }}
                   className="w-full py-2.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
@@ -166,6 +183,34 @@ export default function MpCheckoutModal({ ticket, onClose }) {
                   </svg>
                   Enviar por WhatsApp
                 </button>
+              ) : (
+                <div className="w-full space-y-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-xl border border-green-200 dark:border-green-800">
+                  <p className="text-xs font-medium text-green-800 dark:text-green-300">Teléfono del cliente</p>
+                  <PhoneInput
+                    phone={waPhone}
+                    onPhoneChange={setWaPhone}
+                    country={waCountry}
+                    onCountryChange={setWaCountry}
+                    placeholder="Número de WhatsApp"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowWaForm(false)}
+                      className="flex-1 py-2 text-xs border border-gray-300 dark:border-slate-600 text-gray-600 dark:text-slate-400 rounded-lg hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => openWhatsApp(waPhone, waCountry)}
+                      disabled={!waPhone.trim()}
+                      className="flex-1 py-2 text-xs bg-green-600 hover:bg-green-700 text-white rounded-lg disabled:opacity-50 transition-colors"
+                    >
+                      Enviar
+                    </button>
+                  </div>
+                </div>
               )}
 
               <div className="flex gap-2 w-full">

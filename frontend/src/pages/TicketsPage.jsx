@@ -371,34 +371,32 @@ function NewTicketModal({ onClose, onCreated }) {
           {/* Cliente */}
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2">Datos del cliente</p>
-            {allCustomers.length > 0 && (
-              <div className="relative mb-3">
-                <input
-                  type="text"
-                  value={customerSearch}
-                  onChange={e => { setCustomerSearch(e.target.value); setShowCustomerResults(true) }}
-                  onFocus={() => setShowCustomerResults(true)}
-                  placeholder="Buscar cliente guardado..."
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {showCustomerResults && customerResults.length > 0 && (
-                  <div className="absolute z-10 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden">
-                    {customerResults.map(c => (
-                      <button key={c.id} type="button" onClick={() => selectCustomer(c)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors border-b border-gray-50 dark:border-slate-700/50 last:border-0">
-                        <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0">
-                          {c.name[0].toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{c.name}</p>
-                          <p className="text-xs text-gray-400 truncate">{c.phone || c.email || ''}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="relative mb-3">
+              <input
+                type="text"
+                value={customerSearch}
+                onChange={e => { setCustomerSearch(e.target.value); setShowCustomerResults(true) }}
+                onFocus={() => setShowCustomerResults(true)}
+                placeholder="Buscar cliente guardado..."
+                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {showCustomerResults && customerResults.length > 0 && (
+                <div className="absolute z-10 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden">
+                  {customerResults.map(c => (
+                    <button key={c.id} type="button" onClick={() => selectCustomer(c)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors border-b border-gray-50 dark:border-slate-700/50 last:border-0">
+                      <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                        {c.name[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{c.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{c.phone || c.email || ''}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <input type="text" placeholder="Nombre" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
