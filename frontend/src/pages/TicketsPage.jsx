@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
+import MpCheckoutModal from '../components/MpCheckoutModal'
+import PaymentConfirmModal from '../components/PaymentConfirmModal'
+import PhoneInput from '../components/PhoneInput'
 import { ticketsApi } from '../api/tickets'
 import { productsApi } from '../api/products'
 import { customersApi } from '../api/customers'
@@ -42,9 +45,13 @@ function RowMenu({ ticket, config, onAction }) {
   const isNC = ticket.tipoDoc === 'NC'
   const phone = ticket.customerPhone?.replace(/\D/g, '')
   const email = ticket.customerEmail
+  const canPayWithMp = config?.mpEnabled && ['DRAFT', 'PAYMENT_PENDING', 'PAYMENT_FAILED'].includes(ticket.status) && ticket.paymentMethod === 'Mercado Pago'
+  const canConfirmLocal = ticket.status === 'DRAFT' && ticket.paymentMethod !== 'Mercado Pago' && ticket.paymentMethod !== 'Efectivo'
 
   const items = [
     { label: 'Abrir', icon: 'M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14', action: 'open', always: true },
+    canPayWithMp && { label: 'Cobrar con MP', icon: 'M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z', action: 'mpPayment', color: 'text-blue-600 dark:text-blue-400' },
+    canConfirmLocal && { label: 'Confirmar pago', icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', action: 'localPayment', color: 'text-green-600 dark:text-green-400' },
     phone && { label: 'WhatsApp', icon: 'M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z', action: 'wa', always: true, color: 'text-green-600 dark:text-green-400' },
     email && { label: 'Enviar email', icon: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', action: 'email', always: true, color: 'text-blue-500 dark:text-blue-400' },
     { label: 'Imprimir', icon: 'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z', action: 'print', always: true },
@@ -97,13 +104,21 @@ function RowMenu({ ticket, config, onAction }) {
   )
 }
 
-const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
-const STATUS_COLORS = {
-  PAID: 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-  DRAFT: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
-  CANCELLED: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+const STATUS_LABELS = {
+  PAID:            'Cobrado',
+  DRAFT:           'Borrador',
+  CANCELLED:       'Anulado',
+  PAYMENT_PENDING: 'Esperando pago',
+  PAYMENT_FAILED:  'Pago rechazado',
 }
-
+const STATUS_COLORS = {
+  PAID:            'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+  DRAFT:           'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400',
+  CANCELLED:       'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+  PAYMENT_PENDING: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+  PAYMENT_FAILED:  'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400',
+}
+const ALL_STATUSES = Object.entries(STATUS_LABELS)
 const TIPODOC_LABELS = { COMP: null, NC: 'NC', ND: 'ND', TC: null }
 
 const emptyItem = { productId: null, productName: '', productSku: '', variant: '', quantity: 1, unitPrice: '', _sizes: [], _colors: [], _combos: [] }
@@ -140,7 +155,7 @@ function NewTicketModal({ onClose, onCreated }) {
   const [customerSearch, setCustomerSearch] = useState('')
   const [showCustomerResults, setShowCustomerResults] = useState(false)
   const [items, setItems] = useState([])
-  const [form, setForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
+  const [form, setForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerPhoneCountry: 'AR', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -157,19 +172,21 @@ function NewTicketModal({ onClose, onCreated }) {
     if (!customerSearch.trim()) return []
     const q = customerSearch.toLowerCase()
     return allCustomers.filter(c =>
-      c.name?.toLowerCase().includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q)
+      c.name?.toLowerCase().includes(q) || c.dni?.includes(q) || c.phone?.includes(q) || c.email?.toLowerCase().includes(q)
     ).slice(0, 6)
   }, [allCustomers, customerSearch])
 
   function selectCustomer(c) {
-    setForm(f => ({ ...f, customerName: c.name, customerDni: c.dni || '', customerPhone: c.phone || '', customerEmail: c.email || '', customerNotes: c.notes || '' }))
+    setForm(f => ({ ...f, customerName: c.name, customerDni: c.dni || '', customerPhone: c.phone || '', customerPhoneCountry: c.phoneCountry || 'AR', customerEmail: c.email || '', customerNotes: c.notes || '' }))
     setCustomerSearch('')
     setShowCustomerResults(false)
   }
 
-  const paymentOptions = useMemo(() =>
-    (config.paymentMethods || 'Efectivo').split(',').map(s => s.trim()).filter(Boolean)
-  , [config.paymentMethods])
+  const paymentOptions = useMemo(() => {
+    const methods = (config.paymentMethods || 'Efectivo').split(',').map(s => s.trim()).filter(Boolean)
+    if (config.mpEnabled && !methods.includes('Mercado Pago')) methods.push('Mercado Pago')
+    return methods
+  }, [config.paymentMethods, config.mpEnabled])
 
   const categories = useMemo(() =>
     [...new Set(allProducts.map(p => p.category).filter(Boolean))].sort()
@@ -216,8 +233,12 @@ function NewTicketModal({ onClose, onCreated }) {
     if (items.some(it => !it.productName.trim())) { toast.error('Completá el nombre de todos los productos'); return }
     setSaving(true)
     try {
+      const isMp = form.paymentMethod === 'Mercado Pago'
+      const isCash = form.paymentMethod === 'Efectivo'
+      const needsDraft = !isCash // todo método excepto efectivo arranca en DRAFT
       const payload = {
         ...form,
+        draft: needsDraft ? true : undefined,
         discount: discount || null,
         items: items.map((it, idx) => {
           let size = null, color = null
@@ -230,7 +251,7 @@ function NewTicketModal({ onClose, onCreated }) {
         })
       }
       const { data } = await ticketsApi.create(payload)
-      toast.success(`Ticket ${data.ticketNumber} creado`)
+      if (isCash) toast.success(`Ticket ${data.ticketNumber} creado`)
       onCreated(data)
     } catch { toast.error('Error al crear el ticket') }
     finally { setSaving(false) }
@@ -382,41 +403,44 @@ function NewTicketModal({ onClose, onCreated }) {
           {/* Cliente */}
           <div>
             <p className="text-xs font-medium text-gray-500 dark:text-slate-400 mb-2">Datos del cliente</p>
-            {allCustomers.length > 0 && (
-              <div className="relative mb-3">
-                <input
-                  type="text"
-                  value={customerSearch}
-                  onChange={e => { setCustomerSearch(e.target.value); setShowCustomerResults(true) }}
-                  onFocus={() => setShowCustomerResults(true)}
-                  placeholder="Buscar cliente guardado..."
-                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-                {showCustomerResults && customerResults.length > 0 && (
-                  <div className="absolute z-10 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden">
-                    {customerResults.map(c => (
-                      <button key={c.id} type="button" onClick={() => selectCustomer(c)}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors border-b border-gray-50 dark:border-slate-700/50 last:border-0">
-                        <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0">
-                          {c.name[0].toUpperCase()}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{c.name}</p>
-                          <p className="text-xs text-gray-400 truncate">{c.phone || c.email || ''}</p>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="relative mb-3">
+              <input
+                type="text"
+                value={customerSearch}
+                onChange={e => { setCustomerSearch(e.target.value); setShowCustomerResults(true) }}
+                onFocus={() => setShowCustomerResults(true)}
+                placeholder="Buscar cliente guardado..."
+                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              {showCustomerResults && customerResults.length > 0 && (
+                <div className="absolute z-10 left-0 right-0 mt-1 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-600 rounded-xl shadow-lg overflow-hidden">
+                  {customerResults.map(c => (
+                    <button key={c.id} type="button" onClick={() => selectCustomer(c)}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-blue-50 dark:hover:bg-blue-900/20 text-left transition-colors border-b border-gray-50 dark:border-slate-700/50 last:border-0">
+                      <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center text-xs font-bold text-blue-600 dark:text-blue-400 shrink-0">
+                        {c.name[0].toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{c.name}</p>
+                        <p className="text-xs text-gray-400 truncate">{c.phone || c.email || ''}</p>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <div className="grid grid-cols-2 gap-3">
               <input type="text" placeholder="Nombre" value={form.customerName} onChange={e => setForm(f => ({ ...f, customerName: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <input type="text" placeholder="DNI / CUIT" value={form.customerDni} onChange={e => setForm(f => ({ ...f, customerDni: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              <input type="tel" placeholder="Teléfono WhatsApp" value={form.customerPhone} onChange={e => setForm(f => ({ ...f, customerPhone: e.target.value }))}
-                className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <PhoneInput
+                phone={form.customerPhone}
+                onPhoneChange={v => setForm(f => ({ ...f, customerPhone: v }))}
+                country={form.customerPhoneCountry}
+                onCountryChange={v => setForm(f => ({ ...f, customerPhoneCountry: v }))}
+                placeholder="Teléfono WhatsApp"
+              />
               <input type="email" placeholder="Email (opcional)" value={form.customerEmail} onChange={e => setForm(f => ({ ...f, customerEmail: e.target.value }))}
                 className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               <input type="text" placeholder="Notas del cliente" value={form.customerNotes} onChange={e => setForm(f => ({ ...f, customerNotes: e.target.value }))}
@@ -447,19 +471,23 @@ export default function TicketsPage() {
   const [config, setConfig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [showNew, setShowNew] = useState(false)
+  const [mpPaymentTicket, setMpPaymentTicket] = useState(null)
+  const [localPaymentTicket, setLocalPaymentTicket] = useState(null)
   const [showFilters, setShowFilters] = useState(false)
-  const [filters, setFilters] = useState({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' })
+  const [filters, setFilters] = useState({ q: '', status: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' })
   const [modal, setModal] = useState(null) // { type: 'cancel'|'customer'|'nc'|'nd', ticket }
   const [cancelReason, setCancelReason] = useState('')
   const [customerForm, setCustomerForm] = useState({})
   const [savingAction, setSavingAction] = useState(false)
 
   function setFilter(k, v) { setFilters(f => ({ ...f, [k]: v })) }
-  function clearFilters() { setFilters({ q: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' }) }
+  function clearFilters() { setFilters({ q: '', status: '', dateFrom: '', dateTo: '', minTotal: '', maxTotal: '' }) }
   const hasFilters = Object.values(filters).some(v => v !== '')
 
   function openAction(type, ticket) {
     if (type === 'open') { navigate(`/tickets/${ticket.id}`); return }
+    if (type === 'mpPayment') { setMpPaymentTicket(ticket); return }
+    if (type === 'localPayment') { setLocalPaymentTicket(ticket); return }
     if (type === 'email') {
       ticketsApi.sendEmail(ticket.id)
         .then(() => toast.success(`Email enviado a ${ticket.customerEmail}`))
@@ -467,7 +495,7 @@ export default function TicketsPage() {
       return
     }
     if (type === 'customer') {
-      setCustomerForm({ customerName: ticket.customerName || '', customerDni: ticket.customerDni || '', customerPhone: ticket.customerPhone || '', customerEmail: ticket.customerEmail || '', customerNotes: ticket.customerNotes || '' })
+      setCustomerForm({ customerName: ticket.customerName || '', customerDni: ticket.customerDni || '', customerPhone: ticket.customerPhone || '', customerPhoneCountry: ticket.customerPhoneCountry || 'AR', customerEmail: ticket.customerEmail || '', customerNotes: ticket.customerNotes || '' })
     }
     if (type === 'cancel') setCancelReason('')
     setModal({ type, ticket })
@@ -547,6 +575,7 @@ export default function TicketsPage() {
           t.customerDni?.toLowerCase().includes(q)
         if (!match) return false
       }
+      if (filters.status && t.status !== filters.status) return false
       if (filters.dateFrom && t.createdAt < filters.dateFrom) return false
       if (filters.dateTo && t.createdAt.slice(0, 10) > filters.dateTo) return false
       if (filters.minTotal !== '' && Number(t.total) < Number(filters.minTotal)) return false
@@ -563,7 +592,33 @@ export default function TicketsPage() {
           onCreated={(ticket) => {
             setTickets(prev => [ticket, ...prev])
             setShowNew(false)
-            navigate(`/tickets/${ticket.id}`)
+            if (ticket.paymentMethod === 'Mercado Pago' && config?.mpEnabled) {
+              setMpPaymentTicket(ticket)
+            } else if (ticket.status === 'DRAFT') {
+              setLocalPaymentTicket(ticket)
+            } else {
+              navigate(`/tickets/${ticket.id}`)
+            }
+          }}
+        />
+      )}
+      {mpPaymentTicket && (
+        <MpCheckoutModal
+          ticket={mpPaymentTicket}
+          onClose={(updatedTicket) => {
+            if (updatedTicket) setTickets(ts => ts.map(t => t.id === updatedTicket.id ? updatedTicket : t))
+            setMpPaymentTicket(null)
+          }}
+        />
+      )}
+      {localPaymentTicket && (
+        <PaymentConfirmModal
+          ticket={localPaymentTicket}
+          config={config}
+          onClose={(updatedTicket) => {
+            if (updatedTicket) setTickets(ts => ts.map(t => t.id === updatedTicket.id ? updatedTicket : t))
+            setLocalPaymentTicket(null)
+            if (updatedTicket) navigate(`/tickets/${updatedTicket.id}`)
           }}
         />
       )}
@@ -600,7 +655,7 @@ export default function TicketsPage() {
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-4 mb-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div className="sm:col-span-2 lg:col-span-2">
-                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Cliente / DNI / N° comprobante</label>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">N° comprobante / Cliente / DNI</label>
                 <input
                   value={filters.q}
                   onChange={e => setFilter('q', e.target.value)}
@@ -609,12 +664,25 @@ export default function TicketsPage() {
                 />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Desde</label>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Estado</label>
+                <select
+                  value={filters.status}
+                  onChange={e => setFilter('status', e.target.value)}
+                  className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Todos</option>
+                  {ALL_STATUSES.map(([value, label]) => (
+                    <option key={value} value={value}>{label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Emisión desde</label>
                 <input type="date" value={filters.dateFrom} onChange={e => setFilter('dateFrom', e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Hasta</label>
+                <label className="block text-xs text-gray-500 dark:text-slate-400 mb-1">Emisión hasta</label>
                 <input type="date" value={filters.dateTo} onChange={e => setFilter('dateTo', e.target.value)}
                   className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
@@ -782,9 +850,13 @@ export default function TicketsPage() {
                   onChange={e => setCustomerForm(f => ({ ...f, customerDni: e.target.value }))}
                   className="px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
-              <input type="tel" placeholder="Teléfono WhatsApp" value={customerForm.customerPhone}
-                onChange={e => setCustomerForm(f => ({ ...f, customerPhone: e.target.value }))}
-                className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              <PhoneInput
+                phone={customerForm.customerPhone}
+                onPhoneChange={v => setCustomerForm(f => ({ ...f, customerPhone: v }))}
+                country={customerForm.customerPhoneCountry}
+                onCountryChange={v => setCustomerForm(f => ({ ...f, customerPhoneCountry: v }))}
+                placeholder="Teléfono WhatsApp"
+              />
               <input type="email" placeholder="Email" value={customerForm.customerEmail}
                 onChange={e => setCustomerForm(f => ({ ...f, customerEmail: e.target.value }))}
                 className="w-full px-3 py-2 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />

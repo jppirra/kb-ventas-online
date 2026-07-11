@@ -45,11 +45,14 @@ public class AuthService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("El correo ya está en uso.");
         }
+        String countryCode = (request.getCountryCode() != null && !request.getCountryCode().isBlank())
+                ? request.getCountryCode().toUpperCase() : "AR";
         User user = userRepository.save(User.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
                 .emailVerified(false)
+                .countryCode(countryCode)
                 .build());
 
         String token = UUID.randomUUID().toString();
@@ -150,12 +153,15 @@ public class AuthService {
         }
 
         User user = userRepository.findByEmail(email).orElse(null);
+        boolean isNewUser = false;
         if (user == null) {
+            isNewUser = true;
             user = userRepository.save(User.builder()
                     .email(email).name(name)
                     .passwordHash(passwordEncoder.encode(UUID.randomUUID().toString()))
                     .googleId(googleId).emailVerified(true).enabled(true)
                     .profileImageUrl(picture)
+                    .countryCode(null)
                     .build());
         } else {
             if (!user.isEnabled()) {
@@ -167,7 +173,9 @@ public class AuthService {
             if (user.getProfileImageUrl() == null && picture != null) { user.setProfileImageUrl(picture); changed = true; }
             if (changed) userRepository.save(user);
         }
-        return buildAuthResponse(user);
+        AuthResponse response = buildAuthResponse(user);
+        response.setNewUser(isNewUser);
+        return response;
     }
 
     @Transactional
@@ -190,6 +198,7 @@ public class AuthService {
                 .userId(user.getId()).userName(user.getName()).email(user.getEmail())
                 .appAdmin(user.isAppAdmin()).emailVerified(user.isEmailVerified())
                 .termsAccepted(user.getTermsAcceptedAt() != null)
+                .countryCode(user.getCountryCode())
                 .build();
     }
 

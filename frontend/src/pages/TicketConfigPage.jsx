@@ -2,7 +2,12 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
+import MercadoPagoConnect from '../components/MercadoPagoConnect'
 import { ticketsApi } from '../api/tickets'
+import { paymentsApi } from '../api/payments'
+import { COUNTRIES } from '../utils/countries'
+
+const PREDEFINED_METHODS = ['Efectivo', 'Transferencia', 'Tarjetas', 'Mercado Pago']
 
 const CONDICIONES_IVA = [
   'Responsable Inscripto',
@@ -37,20 +42,88 @@ export default function TicketConfigPage() {
   const [form, setForm] = useState({
     businessName: '', businessAddress: '', businessPhone: '',
     businessEmail: '', taxId: '', logoUrl: '', currency: '$',
-    paymentMethods: 'Efectivo, Transferencia', footer: '', showCatalogQr: false,
+    paymentMethods: 'Efectivo', bankAccounts: '[]', footer: '', showCatalogQr: false,
     tipoComprobante: 'B', puntoVenta: '', condicionIva: '', ingresosBrutos: '', inicioActividades: '',
+    countryCode: 'AR',
   })
+  const [customMethodInput, setCustomMethodInput] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [uploadingLogo, setUploadingLogo] = useState(false)
+  const [mpStatus, setMpStatus] = useState(null)
+  const [connectingMp, setConnectingMp] = useState(false)
 
   useEffect(() => {
-    ticketsApi.getConfig()
-      .then(r => setForm(f => ({ ...f, ...r.data, puntoVenta: r.data.puntoVenta ?? '' })))
-      .finally(() => setLoading(false))
+    const searchParams = new URLSearchParams(window.location.search)
+    const mpCode = searchParams.get('mp_code') || searchParams.get('code')
+    const mpState = searchParams.get('state')
+
+    // Limpiar query params del URL antes de procesar (evita re-procesamiento en refresh)
+    if (mpCode) {
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+
+    Promise.all([
+      ticketsApi.getConfig(),
+      paymentsApi.getMpStatus().catch(() => ({ data: null })),
+    ]).then(([configRes, statusRes]) => {
+      setForm(f => ({ ...f, ...configRes.data, puntoVenta: configRes.data.puntoVenta ?? '' }))
+      setMpStatus(statusRes.data)
+    }).finally(() => setLoading(false))
+
+    // Procesar callback OAuth de MP si hay code en la URL
+    if (mpCode && mpState) {
+      setConnectingMp(true)
+      paymentsApi.connectMp(mpCode, mpState)
+        .then(({ data }) => {
+          setMpStatus(data)
+          toast.success('¡Cuenta de Mercado Pago conectada!')
+        })
+        .catch(() => toast.error('Error al conectar con Mercado Pago. Intentá nuevamente.'))
+        .finally(() => setConnectingMp(false))
+    }
   }, [])
 
   const set = (key, val) => setForm(f => ({ ...f, [key]: val }))
+
+  // ── Helpers medios de pago ────────────────────────────────────────────────
+  const activeMethods = (form.paymentMethods || '').split(',').map(s => s.trim()).filter(Boolean)
+  const customMethods = activeMethods.filter(m => !PREDEFINED_METHODS.includes(m))
+
+  function toggleMethod(method) {
+    const curr = activeMethods
+    const next = curr.includes(method) ? curr.filter(m => m !== method) : [...curr, method]
+    set('paymentMethods', next.join(', '))
+  }
+
+  function addCustomMethod() {
+    const m = customMethodInput.trim()
+    if (!m || activeMethods.includes(m)) return
+    set('paymentMethods', [...activeMethods, m].join(', '))
+    setCustomMethodInput('')
+  }
+
+  function removeCustomMethod(m) {
+    set('paymentMethods', activeMethods.filter(x => x !== m).join(', '))
+  }
+
+  // ── Helpers cuentas bancarias ─────────────────────────────────────────────
+  const bankAccounts = (() => { try { return JSON.parse(form.bankAccounts || '[]') } catch { return [] } })()
+
+  function setBankAccounts(list) { set('bankAccounts', JSON.stringify(list)) }
+
+  function addBankAccount() {
+    setBankAccounts([...bankAccounts, { alias: '', cbu: '', bank: '' }])
+  }
+
+  function updateBankAccount(i, field, value) {
+    const list = bankAccounts.map((a, idx) => idx === i ? { ...a, [field]: value } : a)
+    setBankAccounts(list)
+  }
+
+  function removeBankAccount(i) {
+    setBankAccounts(bankAccounts.filter((_, idx) => idx !== i))
+  }
 
   async function handleSave(e) {
     e.preventDefault()
@@ -155,11 +228,72 @@ export default function TicketConfigPage() {
                   placeholder="$" className={inputCls} />
               </Field>
               <div className="col-span-2">
-                <Field label="Formas de pago" hint="Separadas por coma — aparecen como opciones al crear un ticket">
-                  <input type="text" value={form.paymentMethods} onChange={e => set('paymentMethods', e.target.value)}
-                    placeholder="Efectivo, Transferencia, Tarjeta" className={inputCls} />
+                <Field label="Formas de pago">
+                  <div className="space-y-2">
+                    {/* Predefinidos */}
+                    <div className="grid grid-cols-2 gap-2">
+                      {PREDEFINED_METHODS.filter(m => m !== 'Mercado Pago').map(m => (
+                        <label key={m} className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300 cursor-pointer">
+                          <input type="checkbox" checked={activeMethods.includes(m)} onChange={() => toggleMethod(m)}
+                            className="rounded border-gray-300 dark:border-slate-600 text-blue-600" />
+                          {m}
+                        </label>
+                      ))}
+                    </div>
+                    {/* Métodos custom */}
+                    {customMethods.map(m => (
+                      <div key={m} className="flex items-center gap-2">
+                        <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-slate-300 flex-1 cursor-pointer">
+                          <input type="checkbox" checked onChange={() => removeCustomMethod(m)}
+                            className="rounded border-gray-300 dark:border-slate-600 text-blue-600" />
+                          {m}
+                        </label>
+                        <button type="button" onClick={() => removeCustomMethod(m)}
+                          className="text-xs text-red-400 hover:text-red-600">Quitar</button>
+                      </div>
+                    ))}
+                    {/* Agregar otro */}
+                    <div className="flex gap-2 pt-1">
+                      <input type="text" value={customMethodInput} onChange={e => setCustomMethodInput(e.target.value)}
+                        onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCustomMethod())}
+                        placeholder="Otro medio (ej: Naranja X, Modo...)"
+                        className="flex-1 px-3 py-1.5 text-sm rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                      <button type="button" onClick={addCustomMethod}
+                        className="px-3 py-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-sm rounded-xl border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-colors">
+                        + Agregar
+                      </button>
+                    </div>
+                  </div>
                 </Field>
               </div>
+
+              {/* Cuentas bancarias para transferencia */}
+              {activeMethods.includes('Transferencia') && (
+                <div className="col-span-2">
+                  <Field label="Cuentas para transferencia" hint="Se muestran al confirmar un pago por transferencia">
+                    <div className="space-y-2">
+                      {bankAccounts.map((acc, i) => (
+                        <div key={i} className="flex gap-2 items-start">
+                          <div className="flex-1 grid grid-cols-3 gap-2">
+                            <input type="text" value={acc.alias} onChange={e => updateBankAccount(i, 'alias', e.target.value)}
+                              placeholder="Alias" className={inputCls} />
+                            <input type="text" value={acc.cbu} onChange={e => updateBankAccount(i, 'cbu', e.target.value)}
+                              placeholder="CBU / CVU" className={inputCls} />
+                            <input type="text" value={acc.bank} onChange={e => updateBankAccount(i, 'bank', e.target.value)}
+                              placeholder="Banco (opcional)" className={inputCls} />
+                          </div>
+                          <button type="button" onClick={() => removeBankAccount(i)}
+                            className="mt-2 text-red-400 hover:text-red-600 text-xs">✕</button>
+                        </div>
+                      ))}
+                      <button type="button" onClick={addBankAccount}
+                        className="text-sm text-blue-600 dark:text-blue-400 hover:underline">
+                        + Agregar cuenta
+                      </button>
+                    </div>
+                  </Field>
+                </div>
+              )}
               <div className="col-span-2">
                 <Field label="Pie del comprobante">
                   <textarea rows={2} value={form.footer} onChange={e => set('footer', e.target.value)}
@@ -176,13 +310,27 @@ export default function TicketConfigPage() {
             </div>
           </div>
 
-          {/* Factura electrónica Argentina */}
+          {/* País / Región */}
+          <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 space-y-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">País / Región</h2>
+              <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
+                Determina las reglas de facturación, normalización de teléfonos y medios de pago disponibles.
+              </p>
+            </div>
+            <Field label="País">
+              <select value={form.countryCode} onChange={e => set('countryCode', e.target.value)} className={inputCls}>
+                {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+              </select>
+            </Field>
+          </div>
+
+          {/* Datos fiscales */}
           <div className="bg-white dark:bg-slate-800 rounded-2xl border border-gray-200 dark:border-slate-700 p-6 space-y-5">
             <div>
-              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Factura electrónica Argentina (AFIP)</h2>
+              <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Datos fiscales</h2>
               <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">
-                Completá estos datos para que el comprobante siga el formato requerido por AFIP.
-                La integración directa con el web service de AFIP para emitir CAE está en desarrollo.
+                Estos datos se imprimen en el encabezado del comprobante.
               </p>
             </div>
 
@@ -196,7 +344,7 @@ export default function TicketConfigPage() {
                 </Field>
               </div>
 
-              <Field label="Punto de venta AFIP" hint="Dejá vacío para usar numeración simple (T-0001)">
+              <Field label="Punto de venta" hint="Dejá vacío para usar numeración simple (T-0001)">
                 <input type="number" min="1" max="9999" value={form.puntoVenta}
                   onChange={e => set('puntoVenta', e.target.value)}
                   placeholder="1" className={inputCls} />
@@ -223,8 +371,8 @@ export default function TicketConfigPage() {
             {afipEnabled && (
               <div className="text-xs bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-3 text-amber-700 dark:text-amber-400">
                 {form.tipoComprobante === 'TC'
-                  ? <>Con punto de venta activo y tipo TC, los comprobantes se numerarán como <strong>TC {String(form.puntoVenta).padStart(4,'0')}-00000001</strong> y mostrarán el aviso de que no son válidos como factura.</>
-                  : <>Con punto de venta activo, los comprobantes se numerarán como <strong>{form.tipoComprobante} {String(form.puntoVenta).padStart(4,'0')}-00000001</strong>. Para emitir facturas electrónicas válidas (con CAE) se requiere la integración con AFIP WSFE — próximamente.</>
+                  ? <>Con punto de venta activo y tipo TC, los comprobantes se numerarán como <strong>TC {String(form.puntoVenta).padStart(4,'0')}-00000001</strong>.</>
+                  : <>Con punto de venta activo, los comprobantes se numerarán como <strong>{form.tipoComprobante} {String(form.puntoVenta).padStart(4,'0')}-00000001</strong>.</>
                 }
               </div>
             )}
@@ -235,6 +383,18 @@ export default function TicketConfigPage() {
             {saving ? 'Guardando...' : 'Guardar configuración'}
           </button>
         </form>
+
+        {/* Medios de pago digital */}
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Medios de pago digital</h2>
+          {connectingMp ? (
+            <div className="rounded-2xl border border-gray-200 dark:border-slate-700 p-5 bg-white dark:bg-slate-800 text-sm text-gray-500 dark:text-slate-400">
+              Conectando tu cuenta de Mercado Pago...
+            </div>
+          ) : (
+            <MercadoPagoConnect status={mpStatus} onStatusChange={setMpStatus} />
+          )}
+        </div>
       </div>
     </Layout>
   )

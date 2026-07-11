@@ -8,4 +8,6 @@ import java.util.List;
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
     List<Customer> findByVendorUserIdOrderByCreatedAtDesc(Long vendorUserId);
     boolean existsByVendorUserIdAndOrderId(Long vendorUserId, Long orderId);
+    boolean existsByVendorUserIdAndPhone(Long vendorUserId, String phone);
+    boolean existsByVendorUserIdAndEmail(Long vendorUserId, String email);
 }

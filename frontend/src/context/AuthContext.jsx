@@ -20,13 +20,14 @@ export function AuthProvider({ children }) {
         appAdmin: localStorage.getItem('appAdmin') === 'true',
         emailVerified: localStorage.getItem('emailVerified') === 'true',
         termsAccepted: localStorage.getItem('termsAccepted') === 'true',
+        countryCode: localStorage.getItem('countryCode') || null,
       })
     }
     setLoading(false)
   }, [])
 
   const storeUser = (data) => {
-    const { token, refreshToken, userId, userName, email, appAdmin, emailVerified, termsAccepted } = data
+    const { token, refreshToken, userId, userName, email, appAdmin, emailVerified, termsAccepted, countryCode, newUser } = data
     localStorage.setItem('token', token)
     localStorage.setItem('refreshToken', refreshToken || '')
     localStorage.setItem('userId', String(userId))
@@ -35,8 +36,11 @@ export function AuthProvider({ children }) {
     localStorage.setItem('appAdmin', String(appAdmin || false))
     localStorage.setItem('emailVerified', String(emailVerified || false))
     localStorage.setItem('termsAccepted', String(termsAccepted || false))
+    localStorage.setItem('countryCode', countryCode || '')
     setUser({ token, refreshToken, userId: String(userId), userName, email,
-      appAdmin: Boolean(appAdmin), emailVerified: Boolean(emailVerified), termsAccepted: Boolean(termsAccepted) })
+      appAdmin: Boolean(appAdmin), emailVerified: Boolean(emailVerified),
+      termsAccepted: Boolean(termsAccepted), countryCode: countryCode || null,
+      newUser: Boolean(newUser) })
   }
 
   const login = async (credentials) => {

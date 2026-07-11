@@ -18,6 +18,7 @@ public class ProfileResponse {
     private String brandColorPrimary;
     private String brandColorSecondary;
     private String whatsappNumber;
+    private String countryCode;
     private List<SocialLinkDto> socialLinks;
 
     public static ProfileResponse from(User u, List<SocialLink> links) {
@@ -32,6 +33,7 @@ public class ProfileResponse {
         r.brandColorPrimary = u.getBrandColorPrimary();
         r.brandColorSecondary = u.getBrandColorSecondary();
         r.whatsappNumber = u.getWhatsappNumber();
+        r.countryCode = u.getCountryCode() != null ? u.getCountryCode() : "AR";
         r.socialLinks = links.stream().map(SocialLinkDto::from).toList();
         return r;
     }

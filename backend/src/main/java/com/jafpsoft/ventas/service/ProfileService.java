@@ -49,6 +49,8 @@ public class ProfileService {
         if (req.getBrandColorPrimary() != null) user.setBrandColorPrimary(req.getBrandColorPrimary());
         if (req.getBrandColorSecondary() != null) user.setBrandColorSecondary(req.getBrandColorSecondary());
         if (req.getWhatsappNumber() != null) user.setWhatsappNumber(req.getWhatsappNumber());
+        if (req.getCountryCode() != null && !req.getCountryCode().isBlank())
+            user.setCountryCode(req.getCountryCode().toUpperCase());
 
         if (req.getSocialLinks() != null) {
             socialLinkRepository.deleteByUserId(userId);

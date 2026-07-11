@@ -9,6 +9,7 @@ public class CustomerRequest {
     private String name;
     private String dni;
     private String phone;
+    private String phoneCountry;
     private String email;
     private String notes;
     private String source;

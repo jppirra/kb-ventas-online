@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+
 @Entity
 @Table(name = "sale_tickets", uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "ticket_number"}))
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
@@ -34,6 +35,9 @@ public class SaleTicket {
 
     @Column(name = "customer_phone")
     private String customerPhone;
+
+    @Column(name = "customer_phone_country", length = 2)
+    private String customerPhoneCountry;
 
     @Column(name = "customer_email")
     private String customerEmail;
@@ -80,6 +84,34 @@ public class SaleTicket {
     @OneToMany(mappedBy = "ticket", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<SaleTicketItem> items = new ArrayList<>();
+
+    // ── Pago local (transferencia / tarjeta / otro) ───────────────────────────
+    @Column(name = "payment_reference", columnDefinition = "TEXT")
+    private String paymentReference;
+
+    @Column(name = "payment_proof_url", columnDefinition = "TEXT")
+    private String paymentProofUrl;
+
+    // ── Mercado Pago ───────────────────────────────────────────────────────────
+    @Column(name = "mp_preference_id", length = 100)
+    private String mpPreferenceId;
+
+    @Column(name = "mp_payment_id", length = 100)
+    private String mpPaymentId;
+
+    // Estado en MP: pending | approved | rejected | cancelled | refunded
+    @Column(name = "mp_status", length = 30)
+    private String mpStatus;
+
+    @Column(name = "mp_status_detail", length = 100)
+    private String mpStatusDetail;
+
+    @Column(name = "mp_paid_at")
+    private LocalDateTime mpPaidAt;
+
+    // ── Link público ──────────────────────────────────────────────────────────
+    @Column(name = "public_token", unique = true, length = 36)
+    private String publicToken;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

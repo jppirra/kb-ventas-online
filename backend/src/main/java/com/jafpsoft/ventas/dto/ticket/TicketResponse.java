@@ -14,6 +14,7 @@ public class TicketResponse {
     private String customerName;
     private String customerDni;
     private String customerPhone;
+    private String customerPhoneCountry;
     private String customerEmail;
     private String customerNotes;
     private BigDecimal subtotal;
@@ -27,6 +28,15 @@ public class TicketResponse {
     private String referenceTicketNumber;
     private List<TicketItemResponse> items;
     private LocalDateTime createdAt;
+    // Pago local
+    private String paymentReference;
+    private String paymentProofUrl;
+    // Mercado Pago
+    private String mpStatus;
+    private String mpPreferenceId;
+    private String mpPaymentId;
+    // Link público
+    private String publicToken;
 
     public static TicketResponse from(SaleTicket t) {
         TicketResponse r = new TicketResponse();
@@ -35,6 +45,7 @@ public class TicketResponse {
         r.customerName = t.getCustomerName();
         r.customerDni = t.getCustomerDni();
         r.customerPhone = t.getCustomerPhone();
+        r.customerPhoneCountry = t.getCustomerPhoneCountry() != null ? t.getCustomerPhoneCountry() : "AR";
         r.customerEmail = t.getCustomerEmail();
         r.customerNotes = t.getCustomerNotes();
         r.subtotal = t.getSubtotal();
@@ -47,6 +58,12 @@ public class TicketResponse {
         r.tipoDoc = t.getTipoDoc() != null ? t.getTipoDoc() : "COMP";
         r.referenceTicketNumber = t.getReferenceTicketNumber();
         r.createdAt = t.getCreatedAt();
+        r.paymentReference = t.getPaymentReference();
+        r.paymentProofUrl = t.getPaymentProofUrl();
+        r.mpStatus = t.getMpStatus();
+        r.mpPreferenceId = t.getMpPreferenceId();
+        r.mpPaymentId = t.getMpPaymentId();
+        r.publicToken = t.getPublicToken();
         r.items = t.getItems().stream()
                 .sorted((a, b) -> Integer.compare(
                         a.getSortOrder() != null ? a.getSortOrder() : 0,

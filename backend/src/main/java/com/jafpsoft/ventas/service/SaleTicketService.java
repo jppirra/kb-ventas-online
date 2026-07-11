@@ -1,12 +1,15 @@
 package com.jafpsoft.ventas.service;
 
 import com.jafpsoft.ventas.dto.ticket.*;
+import com.jafpsoft.ventas.model.Customer;
 import com.jafpsoft.ventas.model.SaleTicket;
 import com.jafpsoft.ventas.model.SaleTicketItem;
 import com.jafpsoft.ventas.model.TicketConfig;
+import com.jafpsoft.ventas.repository.CustomerRepository;
 import com.jafpsoft.ventas.repository.ProductRepository;
 import com.jafpsoft.ventas.repository.SaleTicketRepository;
 import com.jafpsoft.ventas.repository.TicketConfigRepository;
+import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -18,6 +21,7 @@ import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
@@ -27,6 +31,8 @@ public class SaleTicketService {
     private final SaleTicketRepository ticketRepository;
     private final TicketConfigRepository configRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
+    private final CustomerRepository customerRepository;
     private final EmailService emailService;
 
     // ── Tickets ───────────────────────────────────────────────────────────────
@@ -37,9 +43,14 @@ public class SaleTicketService {
                 .stream().map(TicketResponse::from).toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public TicketResponse getById(Long id, Long userId) {
-        return TicketResponse.from(findOwned(id, userId));
+        SaleTicket ticket = findOwned(id, userId);
+        if (ticket.getPublicToken() == null) {
+            ticket.setPublicToken(UUID.randomUUID().toString());
+            ticket = ticketRepository.save(ticket);
+        }
+        return TicketResponse.from(ticket);
     }
 
     @Transactional
@@ -78,20 +89,23 @@ public class SaleTicketService {
                     ? String.format("%s-%04d", tipoDoc, ticketNum)
                     : String.format("T-%04d", ticketNum);
 
+        boolean isDraft = Boolean.TRUE.equals(req.getDraft());
         SaleTicket ticket = SaleTicket.builder()
                 .userId(userId)
+                .publicToken(UUID.randomUUID().toString())
                 .ticketNumber(ticketNumber)
                 .tipoDoc(tipoDoc)
                 .referenceTicketNumber(req.getReferenceTicketNumber())
                 .customerName(req.getCustomerName())
                 .customerDni(req.getCustomerDni())
                 .customerPhone(req.getCustomerPhone())
+                .customerPhoneCountry(req.getCustomerPhoneCountry() != null ? req.getCustomerPhoneCountry() : "AR")
                 .customerEmail(req.getCustomerEmail())
                 .customerNotes(req.getCustomerNotes())
                 .paymentMethod(req.getPaymentMethod())
                 .discount(req.getDiscount() != null ? req.getDiscount() : BigDecimal.ZERO)
                 .notes(req.getNotes())
-                .status("PAID")
+                .status(isDraft ? "DRAFT" : "PAID")
                 .build();
 
         AtomicInteger order = new AtomicInteger(0);
@@ -122,9 +136,40 @@ public class SaleTicketService {
         ticket.setTotal(subtotal.subtract(discount).max(BigDecimal.ZERO));
 
         SaleTicket saved = ticketRepository.save(ticket);
-        // NC devuelve stock; ND y COMP descuentan stock
-        adjustStock(saved.getItems(), "NC".equals(tipoDoc) ? 1 : -1, userId);
+        // DRAFT: no ajustar stock hasta que el pago sea confirmado vía webhook
+        // NC: devuelve stock; ND y COMP: descuentan stock
+        if (!isDraft) {
+            adjustStock(saved.getItems(), "NC".equals(tipoDoc) ? 1 : -1, userId);
+        }
+        autoSaveCustomer(userId, req);
         return TicketResponse.from(saved);
+    }
+
+    private void autoSaveCustomer(Long userId, TicketRequest req) {
+        String name = req.getCustomerName();
+        if (name == null || name.isBlank()) return;
+        String phone = req.getCustomerPhone();
+        String email = req.getCustomerEmail();
+        boolean exists = false;
+        if (phone != null && !phone.isBlank()) {
+            exists = customerRepository.existsByVendorUserIdAndPhone(userId, phone);
+        } else if (email != null && !email.isBlank()) {
+            exists = customerRepository.existsByVendorUserIdAndEmail(userId, email);
+        } else {
+            return;
+        }
+        if (!exists) {
+            customerRepository.save(Customer.builder()
+                    .vendorUserId(userId)
+                    .name(name)
+                    .dni(req.getCustomerDni())
+                    .phone(phone)
+                    .phoneCountry(req.getCustomerPhoneCountry() != null ? req.getCustomerPhoneCountry() : "AR")
+                    .email(email)
+                    .notes(req.getCustomerNotes())
+                    .source("ticket")
+                    .build());
+        }
     }
 
     @Transactional
@@ -158,6 +203,7 @@ public class SaleTicketService {
         if (data.containsKey("customerName"))  ticket.setCustomerName(data.get("customerName"));
         if (data.containsKey("customerDni"))   ticket.setCustomerDni(data.get("customerDni"));
         if (data.containsKey("customerPhone")) ticket.setCustomerPhone(data.get("customerPhone"));
+        if (data.containsKey("customerPhoneCountry")) ticket.setCustomerPhoneCountry(data.get("customerPhoneCountry"));
         if (data.containsKey("customerEmail")) ticket.setCustomerEmail(data.get("customerEmail"));
         if (data.containsKey("customerNotes")) ticket.setCustomerNotes(data.get("customerNotes"));
         return TicketResponse.from(ticketRepository.save(ticket));
@@ -166,7 +212,9 @@ public class SaleTicketService {
     @Transactional
     public void delete(Long id, Long userId) {
         SaleTicket ticket = findOwned(id, userId);
-        if (!"CANCELLED".equals(ticket.getStatus())) {
+        // Solo devolver stock si el ticket descontó stock (no aplica a DRAFT ni CANCELLED)
+        String status = ticket.getStatus();
+        if ("PAID".equals(status)) {
             adjustStock(ticket.getItems(), 1, userId);
         }
         ticketRepository.delete(ticket);
@@ -178,7 +226,12 @@ public class SaleTicketService {
     public TicketConfigResponse getConfig(Long userId) {
         TicketConfig config = configRepository.findById(userId)
                 .orElse(TicketConfig.builder().userId(userId).build());
-        return TicketConfigResponse.from(config);
+        TicketConfigResponse r = TicketConfigResponse.from(config);
+        userRepository.findById(userId).ifPresent(u -> {
+            r.setCatalogSlug(u.getSlug());
+            r.setCountryCode(u.getCountryCode() != null ? u.getCountryCode() : "AR");
+        });
+        return r;
     }
 
     @Transactional
@@ -193,6 +246,7 @@ public class SaleTicketService {
         if (req.getLogoUrl() != null) config.setLogoUrl(req.getLogoUrl());
         if (req.getCurrency() != null) config.setCurrency(req.getCurrency());
         if (req.getPaymentMethods() != null) config.setPaymentMethods(req.getPaymentMethods());
+        config.setBankAccounts(req.getBankAccounts());
         if (req.getFooter() != null) config.setFooter(req.getFooter());
         if (req.getShowCatalogQr() != null) config.setShowCatalogQr(req.getShowCatalogQr());
         if (req.getTipoComprobante() != null) config.setTipoComprobante(req.getTipoComprobante());
@@ -200,7 +254,32 @@ public class SaleTicketService {
         if (req.getCondicionIva() != null) config.setCondicionIva(req.getCondicionIva());
         if (req.getIngresosBrutos() != null) config.setIngresosBrutos(req.getIngresosBrutos());
         if (req.getInicioActividades() != null) config.setInicioActividades(req.getInicioActividades());
-        return TicketConfigResponse.from(configRepository.save(config));
+        TicketConfigResponse r = TicketConfigResponse.from(configRepository.save(config));
+        userRepository.findById(userId).ifPresent(u -> {
+            if (req.getCountryCode() != null && !req.getCountryCode().isBlank()) {
+                u.setCountryCode(req.getCountryCode().toUpperCase());
+                userRepository.save(u);
+            }
+            r.setCatalogSlug(u.getSlug());
+            r.setCountryCode(u.getCountryCode() != null ? u.getCountryCode() : "AR");
+        });
+        return r;
+    }
+
+    // ── Confirmar pago local (transferencia / tarjeta / otro) ────────────────
+
+    @Transactional
+    public TicketResponse confirmLocalPayment(Long id, Long userId, String reference, String proofUrl) {
+        SaleTicket ticket = findOwned(id, userId);
+        if (!"DRAFT".equals(ticket.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "El ticket ya fue procesado (estado: " + ticket.getStatus() + ")");
+        }
+        ticket.setStatus("PAID");
+        if (reference != null && !reference.isBlank()) ticket.setPaymentReference(reference);
+        if (proofUrl != null && !proofUrl.isBlank()) ticket.setPaymentProofUrl(proofUrl);
+        adjustStock(ticket.getItems(), "NC".equals(ticket.getTipoDoc()) ? 1 : -1, userId);
+        return TicketResponse.from(ticketRepository.save(ticket));
     }
 
     // ── Email ─────────────────────────────────────────────────────────────────

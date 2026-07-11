@@ -2,13 +2,31 @@ import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import Layout from '../components/Layout'
+import MercadoPagoButton from '../components/MercadoPagoButton'
+import MpCheckoutModal from '../components/MpCheckoutModal'
+import PhoneInput from '../components/PhoneInput'
+import { COUNTRIES } from '../utils/countries'
 import { ticketsApi } from '../api/tickets'
 import { adminApi } from '../api/admin'
 import { fmtDate, fmtDateLong } from '../utils/date'
 import NCNDModal from '../components/NCNDModal'
+import InvoiceDocument from '../components/InvoiceDocument'
+import IssueBillingButton from '../components/IssueBillingButton'
 
-const STATUS_LABELS = { PAID: 'Pagado', DRAFT: 'Borrador', CANCELLED: 'Cancelado' }
-const STATUS_COLORS = { PAID: '#16a34a', DRAFT: '#ca8a04', CANCELLED: '#dc2626' }
+const STATUS_LABELS = {
+  PAID:            'Cobrado',
+  DRAFT:           'Borrador',
+  CANCELLED:       'Anulado',
+  PAYMENT_PENDING: 'Esperando pago',
+  PAYMENT_FAILED:  'Pago rechazado',
+}
+const STATUS_COLORS = {
+  PAID:            '#16a34a',
+  DRAFT:           '#ca8a04',
+  CANCELLED:       '#dc2626',
+  PAYMENT_PENDING: '#2563eb',
+  PAYMENT_FAILED:  '#ea580c',
+}
 
 function buildWhatsAppText(ticket, config) {
   const cur = config?.currency || '$'
@@ -49,183 +67,6 @@ function buildTicketHtml(ticket, config) {
     ${config?.footer ? `<br><br><em>${config.footer}</em>` : ''}`
 }
 
-// Comprobante imprimible con formato AFIP cuando puntoVenta está configurado
-function InvoiceDocument({ ticket, config }) {
-  const cur = config?.currency || '$'
-  const isAfip = !!config?.puntoVenta
-  const tipo = config?.tipoComprobante || 'B'
-
-  const tipoDoc = ticket.tipoDoc || 'COMP'
-  const esTc = tipo === 'TC'
-  const esNC = tipoDoc === 'NC'
-  const esND = tipoDoc === 'ND'
-  const tipoLabel = esTc ? 'TICKET COMPROBANTE'
-    : esNC ? `NOTA DE CRÉDITO ${tipo !== 'TC' ? tipo : ''}`.trim()
-    : esND ? `NOTA DE DÉBITO ${tipo !== 'TC' ? tipo : ''}`.trim()
-    : ({ A: 'FACTURA A', B: 'FACTURA B', C: 'FACTURA C' }[tipo] || 'COMPROBANTE')
-
-  return (
-    <div className="ticket-paper bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm print:shadow-none print:rounded-none print:border-0">
-
-      {/* ── Cabecera ── */}
-      <div className="relative p-6 pb-4 border-b-2 border-gray-800">
-        {/* Logo + nombre (izq) */}
-        <div className="flex items-center gap-4">
-          {config?.logoUrl && (
-            <img src={config.logoUrl} alt="Logo" className="h-14 w-14 object-contain rounded-lg border border-gray-200" />
-          )}
-          <div>
-            <p className="font-bold text-lg text-gray-900">{config?.businessName || 'Mi tienda'}</p>
-            {config?.businessAddress && <p className="text-xs text-gray-500">{config.businessAddress}</p>}
-          </div>
-        </div>
-
-        {/* Tipo de comprobante (centro absoluto) */}
-        <div className="absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 text-center">
-          <h1 className="text-2xl font-black tracking-widest text-gray-900 border-2 border-gray-800 px-5 py-1">
-            {isAfip ? tipoLabel : 'COMPROBANTE'}
-          </h1>
-          <div className="mt-1 border border-gray-400 px-4 py-0.5">
-            <span className="font-mono text-sm font-bold text-gray-700">{ticket.ticketNumber}</span>
-          </div>
-        </div>
-
-        {/* Letra en caja (der) — solo AFIP con tipo A/B/C */}
-        {isAfip && !esTc && !esNC && !esND && (
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 w-14 h-14 border-2 border-gray-800 flex items-center justify-center">
-            <span className="text-3xl font-black text-gray-900">{tipo}</span>
-          </div>
-        )}
-      </div>
-
-      {/* ── Emisor / Fecha / Cliente ── */}
-      <div className="grid grid-cols-3 border-b border-gray-300">
-        {/* Emisor */}
-        <div className="p-4 border-r border-gray-300">
-          <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase mb-2">Emisor</p>
-          <p className="text-sm font-semibold text-gray-900">{config?.businessName || '—'}</p>
-          {config?.businessAddress && <p className="text-xs text-gray-600 mt-0.5">{config.businessAddress}</p>}
-          {config?.taxId && <p className="text-xs text-gray-600 mt-0.5">CUIT: {config.taxId}</p>}
-          {config?.condicionIva && <p className="text-xs text-gray-600 mt-0.5">IVA: {config.condicionIva}</p>}
-          {config?.ingresosBrutos && <p className="text-xs text-gray-600">Ing. Brutos: {config.ingresosBrutos}</p>}
-          {config?.inicioActividades && <p className="text-xs text-gray-600">Inicio act.: {config.inicioActividades}</p>}
-          {config?.businessPhone && <p className="text-xs text-gray-500 mt-1">{config.businessPhone}</p>}
-          {config?.businessEmail && <p className="text-xs text-gray-500">{config.businessEmail}</p>}
-        </div>
-
-        {/* Fecha */}
-        <div className="p-4 border-r border-gray-300 flex flex-col items-center justify-center text-center gap-2">
-          <div className="border border-gray-300 rounded px-3 py-1.5 w-full">
-            <p className="text-xs text-gray-500">Emitida</p>
-            <p className="text-sm font-semibold text-gray-900">{fmtDate(ticket.createdAt)}</p>
-          </div>
-          {ticket.referenceTicketNumber && (
-            <div className="border border-orange-300 rounded px-3 py-1.5 w-full bg-orange-50">
-              <p className="text-xs text-orange-500">Referencia</p>
-              <p className="text-sm font-semibold text-orange-700 font-mono">{ticket.referenceTicketNumber}</p>
-            </div>
-          )}
-          {ticket.paymentMethod && (
-            <div className="border border-gray-300 rounded px-3 py-1.5 w-full">
-              <p className="text-xs text-gray-500">Forma de pago</p>
-              <p className="text-sm font-semibold text-gray-900">{ticket.paymentMethod}</p>
-            </div>
-          )}
-          <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium`}
-            style={{ background: STATUS_COLORS[ticket.status] + '22', color: STATUS_COLORS[ticket.status] }}>
-            {STATUS_LABELS[ticket.status] || ticket.status}
-          </span>
-          {ticket.cancellationReason && (
-            <p className="text-xs text-red-400 mt-1 italic">Motivo: {ticket.cancellationReason}</p>
-          )}
-        </div>
-
-        {/* Cliente */}
-        <div className="p-4">
-          <p className="text-xs font-bold text-blue-700 dark:text-blue-400 uppercase mb-2">Cliente</p>
-          {ticket.customerName
-            ? <p className="text-sm font-semibold text-gray-900">{ticket.customerName}</p>
-            : <p className="text-xs text-gray-400 italic">Consumidor Final</p>
-          }
-          {ticket.customerDni && <p className="text-xs text-gray-600 font-mono mt-0.5">DNI/CUIT: {ticket.customerDni}</p>}
-          {ticket.customerPhone && <p className="text-xs text-gray-600 mt-0.5">{ticket.customerPhone}</p>}
-          {ticket.customerEmail && <p className="text-xs text-gray-600">{ticket.customerEmail}</p>}
-          {ticket.customerNotes && <p className="text-xs text-gray-500 mt-1 italic">{ticket.customerNotes}</p>}
-        </div>
-      </div>
-
-      {/* ── Items ── */}
-      <div className="p-5">
-        <table className="w-full text-sm mb-4">
-          <thead>
-            <tr className="text-left text-xs text-gray-400 border-b border-gray-200 bg-gray-50">
-              <th className="pb-2 pt-1 px-2 font-medium">Producto</th>
-              <th className="pb-2 pt-1 font-medium text-center w-16">Cant.</th>
-              <th className="pb-2 pt-1 font-medium text-right w-28">Precio unit.</th>
-              <th className="pb-2 pt-1 font-medium text-right w-28 pr-2">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {ticket.items?.map(it => (
-              <tr key={it.id}>
-                <td className="py-2 px-2">
-                  <p className="font-medium text-gray-900">{it.productName}</p>
-                  {it.size && <p className="text-xs text-gray-400">Talle: {it.size}</p>}
-                  {it.color && <p className="text-xs text-gray-400">Color: {it.color}</p>}
-                  {it.productSku && <p className="text-xs text-gray-400 font-mono">SKU: {it.productSku}</p>}
-                </td>
-                <td className="py-2 text-center text-gray-600">{it.quantity}</td>
-                <td className="py-2 text-right text-gray-600">{cur}{Number(it.unitPrice).toLocaleString('es-AR')}</td>
-                <td className="py-2 text-right font-semibold text-gray-900 pr-2">{cur}{Number(it.subtotal).toLocaleString('es-AR')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-
-        {/* Totales */}
-        <div className="border-t border-gray-200 pt-3 ml-auto max-w-xs space-y-1">
-          <div className="flex justify-between text-sm text-gray-500">
-            <span>Subtotal</span><span>{cur}{Number(ticket.subtotal).toLocaleString('es-AR')}</span>
-          </div>
-          {Number(ticket.discount) > 0 && (
-            <div className="flex justify-between text-sm text-green-600">
-              <span>Descuento</span><span>-{cur}{Number(ticket.discount).toLocaleString('es-AR')}</span>
-            </div>
-          )}
-          <div className="flex justify-between font-bold text-base text-gray-900 border-t border-gray-300 pt-2">
-            <span>TOTAL</span><span>{cur}{Number(ticket.total).toLocaleString('es-AR')}</span>
-          </div>
-        </div>
-
-        {/* Notas */}
-        {ticket.notes && (
-          <p className="text-xs text-gray-400 italic mt-4 pt-3 border-t border-gray-100">{ticket.notes}</p>
-        )}
-      </div>
-
-      {/* ── Pie ── */}
-      {(config?.footer || isAfip) && (
-        <div className="border-t border-gray-200 px-5 py-3 bg-gray-50">
-          {isAfip && !esTc && (
-            <div className="flex gap-6 text-xs text-gray-400 mb-2">
-              <span>CAE: <span className="text-gray-500 italic">— pendiente —</span></span>
-              <span>Vto. CAE: <span className="text-gray-500 italic">— —</span></span>
-            </div>
-          )}
-          {isAfip && esTc && (
-            <p className="text-xs text-gray-500 text-center font-medium mb-2">
-              Este comprobante no es válido como factura
-            </p>
-          )}
-          {config?.footer && (
-            <p className="text-xs text-gray-400 text-center">{config.footer}</p>
-          )}
-        </div>
-      )}
-    </div>
-  )
-}
-
 export default function TicketDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -234,9 +75,15 @@ export default function TicketDetailPage() {
   const [loading, setLoading] = useState(true)
   const [sendingEmail, setSendingEmail] = useState(false)
   const [editingCustomer, setEditingCustomer] = useState(false)
-  const [customerForm, setCustomerForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerEmail: '', customerNotes: '' })
+  const [customerForm, setCustomerForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerPhoneCountry: 'AR', customerEmail: '', customerNotes: '' })
   const [savingCustomer, setSavingCustomer] = useState(false)
   const [showNcNd, setShowNcNd] = useState(null) // 'NC' | 'ND' | null
+  const [showMpModal, setShowMpModal] = useState(false)
+
+  function handleMpTicketUpdate(newStatus, partialData) {
+    setTicket(prev => prev ? { ...prev, status: newStatus, ...partialData } : prev)
+    if (newStatus === 'PAID') ticketsApi.get(id).then(r => setTicket(r.data)).catch(() => {})
+  }
 
   useEffect(() => {
     Promise.all([ticketsApi.get(id), ticketsApi.getConfig()])
@@ -247,6 +94,7 @@ export default function TicketDetailPage() {
           customerName: tr.data.customerName || '',
           customerDni: tr.data.customerDni || '',
           customerPhone: tr.data.customerPhone || '',
+          customerPhoneCountry: tr.data.customerPhoneCountry || 'AR',
           customerEmail: tr.data.customerEmail || '',
           customerNotes: tr.data.customerNotes || '',
         })
@@ -265,6 +113,7 @@ export default function TicketDetailPage() {
         customerName: data.customerName || '',
         customerDni: data.customerDni || '',
         customerPhone: data.customerPhone || '',
+        customerPhoneCountry: data.customerPhoneCountry || 'AR',
         customerEmail: data.customerEmail || '',
         customerNotes: data.customerNotes || '',
       })
@@ -285,10 +134,23 @@ export default function TicketDetailPage() {
   }
 
   function handleWhatsApp() {
-    const phone = ticket.customerPhone?.replace(/\D/g, '')
-    if (!phone) { toast.error('El cliente no tiene teléfono registrado'); return }
-    const text = buildWhatsAppText(ticket, config)
-    window.open(`https://wa.me/${phone}?text=${text}`, '_blank')
+    const entry = COUNTRIES.find(c => c.code === (ticket.customerPhoneCountry || 'AR'))
+    const dialDigits = entry?.dial?.replace(/\D/g, '') || ''
+    const phoneDigits = ticket.customerPhone?.replace(/\D/g, '') || ''
+    if (!phoneDigits) { toast.error('El cliente no tiene teléfono registrado'); return }
+    const fullNum = dialDigits ? dialDigits + phoneDigits : phoneDigits
+    let text = buildWhatsAppText(ticket, config)
+    if (ticket.publicToken) {
+      const link = `${window.location.origin}/ver/${ticket.publicToken}`
+      text += encodeURIComponent(`\n\nVer comprobante online: ${link}`)
+    }
+    window.open(`https://wa.me/${fullNum}?text=${text}`, '_blank')
+  }
+
+  function handleShareLink() {
+    const link = `${window.location.origin}/ver/${ticket.publicToken}`
+    const msg = encodeURIComponent(`Hola! Te comparto tu comprobante: ${link}`)
+    window.open(`https://wa.me/?text=${msg}`, '_blank')
   }
 
   if (loading) return <Layout><div className="text-center py-16 text-gray-400">Cargando...</div></Layout>
@@ -303,11 +165,23 @@ export default function TicketDetailPage() {
           .no-print { display: none !important; }
           body { background: white !important; }
           .ticket-paper { box-shadow: none !important; border: none !important; border-radius: 0 !important; }
+          a[href]::after { content: none !important; }
         }
       `}</style>
 
       <Layout>
         <div className="max-w-3xl mx-auto px-4 py-8">
+
+          {/* Modal pago MP */}
+          {showMpModal && (
+            <MpCheckoutModal
+              ticket={ticket}
+              onClose={(paidTicket) => {
+                setShowMpModal(false)
+                if (paidTicket) handleMpTicketUpdate(paidTicket.status, paidTicket)
+              }}
+            />
+          )}
 
           {/* Modal NC / ND */}
           {showNcNd && (
@@ -340,8 +214,13 @@ export default function TicketDetailPage() {
                     <input type="text" placeholder="DNI / CUIT" value={customerForm.customerDni}
                       onChange={e => setCustomerForm(f => ({ ...f, customerDni: e.target.value }))} className={inputCls} />
                   </div>
-                  <input type="tel" placeholder="Teléfono WhatsApp" value={customerForm.customerPhone}
-                    onChange={e => setCustomerForm(f => ({ ...f, customerPhone: e.target.value }))} className={inputCls} />
+                  <PhoneInput
+                    phone={customerForm.customerPhone}
+                    onPhoneChange={v => setCustomerForm(f => ({ ...f, customerPhone: v }))}
+                    country={customerForm.customerPhoneCountry}
+                    onCountryChange={v => setCustomerForm(f => ({ ...f, customerPhoneCountry: v }))}
+                    placeholder="Teléfono WhatsApp"
+                  />
                   <input type="email" placeholder="Email" value={customerForm.customerEmail}
                     onChange={e => setCustomerForm(f => ({ ...f, customerEmail: e.target.value }))} className={inputCls} />
                   <input type="text" placeholder="Notas" value={customerForm.customerNotes}
@@ -376,10 +255,9 @@ export default function TicketDetailPage() {
             </div>
             <div className="flex gap-2 flex-wrap justify-end">
               {ticket.customerPhone && (
-                <button onClick={handleWhatsApp}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-xl transition-colors">
+                <button onClick={handleWhatsApp} title="Compartir por WhatsApp"
+                  className="p-2 bg-green-500 hover:bg-green-600 text-white rounded-xl transition-colors">
                   <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-                  WhatsApp
                 </button>
               )}
               {ticket.customerEmail && (
@@ -416,6 +294,9 @@ export default function TicketDetailPage() {
                 </svg>
                 Comprador
               </button>
+              {config?.afipEnabled && ticket.status === 'PAID' && (
+                <IssueBillingButton ticketId={ticket.id} ticketTotal={ticket.total} />
+              )}
               <button onClick={() => window.print()}
                 className="flex items-center gap-1.5 px-3 py-2 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700 text-sm font-medium rounded-xl transition-colors">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -425,6 +306,18 @@ export default function TicketDetailPage() {
               </button>
             </div>
           </div>
+
+          {/* Pago con Mercado Pago — visible para tickets DRAFT/PAYMENT_PENDING/PAYMENT_FAILED */}
+          {config?.mpEnabled && ['DRAFT', 'PAYMENT_PENDING', 'PAYMENT_FAILED'].includes(ticket.status) && (
+            <div className="mb-4 no-print">
+              <MercadoPagoButton
+                ticket={ticket}
+                mpEnabled={config.mpEnabled}
+                onTicketUpdate={handleMpTicketUpdate}
+                onOpenCheckout={() => setShowMpModal(true)}
+              />
+            </div>
+          )}
 
           <InvoiceDocument ticket={ticket} config={config} />
         </div>

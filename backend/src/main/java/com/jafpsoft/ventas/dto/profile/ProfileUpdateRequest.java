@@ -21,5 +21,6 @@ public class ProfileUpdateRequest {
     private String brandColorPrimary;
     private String brandColorSecondary;
     private String whatsappNumber;
+    private String countryCode;
     private List<SocialLinkDto> socialLinks;
 }

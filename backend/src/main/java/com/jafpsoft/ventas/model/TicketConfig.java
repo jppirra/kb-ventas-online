@@ -1,5 +1,6 @@
 package com.jafpsoft.ventas.model;
 
+import com.jafpsoft.ventas.security.crypto.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -40,6 +41,9 @@ public class TicketConfig {
     @Column(name = "payment_methods")
     private String paymentMethods;
 
+    @Column(name = "bank_accounts", columnDefinition = "TEXT")
+    private String bankAccounts;
+
     @Column(columnDefinition = "TEXT")
     private String footer;
 
@@ -75,6 +79,69 @@ public class TicketConfig {
 
     @Column(name = "inicio_actividades", length = 20)
     private String inicioActividades;
+
+    // ── Mercado Pago OAuth credentials (sensibles: cifrado AES-256-GCM) ─────────
+    @Column(name = "mp_user_id")
+    private Long mpUserId;
+
+    // public key va al frontend: no requiere cifrado
+    @Column(name = "mp_public_key", columnDefinition = "TEXT")
+    private String mpPublicKey;
+
+    @Column(name = "mp_enabled", columnDefinition = "boolean not null default false")
+    @Builder.Default
+    private boolean mpEnabled = false;
+
+    @Column(name = "mp_scope", columnDefinition = "TEXT")
+    private String mpScope;
+
+    @Column(name = "mp_connected_at")
+    private LocalDateTime mpConnectedAt;
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "mp_access_token", columnDefinition = "TEXT")
+    private String mpAccessToken;
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "mp_refresh_token", columnDefinition = "TEXT")
+    private String mpRefreshToken;
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "mp_webhook_secret", columnDefinition = "TEXT")
+    private String mpWebhookSecret;
+
+    @Column(name = "mp_webhook_id", length = 50)
+    private String mpWebhookId;
+
+    @Column(name = "mp_token_expires_at")
+    private LocalDateTime mpTokenExpiresAt;
+
+    // ── Facturación electrónica AFIP — certificado digital (cifrado AES-256-GCM) ─
+    @Column(name = "afip_enabled", nullable = false)
+    @Builder.Default
+    private boolean afipEnabled = false;
+
+    @Column(name = "afip_ambiente", length = 15)
+    @Builder.Default
+    private String afipAmbiente = "HOMOLOGACION";
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "afip_cert_p12", columnDefinition = "TEXT")
+    private String afipCertP12;          // base64 del .p12, cifrado
+
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "afip_cert_password", columnDefinition = "TEXT")
+    private String afipCertPassword;
+
+    @Column(name = "afip_cert_expiry")
+    private java.time.LocalDate afipCertExpiry;
+
+    @Column(name = "afip_cert_subject", length = 300)
+    private String afipCertSubject;
+
+    @Column(name = "afip_cert_notified_expiry", nullable = false)
+    @Builder.Default
+    private boolean afipCertNotifiedExpiry = false;
 
     @UpdateTimestamp
     @Column(name = "updated_at")

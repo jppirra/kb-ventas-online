@@ -12,6 +12,7 @@ public class TicketConfigRequest {
     private String logoUrl;
     private String currency;
     private String paymentMethods;
+    private String bankAccounts;
     private String footer;
     private Boolean showCatalogQr;
     private String tipoComprobante;
@@ -19,4 +20,5 @@ public class TicketConfigRequest {
     private String condicionIva;
     private String ingresosBrutos;
     private String inicioActividades;
+    private String countryCode;
 }

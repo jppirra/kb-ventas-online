@@ -3,6 +3,8 @@ package com.jafpsoft.ventas.dto.ticket;
 import com.jafpsoft.ventas.model.TicketConfig;
 import lombok.Data;
 
+import java.time.LocalDateTime;
+
 @Data
 public class TicketConfigResponse {
     private String businessName;
@@ -13,6 +15,7 @@ public class TicketConfigResponse {
     private String logoUrl;
     private String currency;
     private String paymentMethods;
+    private String bankAccounts;
     private String footer;
     private boolean showCatalogQr;
     private Integer nextTicketNumber;
@@ -21,6 +24,13 @@ public class TicketConfigResponse {
     private String condicionIva;
     private String ingresosBrutos;
     private String inicioActividades;
+    private String catalogSlug;
+    private String countryCode;
+    // Mercado Pago — solo campos públicos (nunca tokens)
+    private boolean mpEnabled;
+    private Long mpUserId;
+    private String mpPublicKey;
+    private LocalDateTime mpConnectedAt;
 
     public static TicketConfigResponse from(TicketConfig c) {
         TicketConfigResponse r = new TicketConfigResponse();
@@ -32,6 +42,7 @@ public class TicketConfigResponse {
         r.logoUrl = c.getLogoUrl();
         r.currency = c.getCurrency() != null ? c.getCurrency() : "$";
         r.paymentMethods = c.getPaymentMethods();
+        r.bankAccounts = c.getBankAccounts();
         r.footer = c.getFooter();
         r.showCatalogQr = c.isShowCatalogQr();
         r.nextTicketNumber = c.getNextTicketNumber();
@@ -40,6 +51,10 @@ public class TicketConfigResponse {
         r.condicionIva = c.getCondicionIva();
         r.ingresosBrutos = c.getIngresosBrutos();
         r.inicioActividades = c.getInicioActividades();
+        r.mpEnabled = c.isMpEnabled();
+        r.mpUserId = c.getMpUserId();
+        r.mpPublicKey = c.getMpPublicKey();
+        r.mpConnectedAt = c.getMpConnectedAt();
         return r;
     }
 }

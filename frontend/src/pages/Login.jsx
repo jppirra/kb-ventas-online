@@ -4,6 +4,55 @@ import { GoogleLogin } from '@react-oauth/google'
 import { toast } from 'sonner'
 import { useAuth } from '../context/AuthContext'
 import api from '../api/axios'
+import { COUNTRIES } from '../utils/countries'
+
+function CountryModal({ onSave }) {
+  const [country, setCountry] = useState('AR')
+  const [saving, setSaving] = useState(false)
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await api.put('/profile', { countryCode: country })
+      onSave(country)
+    } catch {
+      toast.error('No se pudo guardar el país. Podés cambiarlo después en Configuración.')
+      onSave(country)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-2xl p-8 text-center space-y-5">
+        <div className="w-14 h-14 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center mx-auto">
+          <svg className="w-7 h-7 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064" />
+          </svg>
+        </div>
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">¿En qué país estás?</h2>
+          <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Esto nos ayuda a configurar la facturación y los medios de pago correctamente.</p>
+        </div>
+        <select
+          value={country}
+          onChange={e => setCountry(e.target.value)}
+          className="w-full px-4 py-2.5 border border-gray-300 dark:border-slate-600 rounded-xl text-gray-900 dark:text-white bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+        >
+          {COUNTRIES.map(c => <option key={c.code} value={c.code}>{c.name}</option>)}
+        </select>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl transition-colors text-sm"
+        >
+          {saving ? 'Guardando...' : 'Continuar'}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 const VERSION = __APP_VERSION__
@@ -15,6 +64,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [showCountryModal, setShowCountryModal] = useState(false)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -34,7 +84,11 @@ export default function Login() {
     try {
       const res = await api.post('/auth/google', { credential: credentialResponse.credential })
       storeUser(res.data)
-      navigate('/')
+      if (res.data.newUser) {
+        setShowCountryModal(true)
+      } else {
+        navigate('/')
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Error al iniciar sesión con Google.')
     } finally {
@@ -47,6 +101,14 @@ export default function Login() {
   }
 
   return (
+    <>
+    {showCountryModal && (
+      <CountryModal onSave={(code) => {
+        localStorage.setItem('countryCode', code)
+        setShowCountryModal(false)
+        navigate('/')
+      }} />
+    )}
     <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-slate-900 p-4">
       <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8">
         <a href="/mercato/" className="flex flex-col items-center gap-2 mb-6">
@@ -118,5 +180,6 @@ export default function Login() {
         </p>
       </div>
     </div>
+    </>
   )
 }

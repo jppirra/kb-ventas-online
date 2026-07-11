@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/app/events").permitAll()
                         .requestMatchers("/api/contact").permitAll()
                         .requestMatchers("/api/collaborators/invite-info/**").permitAll()
+                        .requestMatchers("/api/webhooks/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/api/**").authenticated()

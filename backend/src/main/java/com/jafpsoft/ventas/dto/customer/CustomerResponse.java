@@ -13,6 +13,7 @@ public class CustomerResponse {
     private String name;
     private String dni;
     private String phone;
+    private String phoneCountry;
     private String email;
     private String notes;
     private String source;
@@ -25,6 +26,7 @@ public class CustomerResponse {
                 .name(c.getName())
                 .dni(c.getDni())
                 .phone(c.getPhone())
+                .phoneCountry(c.getPhoneCountry() != null ? c.getPhoneCountry() : "AR")
                 .email(c.getEmail())
                 .notes(c.getNotes())
                 .source(c.getSource())

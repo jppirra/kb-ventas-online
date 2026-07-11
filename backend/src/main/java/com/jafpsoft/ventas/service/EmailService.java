@@ -2,6 +2,9 @@ package com.jafpsoft.ventas.service;
 
 import com.jafpsoft.ventas.dto.order.OrderRequestPayload;
 import com.jafpsoft.ventas.model.EmailLog;
+import com.jafpsoft.ventas.model.SaleTicket;
+import com.jafpsoft.ventas.model.SaleTicketItem;
+import com.jafpsoft.ventas.model.TicketConfig;
 import com.jafpsoft.ventas.repository.EmailLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -156,6 +159,61 @@ public class EmailService {
     }
 
     @Async
+    public void sendPaymentConfirmationEmail(SaleTicket ticket, TicketConfig config) {
+        if (ticket.getCustomerEmail() == null || ticket.getCustomerEmail().isBlank()) return;
+        String biz = config.getBusinessName() != null ? config.getBusinessName() : fromName();
+        String cur = config.getCurrency() != null ? config.getCurrency() : "$";
+        StringBuilder rows = new StringBuilder();
+        for (SaleTicketItem item : ticket.getItems()) {
+            double sub = item.getUnitPrice().doubleValue() * item.getQuantity();
+            rows.append(String.format(
+                "<tr><td style='padding:6px 0;border-bottom:1px solid #f3f4f6;color:#374151;'>%s</td>" +
+                "<td style='padding:6px 0;text-align:center;border-bottom:1px solid #f3f4f6;'>%d</td>" +
+                "<td style='padding:6px 0;text-align:right;border-bottom:1px solid #f3f4f6;font-weight:600;'>%s%.2f</td></tr>",
+                esc(item.getProductName()), item.getQuantity(), cur, sub));
+        }
+        String body = String.format(
+            "<p>Hola%s,</p><p>Tu pago fue <strong style='color:#16a34a;'>confirmado exitosamente</strong> mediante Mercado Pago.</p>" +
+            "<table width='100%%' style='font-size:14px;border-collapse:collapse;margin:16px 0;'>" +
+            "<thead><tr style='font-size:12px;color:#9ca3af;'>" +
+            "<th align='left' style='padding-bottom:6px;border-bottom:1px solid #e5e7eb;'>Producto</th>" +
+            "<th style='padding-bottom:6px;border-bottom:1px solid #e5e7eb;'>Cant.</th>" +
+            "<th align='right' style='padding-bottom:6px;border-bottom:1px solid #e5e7eb;'>Subtotal</th></tr></thead>" +
+            "<tbody>%s</tbody>" +
+            "<tfoot><tr><td colspan='2' style='padding-top:10px;font-weight:600;'>Total</td>" +
+            "<td style='padding-top:10px;text-align:right;font-weight:700;font-size:16px;color:#1d4ed8;'>%s%.2f</td></tr></tfoot>" +
+            "</table><p style='font-size:12px;color:#6b7280;'>Comprobante: <b>%s</b></p>",
+            ticket.getCustomerName() != null ? " " + esc(ticket.getCustomerName()) : "",
+            rows, cur, ticket.getTotal().doubleValue(), esc(ticket.getTicketNumber()));
+        String subject = "Pago confirmado — " + esc(ticket.getTicketNumber()) + " — " + biz;
+        String html = buildActionEmail("Tu pago fue recibido", body, null, null, biz);
+        send(ticket.getCustomerEmail(), "PAYMENT_CONFIRMATION", subject, html);
+    }
+
+    @Async
+    public void sendPaymentReceivedVendorEmail(SaleTicket ticket, TicketConfig config, String vendorEmail) {
+        if (vendorEmail == null || vendorEmail.isBlank()) return;
+        String biz = config.getBusinessName() != null ? config.getBusinessName() : fromName();
+        String cur = config.getCurrency() != null ? config.getCurrency() : "$";
+        String customer = ticket.getCustomerName() != null ? ticket.getCustomerName() : "un cliente";
+        String body = String.format(
+            "<p>Recibiste un pago via <strong>Mercado Pago</strong>.</p>" +
+            "<table width='100%%' style='font-size:14px;border-collapse:collapse;margin:16px 0;'>" +
+            "<tr><td style='color:#6b7280;padding:4px 0;'>Comprobante</td><td style='font-weight:600;padding:4px 0 4px 16px;'>%s</td></tr>" +
+            "<tr><td style='color:#6b7280;padding:4px 0;'>Cliente</td><td style='padding:4px 0 4px 16px;'>%s</td></tr>" +
+            "<tr><td style='color:#6b7280;padding:4px 0;'>Monto</td><td style='font-weight:700;font-size:16px;color:#1d4ed8;padding:4px 0 4px 16px;'>%s%.2f</td></tr>" +
+            "<tr><td style='color:#6b7280;padding:4px 0;'>N.º de operación MP</td><td style='font-family:monospace;padding:4px 0 4px 16px;'>%s</td></tr>" +
+            "</table>",
+            esc(ticket.getTicketNumber()), esc(customer),
+            cur, ticket.getTotal().doubleValue(),
+            ticket.getMpPaymentId() != null ? esc(ticket.getMpPaymentId()) : "-");
+        String actionUrl = baseUrl + "/tickets/" + ticket.getId();
+        String html = buildActionEmail("¡Pago recibido!", body, actionUrl, "Ver comprobante", biz);
+        String subject = "Pago recibido — " + esc(ticket.getTicketNumber()) + " — " + customer;
+        send(vendorEmail, "PAYMENT_RECEIVED_VENDOR", subject, html);
+    }
+
+    @Async
     public void sendContactNotification(String name, String email, String subject, String message) {
         String html = buildActionEmail(
                 "Nuevo mensaje de contacto",
@@ -238,9 +296,7 @@ public class EmailService {
               <table width="100%%" cellpadding="0" cellspacing="0" style="padding:48px 20px;">
                 <tr><td align="center">
                   <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%%;">
-                    <tr><td style="text-align:center;padding-bottom:20px;">
-                      <span style="font-size:24px;font-weight:800;color:%s;letter-spacing:-0.5px;">%s</span>
-                    </td></tr>
+                    %s
                     <tr><td style="background:#fff;border-radius:20px;padding:44px 48px;box-shadow:0 2px 20px rgba(99,102,241,0.10);">
                       <div style="text-align:center;margin-bottom:24px;">
                         %s
@@ -255,14 +311,14 @@ public class EmailService {
                           <a href="%s" style="display:block;padding:14px 36px;font-size:16px;font-weight:700;color:#fff;text-decoration:none;letter-spacing:0.2px;">Aceptar invitación →</a>
                         </td>
                       </tr></table>
-                      <p style="margin:0 0 6px;font-size:12px;color:#9ca3af;text-align:center;">Si no esperabas esta invitación, podés ignorar este mensaje.</p>
-                      <p style="margin:0;font-size:12px;color:#c4b5fd;text-align:center;font-weight:600;">%s · jafpsoft</p>
+                      <p style="margin:0;font-size:12px;color:#9ca3af;text-align:center;">Si no esperabas esta invitación, podés ignorar este mensaje.</p>
                     </td></tr>
+                    %s
                   </table>
                 </td></tr>
               </table>
             </body></html>
-            """.formatted(color, fromName(), avatarBlock, ownerName, color, acceptUrl, fromName());
+            """.formatted(emailHeader(), avatarBlock, ownerName, color, acceptUrl, emailFooter());
 
         send(toEmail, "COLLABORATOR_INVITE", "Te invitaron a colaborar en " + fromName(), html);
     }
@@ -272,7 +328,6 @@ public class EmailService {
                                  java.util.List<com.jafpsoft.ventas.model.Product> agotados,
                                  java.util.List<com.jafpsoft.ventas.model.Product> enStock,
                                  int totalUnidades) {
-        String color = primaryColor();
         String nombre = userName != null ? userName : "vendedor";
 
         StringBuilder rows = new StringBuilder();
@@ -305,22 +360,81 @@ public class EmailService {
               <table width="100%%" cellpadding="0" cellspacing="0" style="padding:48px 20px;">
                 <tr><td align="center">
                   <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%%;">
-                    <tr><td style="text-align:center;padding-bottom:20px;">
-                      <span style="font-size:22px;font-weight:700;color:%s;">%s</span>
-                    </td></tr>
+                    %s
                     <tr><td style="background:#fff;border-radius:20px;padding:36px 40px;box-shadow:0 2px 20px rgba(99,102,241,0.10);">
                       <h1 style="margin:0 0 8px;font-size:20px;font-weight:700;color:#1e1b4b;">Informe de stock</h1>
                       <p style="margin:0 0 20px;font-size:14px;color:#6b7280;">Hola %s, este es tu resumen de stock.</p>
                       %s
                       <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;">Podés cambiar la frecuencia de este informe en Configuración → Informe de stock.</p>
                     </td></tr>
+                    %s
                   </table>
                 </td></tr>
               </table>
             </body></html>
-            """.formatted(color, fromName(), esc(nombre), rows);
+            """.formatted(emailHeader(), esc(nombre), rows, emailFooter());
 
         send(toEmail, "STOCK_REPORT", "Informe de stock — " + fromName(), html);
+    }
+
+    // ── Campaña masiva MP (sin @Async — el BatchNotificationService controla el ritmo) ──
+
+    public void sendMpAnnouncementEmailSync(String toEmail, String vendorName) {
+        String name = fromName();
+        String subject = "¡Novedad! Cobrá con Mercado Pago desde tu cuenta en " + name;
+        String body = "Hola <strong>" + esc(vendorName) + "</strong>,<br><br>" +
+            "Tenemos una gran novedad para tu negocio:<br><br>" +
+            "<strong style='color:#2563eb;font-size:16px;'>Ahora podés cobrar con Mercado Pago directamente desde " + name + ".</strong><br><br>" +
+            "Con esta integración podés:<br>" +
+            "<ul style='margin:12px 0;padding-left:22px;color:#374151;line-height:1.8;'>" +
+            "<li>Generar links de pago automáticos en cada comprobante de venta</li>" +
+            "<li>Compartir el link por WhatsApp o email y cobrar a distancia</li>" +
+            "<li>Recibir el dinero directamente en tu cuenta de Mercado Pago</li>" +
+            "<li>El comprobante se confirma automáticamente cuando se acredita el pago</li>" +
+            "<li>Generar QRs dinámicos para cobrar en persona desde tu celular</li>" +
+            "</ul><br>" +
+            "Para activarlo, ingresá a tu cuenta, andá a <strong>Facturación → Configurar</strong> " +
+            "y buscá la sección <strong>\"Medios de pago digital\"</strong>.<br><br>" +
+            "El proceso de vinculación toma menos de 2 minutos.";
+        String html = buildActionEmail(
+            "¡Cobrá con Mercado Pago!", body,
+            baseUrl + "/tickets/config", "Activar Mercado Pago →",
+            "Si ya tenías tu cuenta vinculada, este email es solo informativo. Tu configuración no se modificó.");
+        send(toEmail, "MP_ANNOUNCEMENT", subject, html);
+    }
+
+    // ── Notificación al vendedor de comprobante auto-generado ─────────────────
+
+    @Async
+    public void sendOrderConfirmedTicketEmail(String toEmail, String vendorName,
+                                              String ticketNumber, String customerName) {
+        String body = "Hola <strong>" + esc(vendorName) + "</strong>,<br><br>" +
+            "Confirmaste el pedido de <strong>" + esc(customerName) + "</strong>.<br>" +
+            "El comprobante <strong style='font-family:monospace;'>" + esc(ticketNumber) +
+            "</strong> fue generado automáticamente y está disponible en tu panel de facturación.";
+        String html = buildActionEmail(
+            "Comprobante generado", body,
+            baseUrl + "/tickets", "Ver comprobantes →",
+            fromName() + " — Notificación automática");
+        send(toEmail, "TICKET_AUTO_CREATED", "Comprobante " + ticketNumber + " generado — " + fromName(), html);
+    }
+
+    // ── Alerta vencimiento certificado AFIP ───────────────────────────────────
+
+    @Async
+    public void sendAfipCertExpirationWarning(String toEmail, String userName,
+                                               java.time.LocalDate expiry, long daysLeft) {
+        String dayStr = daysLeft <= 0 ? "ya venció" : "vence en " + daysLeft + " día" + (daysLeft == 1 ? "" : "s");
+        String body = "Hola <strong>" + esc(userName) + "</strong>,<br><br>" +
+            "El certificado digital AFIP configurado en tu cuenta <strong>" + dayStr + "</strong> " +
+            "(<strong>" + expiry + "</strong>).<br><br>" +
+            "Para evitar interrupciones en la facturación electrónica, renovalo antes de esa fecha " +
+            "desde el panel de Configuración Fiscal → Certificado Digital.";
+        String html = buildActionEmail(
+            "Certificado AFIP por vencer", body,
+            baseUrl + "/billing/config", "Renovar certificado →",
+            "Este es un recordatorio automático. Tu configuración actual sigue activa hasta la fecha indicada.");
+        send(toEmail, "AFIP_CERT_EXPIRY", "Certificado AFIP vence en " + daysLeft + " días — " + fromName(), html);
     }
 
     private static String esc(String s) {
@@ -329,6 +443,29 @@ public class EmailService {
     }
 
     // ── HTML builder ──────────────────────────────────────────────────────────
+
+    private String emailHeader() {
+        return """
+            <tr><td style="text-align:center;padding-bottom:28px;">
+              <a href="https://mercato.jafpsoft.com" style="text-decoration:none;display:inline-block;">
+                <img src="%s/logo-icon.png" alt="" style="width:200px;height:auto;display:block;margin:0 auto 12px;">
+                <img src="%s/logo-text.png" alt="Mercato" style="width:200px;height:auto;display:block;margin:0 auto;">
+              </a>
+            </td></tr>""".formatted(baseUrl, baseUrl);
+    }
+
+    private String emailFooter() {
+        int year = java.time.Year.now().getValue();
+        return """
+            <tr><td style="text-align:center;padding-top:28px;">
+              <p style="margin:0 0 4px;font-size:12px;color:#9ca3af;">
+                Powered by <a href="https://mercato.jafpsoft.com" style="color:#6366f1;text-decoration:none;font-weight:600;">Mercato</a>
+                &nbsp;&middot;&nbsp;
+                Desarrollado por <a href="https://jafpsoft.com" style="color:#6366f1;text-decoration:none;font-weight:600;">JAFPSoft</a>
+              </p>
+              <p style="margin:0;font-size:11px;color:#c4b5fd;">&copy; %d JAFPSoft. Todos los derechos reservados.</p>
+            </td></tr>""".formatted(year);
+    }
 
     private String buildActionEmail(String heading, String body, String ctaUrl, String ctaText, String footer) {
         String color = primaryColor();
@@ -339,25 +476,27 @@ public class EmailService {
               </td>
             </tr></table>""".formatted(color, ctaUrl, ctaText) : "";
 
+        String footerNote = (footer != null && !footer.isBlank())
+            ? "<p style=\"margin:24px 0 0;font-size:12px;color:#9ca3af;\">%s</p>".formatted(footer) : "";
+
         return """
             <!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"></head>
             <body style="margin:0;padding:0;background:#f5f3ff;font-family:'Segoe UI',Arial,sans-serif;">
               <table width="100%%" cellpadding="0" cellspacing="0" style="padding:48px 20px;">
                 <tr><td align="center">
                   <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%%;">
-                    <tr><td style="text-align:center;padding-bottom:20px;">
-                      <span style="font-size:22px;font-weight:700;color:%s;">%s</span>
-                    </td></tr>
+                    %s
                     <tr><td style="background:#fff;border-radius:20px;padding:44px 48px;box-shadow:0 2px 20px rgba(99,102,241,0.10);">
                       <h1 style="margin:0 0 16px;font-size:22px;font-weight:700;color:#1e1b4b;">%s</h1>
-                      <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.7;">%s</p>
+                      <div style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.7;">%s</div>
                       %s
-                      <p style="margin:0;font-size:12px;color:#9ca3af;">%s</p>
+                      %s
                     </td></tr>
+                    %s
                   </table>
                 </td></tr>
               </table>
             </body></html>
-            """.formatted(color, fromName(), heading, body, cta, footer);
+            """.formatted(emailHeader(), heading, body, cta, footerNote, emailFooter());
     }
 }
