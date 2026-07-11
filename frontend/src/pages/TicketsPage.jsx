@@ -156,6 +156,7 @@ function NewTicketModal({ onClose, onCreated }) {
   const [showCustomerResults, setShowCustomerResults] = useState(false)
   const [items, setItems] = useState([])
   const [form, setForm] = useState({ customerName: '', customerDni: '', customerPhone: '', customerPhoneCountry: 'AR', customerEmail: '', customerNotes: '', paymentMethod: '', discount: '', notes: '' })
+  const [clientRef] = useState(() => crypto.randomUUID())
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -238,6 +239,7 @@ function NewTicketModal({ onClose, onCreated }) {
       const needsDraft = !isCash // todo método excepto efectivo arranca en DRAFT
       const payload = {
         ...form,
+        clientRef,
         draft: needsDraft ? true : undefined,
         discount: discount || null,
         items: items.map((it, idx) => {

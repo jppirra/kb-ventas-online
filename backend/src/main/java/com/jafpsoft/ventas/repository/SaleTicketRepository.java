@@ -13,6 +13,7 @@ public interface SaleTicketRepository extends JpaRepository<SaleTicket, Long> {
     List<SaleTicket> findByUserIdOrderByCreatedAtDesc(Long userId);
     Optional<SaleTicket> findByIdAndUserId(Long id, Long userId);
     Optional<SaleTicket> findByPublicToken(String publicToken);
+    Optional<SaleTicket> findByUserIdAndClientRef(Long userId, String clientRef);
     long countByUserId(Long userId);
 
     @Query("SELECT t FROM SaleTicket t WHERE t.userId = :userId AND t.status <> 'CANCELLED' AND t.createdAt >= :start AND t.createdAt < :end ORDER BY t.createdAt DESC")

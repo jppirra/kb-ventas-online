@@ -12,6 +12,7 @@ import com.jafpsoft.ventas.repository.TicketConfigRepository;
 import com.jafpsoft.ventas.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -55,6 +57,12 @@ public class SaleTicketService {
 
     @Transactional
     public TicketResponse create(TicketRequest req, Long userId) {
+        // Idempotencia: si el cliente envía un clientRef ya procesado, devolver el ticket existente
+        if (req.getClientRef() != null && !req.getClientRef().isBlank()) {
+            Optional<SaleTicket> existing = ticketRepository.findByUserIdAndClientRef(userId, req.getClientRef());
+            if (existing.isPresent()) return TicketResponse.from(existing.get());
+        }
+
         // Bloquea la fila para que solicitudes concurrentes no tomen el mismo número.
         // Si todavía no existe config, la crea dentro de la transacción antes que cualquier otro proceso.
         TicketConfig config = configRepository.findByIdForUpdate(userId)
@@ -106,6 +114,7 @@ public class SaleTicketService {
                 .discount(req.getDiscount() != null ? req.getDiscount() : BigDecimal.ZERO)
                 .notes(req.getNotes())
                 .status(isDraft ? "DRAFT" : "PAID")
+                .clientRef(req.getClientRef())
                 .build();
 
         AtomicInteger order = new AtomicInteger(0);
@@ -135,7 +144,18 @@ public class SaleTicketService {
         ticket.setSubtotal(subtotal);
         ticket.setTotal(subtotal.subtract(discount).max(BigDecimal.ZERO));
 
-        SaleTicket saved = ticketRepository.save(ticket);
+        SaleTicket saved;
+        try {
+            saved = ticketRepository.save(ticket);
+        } catch (DataIntegrityViolationException e) {
+            // Race condition: dos requests con el mismo clientRef llegaron simultáneamente — devolver el que ya existe
+            if (req.getClientRef() != null) {
+                return ticketRepository.findByUserIdAndClientRef(userId, req.getClientRef())
+                        .map(TicketResponse::from)
+                        .orElseThrow(() -> e);
+            }
+            throw e;
+        }
         // DRAFT: no ajustar stock hasta que el pago sea confirmado vía webhook
         // NC: devuelve stock; ND y COMP: descuentan stock
         if (!isDraft) {

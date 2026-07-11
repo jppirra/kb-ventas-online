@@ -266,6 +266,8 @@ public class MigrationRunner implements ApplicationRunner {
         } catch (Exception e) {
             log.warn("Migration skipped for billing_audit_logs table: {}", e.getMessage());
         }
+
+        addClientRefIfNeeded();
     }
 
     private void applyIfNeeded(String checkSql, String migrationSql, String label) {
@@ -303,6 +305,21 @@ public class MigrationRunner implements ApplicationRunner {
             );
         } catch (Exception e) {
             log.warn("Backfill user_id skipped: {}", e.getMessage());
+        }
+    }
+
+    private void addClientRefIfNeeded() {
+        applyIfNeeded(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema='public' AND table_name='sale_tickets' AND column_name='client_ref'",
+            "ALTER TABLE sale_tickets ADD COLUMN IF NOT EXISTS client_ref VARCHAR(36)",
+            "sale_tickets.client_ref column"
+        );
+        try {
+            jdbc.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS uq_ticket_client_ref ON sale_tickets (user_id, client_ref) WHERE client_ref IS NOT NULL"
+            );
+        } catch (Exception e) {
+            log.warn("Migration skipped for uq_ticket_client_ref: {}", e.getMessage());
         }
     }
 

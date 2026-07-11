@@ -109,6 +109,10 @@ public class SaleTicket {
     @Column(name = "mp_paid_at")
     private LocalDateTime mpPaidAt;
 
+    // ── Idempotencia ──────────────────────────────────────────────────────────
+    @Column(name = "client_ref", length = 36)
+    private String clientRef;
+
     // ── Link público ──────────────────────────────────────────────────────────
     @Column(name = "public_token", unique = true, length = 36)
     private String publicToken;

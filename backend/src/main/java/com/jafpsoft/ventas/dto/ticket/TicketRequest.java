@@ -25,4 +25,7 @@ public class TicketRequest {
 
     // Si true: crea el ticket en DRAFT para pagar luego con MP (sin descontar stock)
     private Boolean draft;
+
+    // UUID generado por el cliente para evitar tickets duplicados ante reintentos
+    private String clientRef;
 }
