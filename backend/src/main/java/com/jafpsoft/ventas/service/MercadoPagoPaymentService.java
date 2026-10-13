@@ -122,10 +122,10 @@ public class MercadoPagoPaymentService {
     // ── Confirmar pago (llamado desde webhook processor) ──────────────────────
 
     @Transactional
-    public void confirmPayment(Long ticketId, String mpPaymentId, String mpStatus,
-                               LocalDateTime paidAt, String correlationId) {
-        SaleTicket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new EntityNotFoundException("Ticket " + ticketId + " no encontrado"));
+    public void confirmPayment(Long ticketId, Long vendorUserId, String mpPaymentId, String mpStatus,
+                               BigDecimal paidAmount, LocalDateTime paidAt, String correlationId) {
+        // El ticket tiene que ser del vendedor en cuya cuenta de MP está el pago
+        SaleTicket ticket = findOwned(ticketId, vendorUserId);
 
         TicketStatus current = TicketStatus.fromString(ticket.getStatus());
 
@@ -140,6 +140,11 @@ public class MercadoPagoPaymentService {
         } catch (IllegalTicketStateTransitionException e) {
             log.warn("Cannot confirm payment for ticket {} in status {}: {}", ticketId, current, e.getMessage());
             return;
+        }
+
+        if (paidAmount == null || paidAmount.compareTo(ticket.getTotal()) != 0) {
+            throw new IllegalStateException("El importe del pago " + mpPaymentId + " (" + paidAmount
+                    + ") no coincide con el total del ticket " + ticketId + " (" + ticket.getTotal() + ")");
         }
 
         String oldStatus = ticket.getStatus();
@@ -183,10 +188,9 @@ public class MercadoPagoPaymentService {
     // ── Marcar pago fallido (llamado desde webhook processor) ─────────────────
 
     @Transactional
-    public void failPayment(Long ticketId, String mpPaymentId, String mpStatus,
+    public void failPayment(Long ticketId, Long vendorUserId, String mpPaymentId, String mpStatus,
                             String statusDetail, String correlationId) {
-        SaleTicket ticket = ticketRepository.findById(ticketId)
-                .orElseThrow(() -> new EntityNotFoundException("Ticket " + ticketId + " no encontrado"));
+        SaleTicket ticket = findOwned(ticketId, vendorUserId);
 
         TicketStatus current = TicketStatus.fromString(ticket.getStatus());
         if (current == TicketStatus.PAYMENT_FAILED || current == TicketStatus.CANCELLED) {
