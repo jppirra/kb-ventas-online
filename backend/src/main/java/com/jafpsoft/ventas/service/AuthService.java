@@ -3,13 +3,11 @@ package com.jafpsoft.ventas.service;
 import com.jafpsoft.ventas.dto.auth.*;
 import com.jafpsoft.ventas.model.*;
 import com.jafpsoft.ventas.repository.*;
+import com.jafpsoft.ventas.security.GoogleTokenVerifier;
 import com.jafpsoft.ventas.security.JwtTokenProvider;
 import com.jafpsoft.ventas.security.UserDetailsServiceImpl;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -18,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -28,9 +25,6 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class AuthService {
 
-    @Value("${google.client-id:}")
-    private String googleClientId;
-
     private final UserRepository userRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
@@ -39,6 +33,7 @@ public class AuthService {
     private final UserDetailsServiceImpl userDetailsService;
     private final AuthenticationManager authenticationManager;
     private final EmailService emailService;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
     @Transactional
     public Map<String, String> register(RegisterRequest request) {
@@ -142,7 +137,8 @@ public class AuthService {
 
     @Transactional
     public AuthResponse googleLogin(String credential) {
-        Map<String, Object> data = decodeGoogleJwt(credential);
+        // Firma, emisor, destinatario, vencimiento y correo verificado
+        Map<String, Object> data = googleTokenVerifier.verify(credential);
         String email = (String) data.get("email");
         String name = (String) data.getOrDefault("name", email);
         String googleId = (String) data.get("sub");
@@ -200,21 +196,6 @@ public class AuthService {
                 .termsAccepted(user.getTermsAcceptedAt() != null)
                 .countryCode(user.getCountryCode())
                 .build();
-    }
-
-    private Map<String, Object> decodeGoogleJwt(String jwt) {
-        try {
-            String[] parts = jwt.split("\\.");
-            if (parts.length != 3) throw new IllegalArgumentException("Token de Google inválido.");
-            String payload = parts[1];
-            int mod = payload.length() % 4;
-            if (mod == 2) payload += "==";
-            else if (mod == 3) payload += "=";
-            byte[] bytes = Base64.getUrlDecoder().decode(payload);
-            return new ObjectMapper().readValue(bytes, new TypeReference<Map<String, Object>>() {});
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Token de Google inválido.");
-        }
     }
 }
 
