@@ -14,6 +14,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Slf4j
@@ -77,6 +78,10 @@ public class MercadoPagoWebhookProcessor {
             return;
         }
 
+        BigDecimal paidAmount = payment.hasNonNull("transaction_amount")
+                ? payment.get("transaction_amount").decimalValue()
+                : null;
+
         String paidAtStr = payment.path("date_approved").asText(null);
         LocalDateTime paidAt = paidAtStr != null && !paidAtStr.isBlank()
                 ? LocalDateTime.parse(paidAtStr.replace("Z", "").replace("+00:00", "").substring(0, 19))
@@ -87,9 +92,9 @@ public class MercadoPagoWebhookProcessor {
 
         switch (mpStatus) {
             case "approved" ->
-                paymentService.confirmPayment(ticketId, mpPaymentId, mpStatus, paidAt, correlationId);
+                paymentService.confirmPayment(ticketId, vendorUserId, mpPaymentId, mpStatus, paidAmount, paidAt, correlationId);
             case "rejected", "cancelled" ->
-                paymentService.failPayment(ticketId, mpPaymentId, mpStatus, mpStatusDetail, correlationId);
+                paymentService.failPayment(ticketId, vendorUserId, mpPaymentId, mpStatus, mpStatusDetail, correlationId);
             case "pending", "in_process", "authorized" -> {
                 // Actualizar a PAYMENT_PROCESSING si corresponde (sin cambiar stock)
                 log.info("[WEBHOOK] payment {} is {} — no action needed yet", mpPaymentId, mpStatus);
