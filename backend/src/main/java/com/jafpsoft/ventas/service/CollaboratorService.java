@@ -45,7 +45,7 @@ public class CollaboratorService {
             c.setStatus("PENDING");
             c.setInviteToken(UUID.randomUUID().toString());
             c.setAccessAllCatalogs(req.isAccessAllCatalogs());
-            c.setCatalogIds(serializeIds(req.getCatalogIds()));
+            c.setCatalogIds(serializeIds(ownedOnly(req.getCatalogIds(), ownerId)));
             c.setCanPublish(req.isCanPublish());
             collaboratorRepository.save(c);
             sendInviteEmail(owner, c);
@@ -58,7 +58,7 @@ public class CollaboratorService {
                 .inviteToken(UUID.randomUUID().toString())
                 .status("PENDING")
                 .accessAllCatalogs(req.isAccessAllCatalogs())
-                .catalogIds(serializeIds(req.getCatalogIds()))
+                .catalogIds(serializeIds(ownedOnly(req.getCatalogIds(), ownerId)))
                 .canPublish(req.isCanPublish())
                 .build();
         collaboratorRepository.save(collaborator);
@@ -82,7 +82,7 @@ public class CollaboratorService {
         CatalogCollaborator c = collaboratorRepository.findByIdAndOwnerId(collaboratorId, ownerId)
                 .orElseThrow(() -> new EntityNotFoundException("Colaborador no encontrado"));
         c.setAccessAllCatalogs(req.isAccessAllCatalogs());
-        c.setCatalogIds(serializeIds(req.getCatalogIds()));
+        c.setCatalogIds(serializeIds(ownedOnly(req.getCatalogIds(), ownerId)));
         c.setCanPublish(req.isCanPublish());
         collaboratorRepository.save(c);
         User owner = userRepository.findById(ownerId).orElse(null);
@@ -148,7 +148,7 @@ public class CollaboratorService {
                         .stream().filter(cat -> cat.isActive())
                         .map(Catalog::getId).forEach(result::add);
             } else {
-                result.addAll(deserializeIds(c.getCatalogIds()));
+                result.addAll(ownedOnly(deserializeIds(c.getCatalogIds()), c.getOwnerId()));
             }
         }
         return result.stream().distinct().toList();
@@ -159,13 +159,10 @@ public class CollaboratorService {
         List<CatalogCollaborator> active = collaboratorRepository
                 .findByCollaboratorUserIdAndStatus(userId, "ACTIVE");
         for (CatalogCollaborator c : active) {
-            if (c.isAccessAllCatalogs()) {
-                Catalog catalog = catalogRepository.findById(catalogId).orElse(null);
-                if (catalog != null && catalog.getUserId().equals(c.getOwnerId())) return c;
-            } else {
-                List<Long> ids = deserializeIds(c.getCatalogIds());
-                if (ids.contains(catalogId)) return c;
-            }
+            // El catálogo tiene que ser del dueño que invitó, también cuando el acceso es por lista
+            if (!c.isAccessAllCatalogs() && !deserializeIds(c.getCatalogIds()).contains(catalogId)) continue;
+            Catalog catalog = catalogRepository.findById(catalogId).orElse(null);
+            if (catalog != null && catalog.getUserId().equals(c.getOwnerId())) return c;
         }
         return null;
     }
@@ -206,6 +203,17 @@ public class CollaboratorService {
                 owner.getProfileImageUrl(),
                 collaborator.getInviteToken()
         );
+    }
+
+    // Deja solo los catálogos que pertenecen al dueño
+    private List<Long> ownedOnly(List<Long> ids, Long ownerId) {
+        if (ids == null) return List.of();
+        return ids.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .filter(id -> catalogRepository.findById(id)
+                        .filter(cat -> cat.getUserId().equals(ownerId)).isPresent())
+                .toList();
     }
 
     private String serializeIds(List<Long> ids) {
